@@ -48,4 +48,9 @@ return [
         'system_prompt' => env('OPENAI_SYSTEM_PROMPT'),
     ],
 
+    'google_genai' => [
+        'api_key' => env('GOOGLE_GENAI_API_KEY'),
+        'model' => env('GOOGLE_GENAI_MODEL', 'gemini-2.5-flash'),
+    ],
+
 ];

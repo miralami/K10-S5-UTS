@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL?.replace(/\/$/, '') || 'http://localhost:8000/api';
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000/api').replace(/\/$/, '');
 
 const FALLBACK_RECOMMENDATIONS = [
   {
@@ -45,7 +45,7 @@ const FALLBACK_RECOMMENDATIONS = [
   },
 ];
 
-const SHOULD_USE_FALLBACK = process.env.REACT_APP_USE_FALLBACK_RECS === 'true';
+const SHOULD_USE_FALLBACK = import.meta.env.VITE_USE_FALLBACK_RECS === 'true';
 
 function isValidRecommendationsResponse(payload) {
   if (!payload || !Array.isArray(payload.recommendations)) {
