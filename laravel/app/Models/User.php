@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -11,7 +10,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class User extends Authenticatable implements JWTSubject
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable;
 
     /**
@@ -36,7 +34,7 @@ class User extends Authenticatable implements JWTSubject
     ];
 
     /**
-     * Get the attributes that should be cast.
+     * The attributes that should be cast.
      *
      * @return array<string, string>
      */
@@ -48,18 +46,24 @@ class User extends Authenticatable implements JWTSubject
         ];
     }
 
+    /**
+     * JWT Identifier
+     */
     public function getJWTIdentifier(): mixed
     {
         return $this->getKey();
     }
 
+    /**
+     * JWT Custom Claims
+     */
     public function getJWTCustomClaims(): array
     {
         return [];
     }
 
     /**
-     * @return HasMany<JournalNote>
+     * Relationship with journal notes.
      */
     public function journalNotes(): HasMany
     {
@@ -67,7 +71,7 @@ class User extends Authenticatable implements JWTSubject
     }
 
     /**
-     * @return HasMany<WeeklyJournalAnalysis>
+     * Relationship with weekly journal analyses.
      */
     public function weeklyJournalAnalyses(): HasMany
     {
