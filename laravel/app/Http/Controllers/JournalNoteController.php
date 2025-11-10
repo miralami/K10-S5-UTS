@@ -10,15 +10,13 @@ class JournalNoteController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $validated = $request->validate([
-            'user_id' => ['nullable', 'integer', 'exists:users,id'],
-        ]);
-
-        $notesQuery = JournalNote::query();
-
-        if (isset($validated['user_id'])) {
-            $notesQuery->where('user_id', $validated['user_id']);
+        $user = auth()->user();
+        if (!$user) {
+            return response()->json(['message' => 'Unauthorized'], 401);
         }
+
+        $notesQuery = JournalNote::query()
+            ->where('user_id', $user->id);
 
         $notes = $notesQuery
             ->orderByDesc('created_at')
@@ -31,11 +29,17 @@ class JournalNoteController extends Controller
 
     public function store(Request $request): JsonResponse
     {
+        $user = auth()->user();
+        if (!$user) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+
         $validated = $request->validate([
-            'user_id' => ['nullable', 'integer', 'exists:users,id'],
             'title' => ['nullable', 'string', 'max:255'],
             'body' => ['required', 'string'],
         ]);
+
+        $validated['user_id'] = $user->id;
 
         $note = JournalNote::create($validated);
 

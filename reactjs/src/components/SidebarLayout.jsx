@@ -1,6 +1,7 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import {
   Box,
+  Button,
   Flex,
   Heading,
   Icon,
@@ -9,6 +10,7 @@ import {
   useColorModeValue,
 } from '@chakra-ui/react';
 import { CalendarIcon, ChatIcon } from '@chakra-ui/icons';
+import { logout } from '../services/authService';
 
 const navItems = [
   {
@@ -25,6 +27,35 @@ const navItems = [
   },
 ];
 
+function LogoutButton() {
+  const navigate = useNavigate();
+  
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate('/login');
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
+
+  return (
+    <Button
+      onClick={handleLogout}
+      width="full"
+      variant="ghost"
+      colorScheme="red"
+      size="lg"
+      borderRadius="xl"
+      _hover={{
+        bg: 'red.900',
+      }}
+    >
+      Keluar
+    </Button>
+  );
+}
+
 export default function SidebarLayout({ children }) {
   const sidebarBg = useColorModeValue('white', 'gray.900');
   const sidebarBorder = useColorModeValue('gray.200', 'whiteAlpha.200');
@@ -33,6 +64,7 @@ export default function SidebarLayout({ children }) {
 
   return (
     <Flex minH="100vh" bgGradient="linear(to-br, gray.900, gray.800)">
+
       <Box
         as="nav"
         w={{ base: 'full', md: 72 }}
@@ -41,6 +73,16 @@ export default function SidebarLayout({ children }) {
         bg={sidebarBg}
         color={useColorModeValue('gray.800', 'whiteAlpha.900')}
         p={6}
+        minH="100vh"
+        position="fixed"
+        left={0}
+        top={0}
+        bottom={0}
+        zIndex={100}
+        display="flex"
+        flexDirection="column"
+        justifyContent="space-between"
+        overflow="hidden"
       >
         <Stack spacing={8}>
           <Box>
@@ -56,9 +98,12 @@ export default function SidebarLayout({ children }) {
             ))}
           </Stack>
         </Stack>
+        <Box mb={2}>
+          <LogoutButton />
+        </Box>
       </Box>
 
-      <Box flex="1" overflow="auto">
+      <Box flex="1" overflow="auto" ml={{ base: 0, md: 72 }}>
         {children}
       </Box>
     </Flex>

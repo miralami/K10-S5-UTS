@@ -9,11 +9,14 @@ use App\Http\Controllers\RecommendationController;
 
 Route::get('movies/search', [MovieSearchController::class, 'search']);
 Route::post('recommendations', [RecommendationController::class, 'create']);
-Route::get('journal/daily-summary', [JournalAnalysisController::class, 'dailySummary']);
-Route::get('journal/weekly-summary', [JournalAnalysisController::class, 'weeklySummary']);
-Route::apiResource('journal/notes', JournalNoteController::class)->parameters([
-    'notes' => 'note',
-]);
+
+Route::middleware('auth:api')->group(function () {
+    Route::get('journal/daily-summary', [JournalAnalysisController::class, 'dailySummary']);
+    Route::get('journal/weekly-summary', [JournalAnalysisController::class, 'weeklySummary']);
+    Route::apiResource('journal/notes', JournalNoteController::class)->parameters([
+        'notes' => 'note',
+    ]);
+});
 
 Route::prefix('auth')->group(function () {
     Route::post('register', [JwtAuthController::class, 'register']);

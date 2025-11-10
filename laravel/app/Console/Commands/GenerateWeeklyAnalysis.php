@@ -63,8 +63,11 @@ class GenerateWeeklyAnalysis extends Command
 
             $analysis['dailyBreakdown'] = $dailyAnalyses
                 ->map(function ($daily) {
+                    $date = $daily->analysis_date instanceof \Carbon\Carbon
+                        ? $daily->analysis_date->toDateString()
+                        : ($daily->analysis_date ? date('Y-m-d', strtotime($daily->analysis_date)) : null);
                     return [
-                        'date' => $daily->analysis_date?->toDateString(),
+                        'date' => $daily->analysis_date ? CarbonImmutable::parse($daily->analysis_date)->toDateString() : null,
                         'analysis' => $daily->analysis,
                     ];
                 })

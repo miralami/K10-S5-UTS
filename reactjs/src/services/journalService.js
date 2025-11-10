@@ -1,6 +1,10 @@
 import { format } from 'date-fns';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:8000/api';
+const API_BASE_URL = 'http://localhost:8000/api';
+
+function getAuthToken() {
+  return localStorage.getItem('token');
+}
 
 const requestDefaults = {
   mode: 'cors',
@@ -9,6 +13,7 @@ const requestDefaults = {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
     'X-Requested-With': 'XMLHttpRequest',
+    'Authorization': `Bearer ${getAuthToken()}`,
   },
 };
 
@@ -247,11 +252,17 @@ export async function listNotes({ userId, startDate, endDate } = {}) {
   }
   
   if (startDate) {
-    params.append('start_date', format(new Date(startDate), 'yyyy-MM-dd'));
+    const start = new Date(startDate);
+    if (!isNaN(start.getTime())) {
+      params.append('start_date', format(start, 'yyyy-MM-dd'));
+    }
   }
   
   if (endDate) {
-    params.append('end_date', format(new Date(endDate), 'yyyy-MM-dd'));
+    const end = new Date(endDate);
+    if (!isNaN(end.getTime())) {
+      params.append('end_date', format(end, 'yyyy-MM-dd'));
+    }
   }
 
   try {
