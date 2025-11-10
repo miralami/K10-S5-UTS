@@ -73,4 +73,12 @@ class User extends Authenticatable implements JWTSubject
     {
         return $this->hasMany(WeeklyJournalAnalysis::class);
     }
+
+    /**
+     * @return HasMany<DailyJournalAnalysis>
+     */
+    public function dailyJournalAnalyses(): HasMany
+    {
+        return $this->hasMany(DailyJournalAnalysis::class);
+    }
 }
