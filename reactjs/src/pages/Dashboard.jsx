@@ -51,7 +51,7 @@ import MoodEmoji from '../components/MoodEmoji';
 import StyledInfoCard from '../components/StyledInfoCard';
 import { AddIcon, ChevronLeftIcon, ChevronRightIcon, DeleteIcon, EditIcon, RepeatIcon, HamburgerIcon } from '@chakra-ui/icons';
 import JournalCalendar from '../components/JournalCalendar';
-import { getWeeklySummary, listNotes, updateNote, deleteNote } from '../services/journalService';
+import { getWeeklySummary, listNotes, updateNote, deleteNote, generateWeeklyForCurrentUser } from '../services/journalService';
 
 // Helper component for info cards
 function InfoCard({ label, value, color = 'whiteAlpha.800' }) {
@@ -66,6 +66,14 @@ function InfoCard({ label, value, color = 'whiteAlpha.800' }) {
     </Box>
   );
 }
+
+// lightweight SVG fallback used when poster fails to load or is aborted
+const POSTER_FALLBACK = "data:image/svg+xml;utf8," + encodeURIComponent(
+  "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 600 900'>" +
+    "<rect width='100%' height='100%' fill='%23101720'/>" +
+    "<text x='50%' y='50%' fill='%23a3a3a3' font-size='22' text-anchor='middle' dominant-baseline='middle'>No Image</text>" +
+  "</svg>"
+);
 
 function MoodMovieCard({ movie, index }) {
   return (
@@ -90,6 +98,9 @@ function MoodMovieCard({ movie, index }) {
           objectFit="cover"
           w="100%"
           h="120px"
+          loading="lazy"
+          decoding="async"
+          fallbackSrc={POSTER_FALLBACK}
         />
       ) : (
         <Flex
@@ -171,6 +182,7 @@ export default function Dashboard() {
   const [selectedNote, setSelectedNote] = useState(null);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isGeneratingWeekly, setIsGeneratingWeekly] = useState(false);
   const [editTitle, setEditTitle] = useState('');
   const [editBody, setEditBody] = useState('');
   const toast = useToast();
@@ -312,6 +324,33 @@ export default function Dashboard() {
     const end = endOfWeek(nextWeek, { locale: id, weekStartsOn: 1 });
     setDateRange({ start, end });
   }, [dateRange.start]);
+
+  // Trigger manual generation for the logged-in user
+  const handleGenerateWeekly = useCallback(async () => {
+    setIsGeneratingWeekly(true);
+    try {
+      const result = await generateWeeklyForCurrentUser({
+        startDate: format(dateRange.start, 'yyyy-MM-dd'),
+        endDate: format(dateRange.end, 'yyyy-MM-dd'),
+      });
+      if (result?._isError || result?.status === 'error') {
+        throw new Error(result?.message || 'Gagal menghasilkan ringkasan');
+      }
+      toast({ title: 'Ringkasan mingguan berhasil dibuat', status: 'success', duration: 3000 });
+      // If backend returned the week that was generated, ensure dashboard uses it
+      if (result?.week?.start && result?.week?.end) {
+        setDateRange({ start: new Date(result.week.start), end: new Date(result.week.end) });
+      }
+      // Refresh UI for that week
+      await fetchWeeklySummaryData();
+      await fetchAllNotes();
+    } catch (error) {
+      console.error('Error generating weekly for user:', error);
+      toast({ title: 'Gagal membuat ringkasan', description: error.message, status: 'error', duration: 5000 });
+    } finally {
+      setIsGeneratingWeekly(false);
+    }
+  }, [fetchWeeklySummaryData, fetchAllNotes, toast, dateRange.start, dateRange.end]);
 
   // Handle note deletion
   const handleDeleteNote = async (note) => {
@@ -674,9 +713,14 @@ export default function Dashboard() {
                         </Heading>
                         <Text fontSize="lg">🌟</Text>
                       </HStack>
-                      <Text color="orange.200" fontWeight="medium" fontSize="xs">
-                        {format(dateRange.start, 'd MMM', { locale: id })} - {format(dateRange.end, 'd MMM', { locale: id })}
-                      </Text>
+                      <HStack spacing={2}>
+                        <Text color="orange.200" fontWeight="medium" fontSize="xs">
+                          {format(dateRange.start, 'd MMM', { locale: id })} - {format(dateRange.end, 'd MMM', { locale: id })}
+                        </Text>
+                        <Button size="xs" colorScheme="cyan" onClick={handleGenerateWeekly} isLoading={isGeneratingWeekly}>
+                          Generate
+                        </Button>
+                      </HStack>
                     </Flex>
 
                   {weeklyLoading ? (

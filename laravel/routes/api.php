@@ -11,6 +11,8 @@ Route::post('recommendations', [RecommendationController::class, 'create']);
 Route::middleware('auth:api')->group(function () {
     Route::get('journal/daily-summary', [JournalAnalysisController::class, 'dailySummary']);
     Route::get('journal/weekly-summary', [JournalAnalysisController::class, 'weeklySummary']);
+    // Manual trigger for generating weekly analysis for the authenticated user
+    Route::post('journal/generate-weekly', [JournalAnalysisController::class, 'generateWeeklyForUser']);
     Route::apiResource('journal/notes', JournalNoteController::class)->parameters([
         'notes' => 'note',
     ]);

@@ -351,3 +351,23 @@ export async function deleteNote(id) {
     throw error; // Re-throw the error to be handled by the caller
   }
 }
+
+export async function generateWeeklyForCurrentUser({ startDate, endDate, weekEnding } = {}) {
+  try {
+    const body = {};
+    if (startDate) body.start_date = startDate;
+    if (endDate) body.end_date = endDate;
+    if (weekEnding) body.week_ending = weekEnding;
+
+    const response = await fetch(
+      `${API_BASE_URL}/journal/generate-weekly`,
+      buildRequestOptions({ method: 'POST', body: JSON.stringify(body) })
+    );
+
+    const payload = await handleResponse(response);
+    return payload;
+  } catch (error) {
+    console.error('Error in generateWeeklyForCurrentUser:', error);
+    throw error;
+  }
+}

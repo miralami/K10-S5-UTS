@@ -6,6 +6,9 @@ use App\Models\DailyJournalAnalysis;
 use App\Models\JournalNote;
 use App\Models\WeeklyJournalAnalysis;
 use App\Services\WeeklyMovieRecommendationService;
+use App\Services\DailyJournalAnalysisService;
+use App\Services\GeminiMoodAnalysisService;
+use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -148,6 +151,93 @@ class JournalAnalysisController extends Controller
         }
     }
 
+    /**
+     * Generate weekly analysis for the currently authenticated user.
+     * This uses the same logic as the artisan command but limited to a single user.
+     */
+    public function generateWeeklyForUser(Request $request, DailyJournalAnalysisService $dailyService, GeminiMoodAnalysisService $analysisService): JsonResponse
+    {
+        try {
+            $validated = $request->validate([
+                'week_ending' => ['nullable', 'date'],
+                'start_date' => ['nullable', 'date'],
+                'end_date' => ['nullable', 'date'],
+            ]);
+
+            $user = $request->user();
+            if (! $user || !($user instanceof User)) {
+                return response()->json([ 'status' => 'error', 'message' => 'Unauthorized' ], 401);
+            }
+
+            if (isset($validated['start_date']) && isset($validated['end_date'])) {
+                $weekStart = CarbonImmutable::parse($validated['start_date']);
+                $weekEnding = CarbonImmutable::parse($validated['end_date']);
+            } else {
+                $weekEnding = isset($validated['week_ending']) && $validated['week_ending']
+                    ? CarbonImmutable::parse($validated['week_ending'])
+                    : CarbonImmutable::now();
+
+                $weekStart = $weekEnding->startOfWeek(CarbonImmutable::MONDAY);
+                $weekEnding = $weekEnding->endOfWeek(CarbonImmutable::SUNDAY);
+            }
+
+            // Log the requested week for debugging
+            \Log::info('generateWeeklyForUser called', [
+                'user_id' => $user->id,
+                'start_date' => $weekStart->toDateString(),
+                'end_date' => $weekEnding->toDateString(),
+            ]);
+
+            // Ensure daily analyses exist (or are created) for this user's week
+            $dailyAnalyses = $dailyService->ensureWeekForUser($user, $weekEnding);
+
+            $analysis = $analysisService->analyzeWeeklyFromDaily($dailyAnalyses, $weekEnding);
+
+            $analysis['noteCount'] = $dailyAnalyses->sum(function ($daily) {
+                $payload = $daily->analysis ?? [];
+                return (int) ($payload['noteCount'] ?? 0);
+            });
+
+            $analysis['dailyBreakdown'] = $dailyAnalyses
+                ->map(function ($daily) {
+                    return [
+                        'date' => $daily->analysis_date ? CarbonImmutable::parse($daily->analysis_date)->toDateString() : null,
+                        'analysis' => $daily->analysis,
+                    ];
+                })
+                ->values()
+                ->all();
+
+            WeeklyJournalAnalysis::updateOrCreate(
+                [
+                    'user_id' => $user->id,
+                    'week_start' => $weekStart->toDateString(),
+                ],
+                [
+                    'week_end' => $weekEnding->toDateString(),
+                    'analysis' => $analysis,
+                ],
+            );
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Weekly analysis generated for user.',
+                'week' => [ 'start' => $weekStart->toDateString(), 'end' => $weekEnding->toDateString() ],
+                'analysis' => $analysis,
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error generating weekly analysis for user: ' . $e->getMessage(), [
+                'exception' => $e,
+                'user' => $request->user()?->id,
+            ]);
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Gagal menghasilkan ringkasan mingguan. Cek log untuk detail.',
+                'error' => config('app.debug') ? $e->getMessage() : null,
+            ], 500);
+        }
+    }
+
     private function formatNote(JournalNote $note): array
     {
         return [
@@ -155,9 +245,15 @@ class JournalAnalysisController extends Controller
             'user_id' => $note->user_id,
             'title' => $note->title ?? null,
             'body' => $note->body ?? null,
-            'note_date' => $note->note_date ? $note->note_date->toDateString() : null,
-            'created_at' => $note->created_at ? $note->created_at->toIso8601String() : null,
-            'updated_at' => $note->updated_at ? $note->updated_at->toIso8601String() : null,
+            'note_date' => !empty($note->note_date) ? (
+                $note->note_date instanceof \DateTimeInterface ? $note->note_date->format('Y-m-d') : CarbonImmutable::parse($note->note_date)->toDateString()
+            ) : null,
+            'created_at' => !empty($note->created_at) ? (
+                $note->created_at instanceof \DateTimeInterface ? $note->created_at->format(DATE_ATOM) : CarbonImmutable::parse($note->created_at)->toIso8601String()
+            ) : null,
+            'updated_at' => !empty($note->updated_at) ? (
+                $note->updated_at instanceof \DateTimeInterface ? $note->updated_at->format(DATE_ATOM) : CarbonImmutable::parse($note->updated_at)->toIso8601String()
+            ) : null,
         ];
     }
 
@@ -166,7 +262,9 @@ class JournalAnalysisController extends Controller
         return [
             'id' => $daily->id,
             'userId' => $daily->user_id,
-            'date' => $daily->analysis_date?->toDateString(),
+            'date' => !empty($daily->analysis_date) ? (
+                $daily->analysis_date instanceof \DateTimeInterface ? $daily->analysis_date->format('Y-m-d') : CarbonImmutable::parse($daily->analysis_date)->toDateString()
+            ) : null,
             'analysis' => $daily->analysis,
         ];
     }

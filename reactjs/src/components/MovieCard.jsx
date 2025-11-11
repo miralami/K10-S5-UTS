@@ -13,6 +13,14 @@ import {
   Flex
 } from '@chakra-ui/react';
 
+// lightweight SVG fallback used when poster fails to load or is aborted
+const POSTER_FALLBACK = "data:image/svg+xml;utf8," + encodeURIComponent(
+  "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 600 900'>" +
+    "<rect width='100%' height='100%' fill='%23101720'/>" +
+    "<text x='50%' y='50%' fill='%23a3a3a3' font-size='28' text-anchor='middle' dominant-baseline='middle'>No Image</text>" +
+  "</svg>"
+);
+
 const MovieCard = ({ movie, variant, getPrimaryWatchProvider }) => {
   const isRecommendation = variant === 'recommendations';
   const primaryProvider = isRecommendation ? getPrimaryWatchProvider(movie.watchProviders) : null;
@@ -32,6 +40,9 @@ const MovieCard = ({ movie, variant, getPrimaryWatchProvider }) => {
             h="360px"
             transition="transform 0.3s ease"
             _groupHover={{ transform: 'scale(1.05)' }}
+            loading="lazy"
+            decoding="async"
+            fallbackSrc={POSTER_FALLBACK}
           />
         </Box>
       ) : (
