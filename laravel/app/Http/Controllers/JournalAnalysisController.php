@@ -8,6 +8,7 @@ use App\Models\WeeklyJournalAnalysis;
 use App\Services\WeeklyMovieRecommendationService;
 use App\Services\DailyJournalAnalysisService;
 use App\Services\GeminiMoodAnalysisService;
+use Tymon\JWTAuth\Facades\JWTAuth;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
@@ -28,6 +29,29 @@ class JournalAnalysisController extends Controller
                 'end_date' => ['nullable', 'date'],
                 'user_id' => ['nullable', 'integer', 'exists:users,id'],
             ]);
+
+            // If the client did not explicitly request a user_id, prefer the authenticated
+            // user derived from the Authorization bearer token (if present). This prevents
+            // returning another user's most-recent weekly analysis when multiple auth
+            // methods (session cookie + bearer token) are present.
+            if (! isset($validated['user_id'])) {
+                try {
+                    if ($request->header('Authorization')) {
+                        $tokenUser = JWTAuth::parseToken()->authenticate();
+                        if ($tokenUser instanceof User) {
+                            $validated['user_id'] = $tokenUser->id;
+                        }
+                    }
+                } catch (\Exception $e) {
+                    // Failed to parse token: fall back to request->user() below
+                    \Log::info('JWT parseToken failed in weeklySummary: ' . $e->getMessage());
+                }
+            }
+
+            // If still not set, fall back to the standard auth user if available
+            if (! isset($validated['user_id']) && $request->user() instanceof User) {
+                $validated['user_id'] = $request->user()->id;
+            }
 
             if (isset($validated['start_date']) && isset($validated['end_date'])) {
                 $weekStart = CarbonImmutable::parse($validated['start_date']);
@@ -164,7 +188,25 @@ class JournalAnalysisController extends Controller
                 'end_date' => ['nullable', 'date'],
             ]);
 
-            $user = $request->user();
+            // Prefer the user authenticated via Authorization bearer token when present.
+            // This avoids cases where a session cookie for a different user is sent alongside a token.
+            $user = null;
+            try {
+                if ($request->header('Authorization')) {
+                    $userFromToken = JWTAuth::parseToken()->authenticate();
+                    if ($userFromToken && $userFromToken instanceof User) {
+                        $user = $userFromToken;
+                    }
+                }
+            } catch (\Exception $e) {
+                // Token parse/auth may fail; we'll fall back to request->user()
+                \Log::info('JWT parseToken failed in generateWeeklyForUser: ' . $e->getMessage());
+            }
+
+            if (! $user) {
+                $user = $request->user();
+            }
+
             if (! $user || !($user instanceof User)) {
                 return response()->json([ 'status' => 'error', 'message' => 'Unauthorized' ], 401);
             }
