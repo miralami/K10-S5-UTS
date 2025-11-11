@@ -1,6 +1,23 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { format, startOfWeek, endOfWeek, isSameDay } from 'date-fns';
 import { id } from 'date-fns/locale';
+
+// Helper untuk greeting dinamis
+const getTimeBasedGreeting = () => {
+  const hour = new Date().getHours();
+  
+  if (hour >= 5 && hour < 10) {
+    return { greeting: 'Selamat pagi! ☀️', message: 'Semoga hari ini penuh energi positif' };
+  } else if (hour >= 10 && hour < 15) {
+    return { greeting: 'Halo! 👋', message: 'Ayo lihat perjalanan moodmu minggu ini' };
+  } else if (hour >= 15 && hour < 18) {
+    return { greeting: 'Selamat sore! 🌤️', message: 'Waktunya refleksi sejenak' };
+  } else if (hour >= 18 && hour < 22) {
+    return { greeting: 'Selamat malam! 🌙', message: 'Lihat catatan harianmu hari ini' };
+  } else {
+    return { greeting: 'Masih terjaga? 🦉', message: 'Jangan lupa istirahat ya' };
+  }
+};
 import {
   Box,
   Button,
@@ -52,80 +69,73 @@ function InfoCard({ label, value, color = 'whiteAlpha.800' }) {
 
 function MoodMovieCard({ movie, index }) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.1 }}
+    <Box
+      bg="whiteAlpha.100"
+      borderRadius="lg"
+      border="1px solid"
+      borderColor="whiteAlpha.200"
+      overflow="hidden"
+      display="flex"
+      flexDirection="column"
+      h="100%"
+      _hover={{
+        borderColor: 'pink.300',
+      }}
+      transition="all 0.3s"
     >
-      <Box
-        bg="whiteAlpha.100"
-        borderRadius="xl"
-        border="1px solid"
-        borderColor="whiteAlpha.200"
-        overflow="hidden"
-        display="flex"
-        flexDirection="column"
-        h="100%"
-      >
-        {movie.posterUrl ? (
-          <Image
-            src={movie.posterUrl}
-            alt={movie.title}
-            objectFit="cover"
-            w="100%"
-            h="200px"
-          />
-        ) : (
-          <Flex
-            align="center"
-            justify="center"
-            w="100%"
-            h="200px"
-            bg="whiteAlpha.200"
-          >
-            <Text fontSize="3xl">🎬</Text>
-          </Flex>
+      {movie.posterUrl ? (
+        <Image
+          src={movie.posterUrl}
+          alt={movie.title}
+          objectFit="cover"
+          w="100%"
+          h="120px"
+        />
+      ) : (
+        <Flex
+          align="center"
+          justify="center"
+          w="100%"
+          h="120px"
+          bg="whiteAlpha.200"
+        >
+          <Text fontSize="2xl">🎬</Text>
+        </Flex>
+      )}
+      <Stack spacing={1.5} p={2} flex="1">
+        <Box>
+          <Heading size="xs" color="pink.200" noOfLines={1}>
+            {movie.title}
+          </Heading>
+          <HStack spacing={1} mt={1}>
+            {movie.year && (
+              <Badge colorScheme="purple" variant="subtle" fontSize="2xs">
+                {movie.year}
+              </Badge>
+            )}
+            {movie.imdbId && (
+              <Badge colorScheme="pink" variant="outline" fontSize="2xs">
+                IMDb
+              </Badge>
+            )}
+          </HStack>
+        </Box>
+        <Text fontSize="2xs" color="whiteAlpha.900" lineHeight="short" noOfLines={2}>
+          {movie.reason}
+        </Text>
+        {Array.isArray(movie.genres) && movie.genres.length > 0 && (
+          <Wrap spacing={1}>
+            {movie.genres.slice(0, 3).map((genre) => (
+              <WrapItem key={genre}>
+                <Badge colorScheme="cyan" variant="subtle" fontSize="2xs">
+                  {genre}
+                </Badge>
+              </WrapItem>
+            ))}
+          </Wrap>
         )}
-        <Stack spacing={4} p={5} flex="1">
-          <Box>
-            <Heading size="md" color="cyan.200" noOfLines={2}>
-              {movie.title}
-            </Heading>
-            <HStack spacing={2} mt={2}>
-              {movie.year && (
-                <Badge colorScheme="cyan" variant="subtle">
-                  {movie.year}
-                </Badge>
-              )}
-              {movie.imdbId && (
-                <Badge colorScheme="purple" variant="outline">
-                  IMDb {movie.imdbId.toUpperCase()}
-                </Badge>
-              )}
-            </HStack>
-          </Box>
-          {movie.tagline && (
-            <Text fontSize="sm" color="whiteAlpha.700" fontStyle="italic">
-              {movie.tagline}
-            </Text>
-          )}
-          <Text fontSize="sm" color="whiteAlpha.900" lineHeight="tall">
-            {movie.reason}
-          </Text>
-          {Array.isArray(movie.genres) && movie.genres.length > 0 && (
-            <Wrap spacing={2} pt={2}>
-              {movie.genres.map((genre) => (
-                <WrapItem key={genre}>
-                  <Badge colorScheme="blue" variant="subtle">
-                    {genre}
-                  </Badge>
-                </WrapItem>
-              ))}
-            </Wrap>
-          )}
-        </Stack>
-      </Box>
-    </motion.div>
+      </Stack>
+    </Box>
   );
 }
 
@@ -133,6 +143,7 @@ export default function Dashboard() {
   const { isOpen: isSidebarOpen, onToggle: onSidebarToggle } = useDisclosure({ defaultIsOpen: true });
   const showSidebarToggle = useBreakpointValue({ base: true, xl: false });
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [greeting, setGreeting] = useState({ greeting: '', message: '' });
   const [dateRange, setDateRange] = useState(() => {
     const today = new Date();
     return {
@@ -140,6 +151,11 @@ export default function Dashboard() {
       end: endOfWeek(today, { locale: id, weekStartsOn: 1 })
     };
   });
+
+  // Set greeting saat mount
+  useEffect(() => {
+    setGreeting(getTimeBasedGreeting());
+  }, []);
 
   const [weeklyData, setWeeklyData] = useState({
     analysis: null,
@@ -162,25 +178,24 @@ export default function Dashboard() {
   // Get notes for the selected date
   const notesForSelectedDate = useMemo(() => {
     if (!selectedDate) return [];
-    console.log('All notes:', allNotes);
-    console.log('Selected date:', selectedDate);
-    
-    return allNotes.filter(note => {
-      // Use noteDate first, fallback to created_at/createdAt
-      const dateStr = note.noteDate || note.note_date || note.createdAt || note.created_at;
+    // Filter notes by selectedDate using normalized `note_date` or `createdAt` fields.
+    const seen = new Set();
+    const filtered = allNotes.filter((note) => {
+      // prefer updatedAt (latest) for daily filters; fall back to note_date or createdAt
+      const dateStr = note.updatedAt || note.updated_at || note.note_date || note.noteDate || note.createdAt || note.created_at;
       if (!dateStr) return false;
-      
       const noteDate = new Date(dateStr);
-      const result = isSameDay(noteDate, selectedDate);
-      
-      console.log('Comparing:', {
-        noteDate: noteDate.toISOString(),
-        selectedDate: selectedDate.toISOString(),
-        isSame: result
-      });
-      
-      return result;
+      if (!isSameDay(noteDate, selectedDate)) return false;
+      // dedupe by id if present, otherwise by combination key
+      const key = note.id ?? `${dateStr}::${(note.body || '').slice(0,40)}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
     });
+
+    // sort by updated time descending (most recent first), fallbacks included
+    filtered.sort((a, b) => new Date(b.updatedAt || b.note_date || b.createdAt) - new Date(a.updatedAt || a.note_date || a.createdAt));
+    return filtered;
   }, [allNotes, selectedDate]);
 
   // Fetch notes for the current date range
@@ -192,7 +207,30 @@ export default function Dashboard() {
         startDate: dateRange.start,
         endDate: dateRange.end,
       });
-      setAllNotes(Array.isArray(response?.data) ? response.data : []);
+      // journalService.listNotes may return either an array or an object with `data`.
+      // Normalize to an array, dedupe by id, and sort by date desc so latest appears first.
+      const raw = Array.isArray(response) ? response : Array.isArray(response?.data) ? response.data : [];
+      const byId = new Map();
+      for (const n of raw) {
+        if (!n) continue;
+        // prefer server-provided id; if none, fallback to updated timestamp+body hash to avoid accidental dupes
+        const key = n.id ?? `${n.updatedAt || n.updated_at || n.note_date || n.createdAt || n.created_at || ''}::${(n.body || '').slice(0,40)}`;
+        byId.set(key, n);
+      }
+      const normalized = Array.from(byId.values())
+        .map((note) => ({
+          // normalize common date fields for consistent parsing elsewhere
+          id: note.id,
+          title: note.title,
+          body: note.body,
+          note_date: note.note_date || note.noteDate || note.updatedAt || note.updated_at || note.createdAt || note.created_at,
+          createdAt: note.createdAt || note.created_at,
+          updatedAt: note.updatedAt || note.updated_at,
+          ...note,
+        }))
+        .sort((a, b) => new Date(b.updatedAt || b.note_date || b.createdAt) - new Date(a.updatedAt || a.note_date || a.createdAt));
+
+      setAllNotes(normalized);
     } catch (error) {
       console.error('Error fetching notes:', error);
       toast({
@@ -314,7 +352,7 @@ export default function Dashboard() {
         justify="center" 
         align="center" 
         minH="100vh" 
-        bg="gray.900"
+        bgGradient="linear(to-br, #1a1a2e, #16213e, #0f3460, #533483)"
         flexDirection="column"
         gap={4}
       >
@@ -331,9 +369,12 @@ export default function Dashboard() {
         >
           <Text fontSize="4xl">📔</Text>
         </motion.div>
-        <Spinner size="xl" color="cyan.200" thickness="3px" />
+        <Spinner size="xl" color="pink.300" thickness="3px" />
         <Text color="whiteAlpha.800" fontSize="lg" fontWeight="medium">
-          Memuat jurnal Anda...
+          Memuat refleksi harianmu...
+        </Text>
+        <Text color="whiteAlpha.600" fontSize="sm">
+          Sebentar ya, kami sedang menyiapkan wawasanmu ✨
         </Text>
       </Flex>
     );
@@ -341,58 +382,84 @@ export default function Dashboard() {
 
   return (
     <Box 
-      minH="100vh" 
-      bg="gray.900" 
+      h="100vh" 
+      overflow="hidden"
+      bgGradient="linear(to-br, #1a1a2e, #16213e, #0f3460, #533483)"
       color="white" 
-      p={{ base: 4, md: 6 }}
-      backgroundImage="linear-gradient(to bottom right, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.9))"
+      position="relative"
+      _before={{
+        content: '""',
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        bgImage: 'radial-gradient(circle at 20% 50%, rgba(56, 189, 248, 0.05) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(167, 139, 250, 0.05) 0%, transparent 50%)',
+        pointerEvents: 'none',
+      }}
     >
-      <Container maxW="7xl" py={8}>
-        <Stack spacing={6}>
-          {/* Header */}
-          <GlassCard p={6}>
-            <Flex 
-              justify="space-between" 
-              align="center" 
-              direction={{ base: 'column', md: 'row' }}
-              gap={4}
-            >
-              <Stack spacing={1}>
-                <Heading 
-                  size="xl" 
-                  bgGradient="linear(to-r, cyan.200, blue.200)" 
-                  bgClip="text"
-                >
-                  Jurnal Harian
-                </Heading>
-                <Text color="whiteAlpha.700" fontSize="lg">
-                  {format(selectedDate, 'EEEE, d MMMM yyyy', { locale: id })}
-                </Text>
-              </Stack>
-              <HStack spacing={4}>
-                <Button
-                  leftIcon={<RepeatIcon />}
-                  onClick={() => {
-                    fetchWeeklySummaryData();
-                    fetchAllNotes();
-                  }}
-                  isLoading={weeklyLoading || notesLoading}
-                  variant="ghost"
-                  _hover={{ bg: 'whiteAlpha.200' }}
-                  size="sm"
-                >
-                  Muat Ulang
-                </Button>
-                <Button
-                  colorScheme="cyan"
-                  size="sm"
-                  onClick={() => window.location.href = '/'}
-                >
-                  Tambah Catatan Baru
-                </Button>
-              </HStack>
-            </Flex>
-          </GlassCard>
+      <Container maxW="7xl" h="full" py={3} position="relative" zIndex={1}>
+        <Stack spacing={3} h="full">
+          {/* Header - Compact */}
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+          >
+            <GlassCard p={3} backdropFilter="blur(20px)">
+              <Flex 
+                justify="space-between" 
+                align="center" 
+                gap={3}
+              >
+                <HStack spacing={3}>
+                  <Box>
+                    <HStack spacing={2} mb={1}>
+                      <Badge colorScheme="purple" px={2} py={0.5} borderRadius="full" textTransform="none" fontSize="xs">
+                        🔒 Private
+                      </Badge>
+                      <Badge colorScheme="pink" px={2} py={0.5} borderRadius="full" textTransform="none" fontSize="xs">
+                        Refleksi
+                      </Badge>
+                    </HStack>
+                    <Heading 
+                      size="md" 
+                      bgGradient="linear(to-r, orange.200, pink.200)" 
+                      bgClip="text"
+                    >
+                      {greeting.greeting}
+                    </Heading>
+                    <Text color="whiteAlpha.600" fontSize="xs">
+                      {format(selectedDate, 'EEEE, d MMM yyyy', { locale: id })}
+                    </Text>
+                  </Box>
+                </HStack>
+                <HStack spacing={2}>
+                  <IconButton
+                    icon={<RepeatIcon />}
+                    onClick={() => {
+                      fetchWeeklySummaryData();
+                      fetchAllNotes();
+                    }}
+                    isLoading={weeklyLoading || notesLoading}
+                    variant="ghost"
+                    colorScheme="purple"
+                    _hover={{ bg: 'whiteAlpha.200' }}
+                    size="sm"
+                    aria-label="Refresh"
+                  />
+                  <Button
+                    colorScheme="pink"
+                    size="sm"
+                    onClick={() => window.location.href = '/'}
+                    leftIcon={<AddIcon />}
+                  >
+                    Tulis
+                  </Button>
+                </HStack>
+              </Flex>
+            </GlassCard>
+          </motion.div>
 
           {/* Sidebar Toggle Button (Mobile) */}
           {showSidebarToggle && (
@@ -409,139 +476,208 @@ export default function Dashboard() {
           )}
 
           <Grid 
-            templateColumns={{ base: '1fr', xl: isSidebarOpen ? '350px 1fr' : '0 1fr' }} 
-            gap={6}
+            templateColumns={{ base: '1fr', xl: isSidebarOpen ? '320px 1fr' : '0 1fr' }} 
+            gap={3}
+            flex="1"
+            overflow="hidden"
           >
             {/* Left Side - Calendar & Notes */}
             <Box 
               display={{ base: isSidebarOpen ? 'block' : 'none', xl: 'block' }} 
-              width={{ base: 'full', xl: isSidebarOpen ? '350px' : '0' }}
+              width={{ base: 'full', xl: isSidebarOpen ? '320px' : '0' }}
               transition="width 0.2s"
               overflow="hidden"
             >
-              <Stack spacing={6} position="sticky" top={6} alignSelf="start">
+              <Stack spacing={3} h="full" overflow="auto" pr={2}
+                sx={{
+                  '&::-webkit-scrollbar': { width: '6px' },
+                  '&::-webkit-scrollbar-track': { bg: 'whiteAlpha.100' },
+                  '&::-webkit-scrollbar-thumb': { bg: 'whiteAlpha.400', borderRadius: 'full' },
+                }}
+              >
               {/* Calendar */}
-              <Box bg="rgba(15, 23, 42, 0.75)" borderRadius="2xl" p={6} border="1px solid" borderColor="whiteAlpha.200">
-                <JournalCalendar
-                  selectedDate={selectedDate}
-                  onSelectDate={handleDateSelect}
-                  notes={allNotes}
-                />
-                <Flex justify="space-between" mt={4} align="center">
-                  <Button
-                    leftIcon={<ChevronLeftIcon />}
-                    onClick={goToPreviousWeek}
-                    size="sm"
-                    variant="ghost"
-                  >
-                    Minggu Lalu
-                  </Button>
-                  <Text fontSize="md" fontWeight="medium">
-                    {format(dateRange.start, 'd MMM', { locale: id })} - {format(dateRange.end, 'd MMM yyyy', { locale: id })}
-                  </Text>
-                  <Button
-                    rightIcon={<ChevronRightIcon />}
-                    onClick={goToNextWeek}
-                    size="sm"
-                    variant="ghost"
-                  >
-                    Minggu Depan
-                  </Button>
-                </Flex>
-              </Box>
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.5, delay: 0.1 }}
+              >
+                <Box 
+                  bg="rgba(15, 23, 42, 0.75)" 
+                  borderRadius="xl" 
+                  p={3} 
+                  border="1px solid" 
+                  borderColor="whiteAlpha.200"
+                  backdropFilter="blur(20px)"
+                  _hover={{ borderColor: 'purple.300' }}
+                  transition="all 0.3s"
+                >
+                  <JournalCalendar
+                    selectedDate={selectedDate}
+                    onSelectDate={handleDateSelect}
+                    notes={allNotes}
+                  />
+                  <Flex justify="space-between" mt={2} align="center" gap={1}>
+                    <IconButton
+                      icon={<ChevronLeftIcon />}
+                      onClick={goToPreviousWeek}
+                      size="xs"
+                      variant="ghost"
+                      colorScheme="purple"
+                      aria-label="Previous week"
+                    />
+                    <Text fontSize="xs" fontWeight="medium" color="orange.200" textAlign="center">
+                      {format(dateRange.start, 'd MMM', { locale: id })} - {format(dateRange.end, 'd MMM', { locale: id })}
+                    </Text>
+                    <IconButton
+                      icon={<ChevronRightIcon />}
+                      onClick={goToNextWeek}
+                      size="xs"
+                      variant="ghost"
+                      colorScheme="purple"
+                      aria-label="Next week"
+                    />
+                  </Flex>
+                </Box>
+              </motion.div>
 
               {/* Daily Notes */}
-              <Box bg="rgba(15, 23, 42, 0.75)" borderRadius="2xl" p={6} border="1px solid" borderColor="whiteAlpha.200">
-                <Flex justify="space-between" align="center" mb={4}>
-                  <Heading size="md">Catatan Harian</Heading>
-                </Flex>
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+              >
+                <Box 
+                  bg="rgba(15, 23, 42, 0.75)" 
+                  borderRadius="xl" 
+                  p={3} 
+                  border="1px solid" 
+                  borderColor="whiteAlpha.200"
+                  backdropFilter="blur(20px)"
+                  _hover={{ borderColor: 'pink.300' }}
+                  transition="all 0.3s"
+                  maxH="calc(100vh - 420px)"
+                  overflow="auto"
+                  sx={{
+                    '&::-webkit-scrollbar': { width: '6px' },
+                    '&::-webkit-scrollbar-track': { bg: 'whiteAlpha.100' },
+                    '&::-webkit-scrollbar-thumb': { bg: 'whiteAlpha.400', borderRadius: 'full' },
+                  }}
+                >
+                  <Flex justify="space-between" align="center" mb={2}>
+                    <HStack>
+                      <Heading size="sm">Catatan</Heading>
+                      <Text fontSize="lg">📝</Text>
+                    </HStack>
+                  </Flex>
 
-                {notesForSelectedDate.length === 0 ? (
-                  <Box textAlign="center" py={8} color="whiteAlpha.600">
-                    <Text>Belum ada catatan untuk hari ini</Text>
-                  </Box>
-                ) : (
-                  <Stack spacing={4}>
-                    {notesForSelectedDate.map((note) => (
-                      <motion.div
-                        key={note.id}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.3 }}
-                      >
-                        <Box 
-                          p={4}
-                          bg="whiteAlpha.50"
-                          borderRadius="xl"
-                          border="1px solid"
-                          borderColor="whiteAlpha.100"
-                          _hover={{ 
-                            bg: 'whiteAlpha.100',
-                            transform: 'translateY(-2px)',
-                            boxShadow: 'lg',
-                            borderColor: 'whiteAlpha.200'
-                          }}
-                          transition="all 0.2s"
+                  {notesForSelectedDate.length === 0 ? (
+                    <Box textAlign="center" py={4} color="whiteAlpha.600">
+                      <Text fontSize="2xl" mb={1}>✨</Text>
+                      <Text fontSize="sm">Belum ada catatan</Text>
+                    </Box>
+                  ) : (
+                    <Stack spacing={2}>
+                      {notesForSelectedDate.map((note, idx) => (
+                        <motion.div
+                          key={note.id}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.3, delay: idx * 0.05 }}
                         >
-                          <Flex justify="space-between" align="start" gap={4}>
-                            <Box flex="1">
-                              <Flex align="center" mb={2}>
-                                <Text fontWeight="semibold" fontSize="md" color="whiteAlpha.900">
-                                  {note.title || 'Tanpa Judul'}
+                          <Box 
+                            p={2}
+                            bg="whiteAlpha.50"
+                            borderRadius="lg"
+                            border="1px solid"
+                            borderColor="whiteAlpha.100"
+                            _hover={{ 
+                              bg: 'whiteAlpha.100',
+                              borderColor: 'pink.300'
+                            }}
+                            transition="all 0.2s"
+                          >
+                            <Flex justify="space-between" align="start" gap={2}>
+                              <Box flex="1" minW="0">
+                                <Flex align="center" mb={1}>
+                                  <Text fontWeight="semibold" fontSize="xs" color="orange.200" noOfLines={1}>
+                                    {note.title || 'Tanpa Judul'}
+                                  </Text>
+                                  <Text fontSize="xs" color="whiteAlpha.600" ml={2} flexShrink={0}>
+                                    {format(new Date(note.updatedAt || note.createdAt || note.note_date), 'HH:mm')}
+                                  </Text>
+                                </Flex>
+                                <Text 
+                                  fontSize="xs" 
+                                  color="whiteAlpha.800" 
+                                  noOfLines={2}
+                                  lineHeight="short"
+                                >
+                                  {note.body}
                                 </Text>
-                                <Text fontSize="sm" color="whiteAlpha.600" ml={2}>
-                                  • {format(new Date(note.note_date || note.createdAt), 'HH:mm')}
-                                </Text>
-                              </Flex>
-                              <Text 
-                                fontSize="sm" 
-                                color="whiteAlpha.800" 
-                                noOfLines={2}
-                                lineHeight="tall"
-                              >
-                                {note.body}
-                              </Text>
-                            </Box>
-                            <HStack spacing={1}>
-                              <IconButton
-                                icon={<EditIcon />}
-                                size="sm"
-                                variant="ghost"
-                                aria-label="Edit catatan"
-                                color="cyan.200"
-                                _hover={{ bg: 'whiteAlpha.200' }}
-                              />
-                              <IconButton
-                                icon={<DeleteIcon />}
-                                size="sm"
-                                variant="ghost"
-                                colorScheme="red"
-                                aria-label="Hapus catatan"
-                                onClick={() => handleDeleteNote(note)}
-                                isLoading={isDeleting}
-                                _hover={{ bg: 'red.900' }}
-                              />
-                            </HStack>
-                          </Flex>
-                        </Box>
-                      </motion.div>
-                    ))}
-                  </Stack>
-                )}
-              </Box>
+                              </Box>
+                              <HStack spacing={0.5}>
+                                <IconButton
+                                  icon={<EditIcon />}
+                                  size="xs"
+                                  variant="ghost"
+                                  aria-label="Edit"
+                                  colorScheme="purple"
+                                />
+                                <IconButton
+                                  icon={<DeleteIcon />}
+                                  size="xs"
+                                  variant="ghost"
+                                  colorScheme="red"
+                                  aria-label="Hapus"
+                                  onClick={() => handleDeleteNote(note)}
+                                  isLoading={isDeleting}
+                                />
+                              </HStack>
+                            </Flex>
+                          </Box>
+                        </motion.div>
+                      ))}
+                    </Stack>
+                  )}
+                </Box>
+              </motion.div>
             </Stack>
             </Box>
 
             {/* Right Side - Weekly Summary */}
-            <Box>
-              <Box bg="rgba(15, 23, 42, 0.75)" borderRadius="2xl" p={6} border="1px solid" borderColor="whiteAlpha.200">
-                <Stack spacing={6}>
-                  <Box>
-                    <Heading size="lg" mb={1}>Ringkasan Mingguan</Heading>
-                    <Text color="whiteAlpha.600">
-                      {format(dateRange.start, 'd MMM', { locale: id })} - {format(dateRange.end, 'd MMM yyyy', { locale: id })}
-                    </Text>
-                  </Box>
+            <Box overflow="auto" h="full"
+              sx={{
+                '&::-webkit-scrollbar': { width: '6px' },
+                '&::-webkit-scrollbar-track': { bg: 'whiteAlpha.100' },
+                '&::-webkit-scrollbar-thumb': { bg: 'whiteAlpha.400', borderRadius: 'full' },
+              }}
+            >
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.5, delay: 0.15 }}
+              >
+                <Box 
+                  bg="rgba(15, 23, 42, 0.75)" 
+                  borderRadius="xl" 
+                  p={3} 
+                  border="1px solid" 
+                  borderColor="whiteAlpha.200"
+                  backdropFilter="blur(20px)"
+                  boxShadow="0 0 40px rgba(167, 139, 250, 0.1)"
+                >
+                  <Stack spacing={3}>
+                    <Flex justify="space-between" align="center">
+                      <HStack>
+                        <Heading size="sm" bgGradient="linear(to-r, cyan.200, purple.200)" bgClip="text">
+                          Refleksi Mingguan
+                        </Heading>
+                        <Text fontSize="lg">🌟</Text>
+                      </HStack>
+                      <Text color="orange.200" fontWeight="medium" fontSize="xs">
+                        {format(dateRange.start, 'd MMM', { locale: id })} - {format(dateRange.end, 'd MMM', { locale: id })}
+                      </Text>
+                    </Flex>
 
                   {weeklyLoading ? (
                     <Box textAlign="center" py={8}>
@@ -567,62 +703,74 @@ export default function Dashboard() {
                         <Box>
                           <Flex 
                             direction={{ base: "column", md: "row" }}
-                            gap={6}
-                            mb={6}
+                            gap={3}
+                            mb={3}
                           >
                             {/* Mood Score */}
                             <Box 
                               flex="1"
                               bg="whiteAlpha.100"
-                              p={6}
-                              borderRadius="xl"
+                              p={3}
+                              borderRadius="lg"
                               border="1px solid"
                               borderColor="whiteAlpha.200"
                               display="flex"
                               alignItems="center"
                               justifyContent="center"
                               flexDirection="column"
-                              gap={4}
+                              gap={2}
+                              _hover={{ 
+                                borderColor: 'purple.300',
+                              }}
+                              transition="all 0.3s"
                             >
-                              <Flex align="center" gap={2}>
-                                <Heading size="md">Skor Mood</Heading>
-                                <MoodEmoji mood={weeklyData.analysis.dominantMood} size="32px" />
+                              <Flex align="center" gap={1}>
+                                <Heading size="xs">Skor</Heading>
+                                <MoodEmoji mood={weeklyData.analysis.dominantMood} size="20px" />
                               </Flex>
                               <CircularProgress 
                                 value={weeklyData.analysis.moodScore || 0}
-                                size={160}
-                                color="cyan.400"
+                                size={100}
+                                color="pink.400"
                               />
                             </Box>
 
                             {/* Mood Details */}
-                            <Stack flex="2" spacing={4}>
-                              <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+                            <Stack flex="2" spacing={2}>
+                              <SimpleGrid columns={{ base: 1, md: 2 }} spacing={2}>
                                 <Box
                                   bg="whiteAlpha.100"
-                                  p={6}
-                                  borderRadius="xl"
+                                  p={3}
+                                  borderRadius="lg"
                                   border="1px solid"
                                   borderColor="whiteAlpha.200"
+                                  _hover={{ 
+                                    borderColor: 'cyan.300',
+                                  }}
+                                  transition="all 0.3s"
                                 >
-                                  <Text fontSize="sm" color="whiteAlpha.600" mb={2}>
+                                  <Text fontSize="xs" color="whiteAlpha.600" mb={1}>
                                     🎭 Mood Dominan
                                   </Text>
-                                  <Heading size="md" color="cyan.200">
+                                  <Heading size="xs" color="cyan.200">
                                     {weeklyData.analysis.dominantMood || 'Belum ada data'}
                                   </Heading>
                                 </Box>
                                 <Box
                                   bg="whiteAlpha.100"
-                                  p={6}
-                                  borderRadius="xl"
+                                  p={3}
+                                  borderRadius="lg"
                                   border="1px solid"
                                   borderColor="whiteAlpha.200"
+                                  _hover={{ 
+                                    borderColor: 'orange.300',
+                                  }}
+                                  transition="all 0.3s"
                                 >
-                                  <Text fontSize="sm" color="whiteAlpha.600" mb={2}>
-                                    ✨ Afirmasi Hari Ini
+                                  <Text fontSize="xs" color="whiteAlpha.600" mb={1}>
+                                    ✨ Afirmasi
                                   </Text>
-                                  <Text fontSize="md" color="yellow.200" fontWeight="500">
+                                  <Text fontSize="xs" color="orange.200" fontWeight="500" lineHeight="short" noOfLines={2}>
                                     {weeklyData.analysis.affirmation || 'Belum ada'}
                                   </Text>
                                 </Box>
@@ -636,24 +784,22 @@ export default function Dashboard() {
                       {weeklyData.analysis.summary && (
                         <SlideFade in={true} offsetY={20}>
                           <Box>
-                            <Flex align="center" mb={3}>
-                              <Heading size="md" mr={3}>Ringkasan</Heading>
-                              <Text fontSize="xl">📝</Text>
+                            <Flex align="center" mb={1}>
+                              <Heading size="xs" mr={2} color="purple.200">Ringkasan</Heading>
+                              <Text fontSize="md">📝</Text>
                             </Flex>
                             <Box 
                               bg="whiteAlpha.100" 
-                              p={6} 
-                              borderRadius="xl"
+                              p={3} 
+                              borderRadius="lg"
                               border="1px solid"
                               borderColor="whiteAlpha.200"
                               _hover={{
-                                bg: "whiteAlpha.200",
-                                transform: "translateY(-2px)",
-                                boxShadow: "lg"
+                                borderColor: "purple.300",
                               }}
-                              transition="all 0.2s"
+                              transition="all 0.3s"
                             >
-                              <Text lineHeight="tall" color="whiteAlpha.900">
+                              <Text lineHeight="short" color="whiteAlpha.900" fontSize="xs">
                                 {weeklyData.analysis.summary}
                               </Text>
                             </Box>
@@ -662,116 +808,92 @@ export default function Dashboard() {
                       )}
 
                       {/* Highlights & Advice */}
-                      <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6}>
-                        <SlideFade in={true} offsetY={20}>
-                          <Box>
-                            <Flex align="center" mb={3}>
-                              <Heading size="md" mr={3}>Sorotan</Heading>
-                              <Text fontSize="xl">🌟</Text>
-                            </Flex>
-                            <Box 
-                              bg="whiteAlpha.100" 
-                              p={6} 
-                              borderRadius="xl"
-                              border="1px solid"
-                              borderColor="whiteAlpha.200"
-                              position="relative"
-                              _hover={{
-                                bg: "whiteAlpha.200",
-                                transform: "translateY(-2px)",
-                                boxShadow: "lg"
-                              }}
-                              transition="all 0.2s"
-                            >
-                              <Stack spacing={3}>
-                                {(weeklyData.analysis.highlights || ['Belum ada sorotan']).map((item, idx) => (
-                                  <motion.div
-                                    key={idx}
-                                    initial={{ opacity: 0, x: -20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{ delay: idx * 0.1 }}
-                                  >
-                                    <Text display="flex" alignItems="flex-start" color="whiteAlpha.900">
-                                      <Text as="span" mr={2} color="yellow.200">✦</Text>
-                                      {item}
-                                    </Text>
-                                  </motion.div>
-                                ))}
-                              </Stack>
-                            </Box>
+                      <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
+                        <Box>
+                          <Flex align="center" mb={1}>
+                            <Heading size="xs" mr={2} color="orange.200">Sorotan</Heading>
+                            <Text fontSize="md">🌟</Text>
+                          </Flex>
+                          <Box 
+                            bg="whiteAlpha.100" 
+                            p={3} 
+                            borderRadius="lg"
+                            border="1px solid"
+                            borderColor="whiteAlpha.200"
+                            _hover={{
+                              borderColor: "orange.300",
+                            }}
+                            transition="all 0.3s"
+                          >
+                            <Stack spacing={1.5}>
+                              {(weeklyData.analysis.highlights || ['Belum ada sorotan']).map((item, idx) => (
+                                <Text key={idx} display="flex" alignItems="flex-start" color="whiteAlpha.900" lineHeight="short" fontSize="xs">
+                                  <Text as="span" mr={1} color="orange.300">✦</Text>
+                                  {item}
+                                </Text>
+                              ))}
+                            </Stack>
                           </Box>
-                        </SlideFade>
+                        </Box>
                         
-                        <SlideFade in={true} offsetY={20}>
-                          <Box>
-                            <Flex align="center" mb={3}>
-                              <Heading size="md" mr={3}>Saran</Heading>
-                              <Text fontSize="xl">💡</Text>
-                            </Flex>
-                            <Box 
-                              bg="whiteAlpha.100" 
-                              p={6} 
-                              borderRadius="xl"
-                              border="1px solid"
-                              borderColor="whiteAlpha.200"
-                              position="relative"
-                              _hover={{
-                                bg: "whiteAlpha.200",
-                                transform: "translateY(-2px)",
-                                boxShadow: "lg"
-                              }}
-                              transition="all 0.2s"
-                            >
-                              <Stack spacing={3}>
-                                {(weeklyData.analysis.advice || ['Belum ada saran']).map((item, idx) => (
-                                  <motion.div
-                                    key={idx}
-                                    initial={{ opacity: 0, x: -20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{ delay: idx * 0.1 }}
-                                  >
-                                    <Text display="flex" alignItems="flex-start" color="whiteAlpha.900">
-                                      <Text as="span" mr={2} color="cyan.200">⚡</Text>
-                                      {item}
-                                    </Text>
-                                  </motion.div>
-                                ))}
-                              </Stack>
-                            </Box>
+                        <Box>
+                          <Flex align="center" mb={1}>
+                            <Heading size="xs" mr={2} color="cyan.200">Saran</Heading>
+                            <Text fontSize="md">💡</Text>
+                          </Flex>
+                          <Box 
+                            bg="whiteAlpha.100" 
+                            p={3} 
+                            borderRadius="lg"
+                            border="1px solid"
+                            borderColor="whiteAlpha.200"
+                            _hover={{
+                              borderColor: "cyan.300",
+                            }}
+                            transition="all 0.3s"
+                          >
+                            <Stack spacing={1.5}>
+                              {(weeklyData.analysis.advice || ['Belum ada saran']).map((item, idx) => (
+                                <Text key={idx} display="flex" alignItems="flex-start" color="whiteAlpha.900" lineHeight="short" fontSize="xs">
+                                  <Text as="span" mr={1} color="cyan.300">⚡</Text>
+                                  {item}
+                                </Text>
+                              ))}
+                            </Stack>
                           </Box>
-                        </SlideFade>
+                        </Box>
                       </SimpleGrid>
 
                       {weeklyData.recommendations?.items?.length ? (
-                        <SlideFade in={true} offsetY={20}>
-                          <Box>
-                            <Flex align="center" mb={3}>
-                              <Heading size="md" mr={3}>
-                                {weeklyData.recommendations.headline || 'Rekomendasi Film Mingguan'}
-                              </Heading>
-                              <Text fontSize="xl">🎬</Text>
-                            </Flex>
-                            <Text color="whiteAlpha.700" mb={4}>
-                              {weeklyData.recommendations.description || 'Film pilihan untuk menemani perjalanan mood minggu ini.'}
-                            </Text>
-                            {/* Rekomendasi film tematik berbasis mood mingguan */}
-                            <SimpleGrid columns={{ base: 1, md: 3 }} spacing={5}>
-                              {weeklyData.recommendations.items.map((movie, idx) => (
-                                <MoodMovieCard key={`${movie.title}-${idx}`} movie={movie} index={idx} />
-                              ))}
-                            </SimpleGrid>
-                          </Box>
-                        </SlideFade>
+                        <Box>
+                          <Flex align="center" mb={2}>
+                            <Heading size="xs" mr={2} color="pink.200">
+                              {weeklyData.recommendations.headline || 'Rekomendasi Film'}
+                            </Heading>
+                            <Text fontSize="md">🎬</Text>
+                          </Flex>
+                          <Text color="whiteAlpha.700" mb={2} fontSize="xs">
+                            {weeklyData.recommendations.description || 'Film pilihan untuk mood minggu ini.'}
+                          </Text>
+                          {/* Rekomendasi film tematik berbasis mood mingguan */}
+                          <SimpleGrid columns={{ base: 1, md: 3 }} spacing={2}>
+                            {weeklyData.recommendations.items.map((movie, idx) => (
+                              <MoodMovieCard key={`${movie.title}-${idx}`} movie={movie} index={idx} />
+                            ))}
+                          </SimpleGrid>
+                        </Box>
                       ) : null}
                     </Stack>
                   ) : (
                     <Box textAlign="center" py={8} color="whiteAlpha.600">
-                      <Text>Belum ada data ringkasan untuk minggu ini.</Text>
-                      <Text mt={2}>Catat aktivitas harianmu untuk melihat analisis mingguan.</Text>
+                      <Text fontSize="3xl" mb={2}>📊</Text>
+                      <Text>Belum ada data refleksi untuk minggu ini.</Text>
+                      <Text mt={2} fontSize="sm">Tulis catatan harianmu untuk melihat wawasan mingguan.</Text>
                     </Box>
                   )}
                 </Stack>
               </Box>
+              </motion.div>
             </Box>
           </Grid>
         </Stack>

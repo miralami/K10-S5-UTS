@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\JournalNote;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Carbon\Carbon;
 
 class JournalNoteController extends Controller
 {
@@ -18,8 +19,9 @@ class JournalNoteController extends Controller
         $notesQuery = JournalNote::query()
             ->where('user_id', $user->id);
 
+        // order by updated_at so frontend that relies on `updatedAt` sees the latest items first
         $notes = $notesQuery
-            ->orderByDesc('created_at')
+            ->orderByDesc('updated_at')
             ->get(['id', 'user_id', 'title', 'body', 'note_date', 'created_at', 'updated_at']);
 
         return response()->json([
@@ -85,14 +87,49 @@ class JournalNoteController extends Controller
 
     private function transformNote(JournalNote $note): array
     {
-        return [
+        // Build the response defensively to avoid undefined property warnings
+        $data = [
             'id' => $note->id,
-            'userId' => $note->user_id,
-            'title' => $note->title,
-            'body' => $note->body,
-            'noteDate' => $note->note_date ? \Carbon\Carbon::parse($note->note_date)->toAtomString() : null,
-            'createdAt' => $note->created_at?->toAtomString(),
-            'updatedAt' => $note->updated_at?->toAtomString(),
+            'userId' => $note->user_id ?? null,
+            'title' => $note->title ?? null,
+            'body' => $note->body ?? null,
         ];
+
+        // note_date may be a date-only string in DB; normalize to ISO if present
+        if (!empty($note->note_date)) {
+            try {
+                $data['noteDate'] = Carbon::parse($note->note_date)->setTimezone('Asia/Jakarta')->toAtomString();
+            } catch (\Throwable $e) {
+                // ignore parse errors and omit the field
+            }
+        }
+
+        if (!empty($note->created_at)) {
+            // Eloquent commonly provides Carbon instances for created_at/updated_at,
+            // but guard to avoid warnings if they are strings.
+            if ($note->created_at instanceof \DateTimeInterface) {
+                $data['createdAt'] = $note->created_at->setTimezone(new \DateTimeZone('Asia/Jakarta'))->format(DATE_ATOM);
+            } else {
+                try {
+                    $data['createdAt'] = Carbon::parse($note->created_at)->setTimezone('Asia/Jakarta')->toAtomString();
+                } catch (\Throwable $e) {
+                    // omit on parse error
+                }
+            }
+        }
+
+        if (!empty($note->updated_at)) {
+            if ($note->updated_at instanceof \DateTimeInterface) {
+                $data['updatedAt'] = $note->updated_at->setTimezone(new \DateTimeZone('Asia/Jakarta'))->format(DATE_ATOM);
+            } else {
+                try {
+                    $data['updatedAt'] = Carbon::parse($note->updated_at)->setTimezone('Asia/Jakarta')->toAtomString();
+                } catch (\Throwable $e) {
+                    // omit on parse error
+                }
+            }
+        }
+
+        return $data;
     }
 }

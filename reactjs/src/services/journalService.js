@@ -13,17 +13,20 @@ const requestDefaults = {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
     'X-Requested-With': 'XMLHttpRequest',
-    'Authorization': `Bearer ${getAuthToken()}`,
+    // Note: don't set Authorization here at module load — read token dynamically per-request
   },
 };
 
 function buildRequestOptions(options = {}) {
+  const token = getAuthToken();
   return {
     ...requestDefaults,
     ...options,
     headers: {
       ...requestDefaults.headers,
       ...(options.headers ?? {}),
+      // Inject the latest token from localStorage at request time
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
   };
 }
