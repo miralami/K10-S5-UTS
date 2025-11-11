@@ -20,7 +20,7 @@ class JournalNoteController extends Controller
 
         $notes = $notesQuery
             ->orderByDesc('created_at')
-            ->get(['id', 'user_id', 'title', 'body', 'created_at', 'updated_at']);
+            ->get(['id', 'user_id', 'title', 'body', 'note_date', 'created_at', 'updated_at']);
 
         return response()->json([
             'data' => $notes->map(fn (JournalNote $note) => $this->transformNote($note)),
@@ -90,6 +90,7 @@ class JournalNoteController extends Controller
             'userId' => $note->user_id,
             'title' => $note->title,
             'body' => $note->body,
+            'noteDate' => $note->note_date ? \Carbon\Carbon::parse($note->note_date)->toAtomString() : null,
             'createdAt' => $note->created_at?->toAtomString(),
             'updatedAt' => $note->updated_at?->toAtomString(),
         ];

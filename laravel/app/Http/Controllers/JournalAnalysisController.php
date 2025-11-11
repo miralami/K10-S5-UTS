@@ -5,12 +5,17 @@ namespace App\Http\Controllers;
 use App\Models\DailyJournalAnalysis;
 use App\Models\JournalNote;
 use App\Models\WeeklyJournalAnalysis;
+use App\Services\WeeklyMovieRecommendationService;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class JournalAnalysisController extends Controller
 {
+    public function __construct(private readonly WeeklyMovieRecommendationService $movieRecommendations)
+    {
+    }
+
     public function weeklySummary(Request $request): JsonResponse
     {
         try {
@@ -28,7 +33,7 @@ class JournalAnalysisController extends Controller
                 $weekEnding = isset($validated['week_ending']) && $validated['week_ending']
                     ? CarbonImmutable::parse($validated['week_ending'])
                     : CarbonImmutable::now();
-                
+
                 $weekStart = $weekEnding->startOfWeek(CarbonImmutable::MONDAY);
                 $weekEnd = $weekEnding->endOfWeek(CarbonImmutable::SUNDAY);
             }
@@ -50,6 +55,14 @@ class JournalAnalysisController extends Controller
                 ->when(!isset($validated['user_id']), fn ($query) => $query->orderByDesc('created_at'))
                 ->first();
 
+            $analysisPayload = $analysisRecord?->analysis;
+            $recommendations = null;
+
+            if (is_array($analysisPayload) && !empty($analysisPayload)) {
+                // Gunakan mood mingguan untuk memetakan rekomendasi film tematik.
+                $recommendations = $this->movieRecommendations->buildRecommendations($analysisPayload);
+            }
+
             $dailySummaries = DailyJournalAnalysis::query()
                 ->when(isset($validated['user_id']), fn ($query) => $query->where('user_id', $validated['user_id']))
                 ->when(!isset($validated['user_id']), fn ($query) => $query->orderByDesc('analysis_date'))
@@ -66,8 +79,9 @@ class JournalAnalysisController extends Controller
                     'userId' => $validated['user_id'] ?? null,
                 ],
                 'notes' => $notes,
-                'analysis' => $analysisRecord?->analysis,
+                'analysis' => $analysisPayload,
                 'dailySummaries' => $dailySummaries,
+                'recommendations' => $recommendations,
                 'status' => $analysisRecord ? 'ready' : 'pending',
                 'message' => $analysisRecord
                     ? null
@@ -78,7 +92,7 @@ class JournalAnalysisController extends Controller
                 'exception' => $e,
                 'request' => $request->all()
             ]);
-            
+
             return response()->json([
                 'status' => 'error',
                 'message' => 'Terjadi kesalahan saat memuat ringkasan mingguan. Silakan coba lagi nanti.',
@@ -125,7 +139,7 @@ class JournalAnalysisController extends Controller
                 'exception' => $e,
                 'request' => $request->all()
             ]);
-            
+
             return response()->json([
                 'status' => 'error',
                 'message' => 'Terjadi kesalahan saat memuat ringkasan harian. Silakan coba lagi nanti.',

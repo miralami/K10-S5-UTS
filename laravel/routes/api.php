@@ -4,10 +4,8 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\JwtAuthController;
 use App\Http\Controllers\JournalAnalysisController;
 use App\Http\Controllers\JournalNoteController;
-use App\Http\Controllers\MovieSearchController;
 use App\Http\Controllers\RecommendationController;
 
-Route::get('movies/search', [MovieSearchController::class, 'search']);
 Route::post('recommendations', [RecommendationController::class, 'create']);
 
 Route::middleware('auth:api')->group(function () {

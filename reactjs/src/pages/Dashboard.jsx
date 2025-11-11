@@ -10,6 +10,7 @@ import {
   Heading,
   HStack,
   IconButton,
+  Image,
   SimpleGrid,
   Spinner,
   Stack,
@@ -22,11 +23,13 @@ import {
   Divider,
   useDisclosure,
   useBreakpointValue,
+  Badge,
+  Wrap,
+  WrapItem,
 } from '@chakra-ui/react';
 import { GlassCard } from '../components/GlassCard';
 import CircularProgress from '../components/CircularProgress';
 import { motion } from 'framer-motion';
-import MoodChart from '../components/MoodChart';
 import MoodEmoji from '../components/MoodEmoji';
 import StyledInfoCard from '../components/StyledInfoCard';
 import { AddIcon, ChevronLeftIcon, ChevronRightIcon, DeleteIcon, EditIcon, RepeatIcon, HamburgerIcon } from '@chakra-ui/icons';
@@ -47,6 +50,85 @@ function InfoCard({ label, value, color = 'whiteAlpha.800' }) {
   );
 }
 
+function MoodMovieCard({ movie, index }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.1 }}
+    >
+      <Box
+        bg="whiteAlpha.100"
+        borderRadius="xl"
+        border="1px solid"
+        borderColor="whiteAlpha.200"
+        overflow="hidden"
+        display="flex"
+        flexDirection="column"
+        h="100%"
+      >
+        {movie.posterUrl ? (
+          <Image
+            src={movie.posterUrl}
+            alt={movie.title}
+            objectFit="cover"
+            w="100%"
+            h="200px"
+          />
+        ) : (
+          <Flex
+            align="center"
+            justify="center"
+            w="100%"
+            h="200px"
+            bg="whiteAlpha.200"
+          >
+            <Text fontSize="3xl">🎬</Text>
+          </Flex>
+        )}
+        <Stack spacing={4} p={5} flex="1">
+          <Box>
+            <Heading size="md" color="cyan.200" noOfLines={2}>
+              {movie.title}
+            </Heading>
+            <HStack spacing={2} mt={2}>
+              {movie.year && (
+                <Badge colorScheme="cyan" variant="subtle">
+                  {movie.year}
+                </Badge>
+              )}
+              {movie.imdbId && (
+                <Badge colorScheme="purple" variant="outline">
+                  IMDb {movie.imdbId.toUpperCase()}
+                </Badge>
+              )}
+            </HStack>
+          </Box>
+          {movie.tagline && (
+            <Text fontSize="sm" color="whiteAlpha.700" fontStyle="italic">
+              {movie.tagline}
+            </Text>
+          )}
+          <Text fontSize="sm" color="whiteAlpha.900" lineHeight="tall">
+            {movie.reason}
+          </Text>
+          {Array.isArray(movie.genres) && movie.genres.length > 0 && (
+            <Wrap spacing={2} pt={2}>
+              {movie.genres.map((genre) => (
+                <WrapItem key={genre}>
+                  <Badge colorScheme="blue" variant="subtle">
+                    {genre}
+                  </Badge>
+                </WrapItem>
+              ))}
+            </Wrap>
+          )}
+        </Stack>
+      </Box>
+    </motion.div>
+  );
+}
+
 export default function Dashboard() {
   const { isOpen: isSidebarOpen, onToggle: onSidebarToggle } = useDisclosure({ defaultIsOpen: true });
   const showSidebarToggle = useBreakpointValue({ base: true, xl: false });
@@ -62,6 +144,7 @@ export default function Dashboard() {
   const [weeklyData, setWeeklyData] = useState({
     analysis: null,
     dailySummaries: [],
+    recommendations: null,
     status: 'idle',
     message: null
   });
@@ -79,20 +162,24 @@ export default function Dashboard() {
   // Get notes for the selected date
   const notesForSelectedDate = useMemo(() => {
     if (!selectedDate) return [];
+    console.log('All notes:', allNotes);
+    console.log('Selected date:', selectedDate);
+    
     return allNotes.filter(note => {
-      const noteDate = new Date(note.note_date || note.created_at || note.createdAt);
-      // Convert dates to UTC to ensure proper comparison
-      const utcNoteDate = new Date(Date.UTC(
-        noteDate.getFullYear(),
-        noteDate.getMonth(),
-        noteDate.getDate()
-      ));
-      const utcSelectedDate = new Date(Date.UTC(
-        selectedDate.getFullYear(),
-        selectedDate.getMonth(),
-        selectedDate.getDate()
-      ));
-      return isSameDay(utcNoteDate, utcSelectedDate);
+      // Use noteDate first, fallback to created_at/createdAt
+      const dateStr = note.noteDate || note.note_date || note.createdAt || note.created_at;
+      if (!dateStr) return false;
+      
+      const noteDate = new Date(dateStr);
+      const result = isSameDay(noteDate, selectedDate);
+      
+      console.log('Comparing:', {
+        noteDate: noteDate.toISOString(),
+        selectedDate: selectedDate.toISOString(),
+        isSame: result
+      });
+      
+      return result;
     });
   }, [allNotes, selectedDate]);
 
@@ -135,13 +222,16 @@ export default function Dashboard() {
       setWeeklyData({
         analysis: response?.analysis || null,
         dailySummaries: response?.dailySummaries || [],
+        recommendations: response?.recommendations || null,
         status: response?.status || 'success',
+        message: response?.message || null,
       });
     } catch (error) {
       console.error('Error fetching weekly summary:', error);
       setWeeklyData({
         analysis: null,
         dailySummaries: [],
+        recommendations: null,
         status: 'error',
         message: error.message || 'Gagal memuat data'
       });
@@ -537,35 +627,8 @@ export default function Dashboard() {
                                   </Text>
                                 </Box>
                               </SimpleGrid>
-                              
-                              <Box
-                                bg="whiteAlpha.100"
-                                p={6}
-                                borderRadius="xl"
-                                border="1px solid"
-                                borderColor="whiteAlpha.200"
-                              >
-                                <Text fontSize="sm" color="whiteAlpha.600" mb={3}>
-                                  📈 Tren Mood Mingguan
-                                </Text>
-                                <MoodChart data={weeklyData.dailySummaries} />
-                              </Box>
                             </Stack>
                           </Flex>
-
-                          {/* Mood Chart */}
-                          <Box 
-                            bg="whiteAlpha.100" 
-                            p={4} 
-                            borderRadius="xl" 
-                            border="1px solid"
-                            borderColor="whiteAlpha.200"
-                          >
-                            <Text mb={4} fontWeight="medium" color="whiteAlpha.800">
-                              Grafik Mood Harian
-                            </Text>
-                            <MoodChart data={weeklyData.dailySummaries} />
-                          </Box>
                         </Box>
                       </ScaleFade>
 
@@ -678,6 +741,28 @@ export default function Dashboard() {
                           </Box>
                         </SlideFade>
                       </SimpleGrid>
+
+                      {weeklyData.recommendations?.items?.length ? (
+                        <SlideFade in={true} offsetY={20}>
+                          <Box>
+                            <Flex align="center" mb={3}>
+                              <Heading size="md" mr={3}>
+                                {weeklyData.recommendations.headline || 'Rekomendasi Film Mingguan'}
+                              </Heading>
+                              <Text fontSize="xl">🎬</Text>
+                            </Flex>
+                            <Text color="whiteAlpha.700" mb={4}>
+                              {weeklyData.recommendations.description || 'Film pilihan untuk menemani perjalanan mood minggu ini.'}
+                            </Text>
+                            {/* Rekomendasi film tematik berbasis mood mingguan */}
+                            <SimpleGrid columns={{ base: 1, md: 3 }} spacing={5}>
+                              {weeklyData.recommendations.items.map((movie, idx) => (
+                                <MoodMovieCard key={`${movie.title}-${idx}`} movie={movie} index={idx} />
+                              ))}
+                            </SimpleGrid>
+                          </Box>
+                        </SlideFade>
+                      ) : null}
                     </Stack>
                   ) : (
                     <Box textAlign="center" py={8} color="whiteAlpha.600">

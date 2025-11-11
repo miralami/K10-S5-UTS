@@ -1,13 +1,18 @@
-import { Box, Text, VStack } from '@chakra-ui/react';
+import { Box, Text, VStack, useToken } from '@chakra-ui/react';
 import { motion } from 'framer-motion';
 
-const MotionBox = motion(Box);
+const MotionCircle = motion.circle;
 
 const CircularProgress = ({ value, size = 120, strokeWidth = 8, color = "cyan.400" }) => {
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
-  const progressValue = Math.min(100, Math.max(0, value * 10)); // Convert 0-10 scale to percentage
+  // Assume value is already 0-100
+  const progressValue = Math.min(100, Math.max(0, value || 0));
   const strokeDashoffset = circumference - (progressValue / 100) * circumference;
+
+  // Resolve Chakra color token (e.g. 'cyan.400') to actual color value for SVG stroke
+  const [resolvedColor] = useToken('colors', [color]);
+  const strokeColor = resolvedColor || '#00bcd4';
 
   return (
     <Box position="relative" width={`${size}px`} height={`${size}px`}>
@@ -22,8 +27,7 @@ const CircularProgress = ({ value, size = 120, strokeWidth = 8, color = "cyan.40
           strokeWidth={strokeWidth}
         />
         {/* Progress circle */}
-        <MotionBox
-          as="circle"
+        <MotionCircle
           initial={{ strokeDashoffset: circumference }}
           animate={{ strokeDashoffset }}
           transition={{ duration: 1, ease: "easeOut" }}
@@ -31,14 +35,11 @@ const CircularProgress = ({ value, size = 120, strokeWidth = 8, color = "cyan.40
           cy={size / 2}
           r={radius}
           fill="none"
-          stroke={`var(--chakra-colors-${color})`}
+          stroke={strokeColor}
           strokeWidth={strokeWidth}
-          strokeLinecap="round"
+          strokeLinecap="butt"
           transform={`rotate(-90 ${size / 2} ${size / 2})`}
           strokeDasharray={circumference}
-          style={{
-            transformOrigin: "center",
-          }}
         />
       </svg>
       {/* Center text */}
@@ -50,10 +51,10 @@ const CircularProgress = ({ value, size = 120, strokeWidth = 8, color = "cyan.40
         spacing={0}
       >
         <Text fontSize="2xl" fontWeight="bold" color={color}>
-          {value}
+          {Math.round(value || 0)}
         </Text>
         <Text fontSize="xs" color="whiteAlpha.700">
-          dari 10
+          dari 100
         </Text>
       </VStack>
     </Box>
