@@ -65,7 +65,17 @@ return [
     |
     */
 
-    'timezone' => 'UTC',
+    /*
+    |--------------------------------------------------------------------------
+    | Application Timezone
+    |--------------------------------------------------------------------------
+    |
+    | Set default timezone. Default can be overridden by APP_TIMEZONE in .env.
+    | For this project we prefer Asia/Jakarta so stored timestamps and date
+    | helpers align with Jakarta local time.
+    |
+    */
+    'timezone' => env('APP_TIMEZONE', 'Asia/Jakarta'),
 
     /*
     |--------------------------------------------------------------------------

@@ -1,0 +1,56 @@
+/* Custom Font Styles */
+body {
+  font-family: 'Quicksand', sans-serif !important;
+  letter-spacing: 0.2px;
+}
+
+h1, h2, h3, h4, h5, h6, 
+.chakra-heading {
+  font-family: 'Fredoka', sans-serif !important;
+  letter-spacing: -0.2px;
+}
+
+.chakra-button {
+  font-family: 'Fredoka', sans-serif !important;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+}
+
+.chakra-input, 
+.chakra-select, 
+.chakra-textarea {
+  font-family: 'Quicksand', sans-serif !important;
+}
+
+/* Make text more playful */
+.chakra-text {
+  font-family: 'Quicksand', sans-serif !important;
+  line-height: 1.6;
+}
+
+/* Movie card title */
+.movie-card h2 {
+  font-family: 'Fredoka', sans-serif !important;
+  font-weight: 600;
+  letter-spacing: -0.3px;
+}
+
+/* Status and type badges */
+.chakra-badge {
+  font-family: 'Fredoka', sans-serif !important;
+  font-weight: 500;
+  letter-spacing: 0.2px;
+}
+
+/* Links */
+.chakra-link {
+  font-family: 'Quicksand', sans-serif !important;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+
+/* Search input placeholders */
+::placeholder {
+  font-family: 'Quicksand', sans-serif !important;
+  opacity: 0.7;
+}

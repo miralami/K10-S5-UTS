@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class WeeklyJournalAnalysis extends Model
 {
@@ -29,5 +30,18 @@ class WeeklyJournalAnalysis extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * @return HasMany<DailyJournalAnalysis>
+     */
+    public function dailyAnalyses(): HasMany
+    {
+        return $this->hasMany(DailyJournalAnalysis::class, 'user_id', 'user_id')
+            ->whereBetween('analysis_date', [
+                $this->week_start,
+                $this->week_end,
+            ])
+            ->orderBy('analysis_date');
     }
 }

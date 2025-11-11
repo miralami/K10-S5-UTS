@@ -2,66 +2,312 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\DailyJournalAnalysis;
 use App\Models\JournalNote;
+use App\Models\WeeklyJournalAnalysis;
+use App\Services\WeeklyMovieRecommendationService;
+use App\Services\DailyJournalAnalysisService;
 use App\Services\GeminiMoodAnalysisService;
+use Tymon\JWTAuth\Facades\JWTAuth;
+use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use RuntimeException;
 
 class JournalAnalysisController extends Controller
 {
-    public function __construct(private readonly GeminiMoodAnalysisService $analysisService)
+    public function __construct(private readonly WeeklyMovieRecommendationService $movieRecommendations)
     {
     }
 
     public function weeklySummary(Request $request): JsonResponse
     {
-        $validated = $request->validate([
-            'week_ending' => ['nullable', 'date'],
-            'user_id' => ['nullable', 'integer', 'exists:users,id'],
-        ]);
-
-        $weekEnding = isset($validated['week_ending'])
-            ? CarbonImmutable::parse($validated['week_ending'])
-            : CarbonImmutable::now();
-
-        $notesQuery = JournalNote::query();
-
-        if (isset($validated['user_id'])) {
-            $notesQuery->where('user_id', $validated['user_id']);
-        }
-
-        $notes = $notesQuery
-            ->forWeek($weekEnding)
-            ->get(['id', 'user_id', 'title', 'body', 'created_at']);
-
         try {
-            $analysis = $this->analysisService->analyzeWeeklyNotes($notes, $weekEnding);
-        } catch (RuntimeException $exception) {
+            $validated = $request->validate([
+                'week_ending' => ['nullable', 'date'],
+                'start_date' => ['nullable', 'date'],
+                'end_date' => ['nullable', 'date'],
+                'user_id' => ['nullable', 'integer', 'exists:users,id'],
+            ]);
+
+            // If the client did not explicitly request a user_id, prefer the authenticated
+            // user derived from the Authorization bearer token (if present). This prevents
+            // returning another user's most-recent weekly analysis when multiple auth
+            // methods (session cookie + bearer token) are present.
+            if (! isset($validated['user_id'])) {
+                try {
+                    if ($request->header('Authorization')) {
+                        $tokenUser = JWTAuth::parseToken()->authenticate();
+                        if ($tokenUser instanceof User) {
+                            $validated['user_id'] = $tokenUser->id;
+                        }
+                    }
+                } catch (\Exception $e) {
+                    // Failed to parse token: fall back to request->user() below
+                    \Log::info('JWT parseToken failed in weeklySummary: ' . $e->getMessage());
+                }
+            }
+
+            // If still not set, fall back to the standard auth user if available
+            if (! isset($validated['user_id']) && $request->user() instanceof User) {
+                $validated['user_id'] = $request->user()->id;
+            }
+
+            if (isset($validated['start_date']) && isset($validated['end_date'])) {
+                $weekStart = CarbonImmutable::parse($validated['start_date']);
+                $weekEnd = CarbonImmutable::parse($validated['end_date']);
+            } else {
+                $weekEnding = isset($validated['week_ending']) && $validated['week_ending']
+                    ? CarbonImmutable::parse($validated['week_ending'])
+                    : CarbonImmutable::now();
+
+                $weekStart = $weekEnding->startOfWeek(CarbonImmutable::MONDAY);
+                $weekEnd = $weekEnding->endOfWeek(CarbonImmutable::SUNDAY);
+            }
+
+            // Ensure we have valid dates
+            if (!$weekStart || !$weekEnd) {
+                throw new \InvalidArgumentException('Tanggal tidak valid');
+            }
+
+            $notes = JournalNote::query()
+                ->when(isset($validated['user_id']), fn ($query) => $query->where('user_id', $validated['user_id']))
+                ->forWeek($weekStart, $weekEnd)
+                ->get(['id', 'user_id', 'title', 'body', 'note_date', 'created_at'])
+                ->map(fn (JournalNote $note) => $this->formatNote($note)) ?? [];
+
+            $analysisRecord = WeeklyJournalAnalysis::query()
+                ->whereDate('week_start', $weekStart->toDateString())
+                ->when(isset($validated['user_id']), fn ($query) => $query->where('user_id', $validated['user_id']))
+                ->when(!isset($validated['user_id']), fn ($query) => $query->orderByDesc('created_at'))
+                ->first();
+
+            $analysisPayload = $analysisRecord?->analysis;
+            $recommendations = null;
+
+            if (is_array($analysisPayload) && !empty($analysisPayload)) {
+                // Gunakan mood mingguan untuk memetakan rekomendasi film tematik.
+                $recommendations = $this->movieRecommendations->buildRecommendations($analysisPayload);
+            }
+
+            $dailySummaries = DailyJournalAnalysis::query()
+                ->when(isset($validated['user_id']), fn ($query) => $query->where('user_id', $validated['user_id']))
+                ->when(!isset($validated['user_id']), fn ($query) => $query->orderByDesc('analysis_date'))
+                ->whereBetween('analysis_date', [$weekStart->toDateString(), $weekEnd->toDateString()])
+                ->get(['id', 'user_id', 'analysis_date', 'analysis'])
+                ->map(fn (DailyJournalAnalysis $daily) => $this->formatDaily($daily)) ?? [];
+
             return response()->json([
-                'message' => $exception->getMessage(),
-            ], 502);
+                'week' => [
+                    'start' => $weekStart->toDateString(),
+                    'end' => $weekEnd->toDateString(),
+                ],
+                'filters' => [
+                    'userId' => $validated['user_id'] ?? null,
+                ],
+                'notes' => $notes,
+                'analysis' => $analysisPayload,
+                'dailySummaries' => $dailySummaries,
+                'recommendations' => $recommendations,
+                'status' => $analysisRecord ? 'ready' : 'pending',
+                'message' => $analysisRecord
+                    ? null
+                    : 'Ringkasan mingguan belum tersedia. Cron akan memperbarui setiap Senin 02:00.',
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error in weeklySummary: ' . $e->getMessage(), [
+                'exception' => $e,
+                'request' => $request->all()
+            ]);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Terjadi kesalahan saat memuat ringkasan mingguan. Silakan coba lagi nanti.',
+                'error' => config('app.debug') ? $e->getMessage() : null,
+            ], 500);
         }
+    }
 
-        $week = [
-            'start' => $weekEnding->startOfWeek(CarbonImmutable::MONDAY)->toDateString(),
-            'end' => $weekEnding->endOfWeek(CarbonImmutable::SUNDAY)->toDateString(),
+    public function dailySummary(Request $request): JsonResponse
+    {
+        try {
+            $validated = $request->validate([
+                'date' => ['nullable', 'date'],
+                'user_id' => ['nullable', 'integer', 'exists:users,id'],
+            ]);
+
+            $targetDate = isset($validated['date']) && $validated['date']
+                ? CarbonImmutable::parse($validated['date'])->toDateString()
+                : CarbonImmutable::now()->toDateString();
+
+            if (!$targetDate) {
+                throw new \InvalidArgumentException('Tanggal tidak valid');
+            }
+
+            $record = DailyJournalAnalysis::query()
+                ->whereDate('analysis_date', $targetDate)
+                ->when(isset($validated['user_id']), fn ($builder) => $builder->where('user_id', $validated['user_id']))
+                ->when(!isset($validated['user_id']), fn ($builder) => $builder->orderByDesc('analysis_date'))
+                ->first();
+
+            return response()->json([
+                'date' => $targetDate,
+                'filters' => [
+                    'userId' => $validated['user_id'] ?? null,
+                ],
+                'analysis' => $record?->analysis,
+                'status' => $record ? 'ready' : 'pending',
+                'message' => $record
+                    ? null
+                    : 'Ringkasan harian belum tersedia untuk tanggal tersebut.',
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error in dailySummary: ' . $e->getMessage(), [
+                'exception' => $e,
+                'request' => $request->all()
+            ]);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Terjadi kesalahan saat memuat ringkasan harian. Silakan coba lagi nanti.',
+                'error' => config('app.debug') ? $e->getMessage() : null,
+            ], 500);
+        }
+    }
+
+    /**
+     * Generate weekly analysis for the currently authenticated user.
+     * This uses the same logic as the artisan command but limited to a single user.
+     */
+    public function generateWeeklyForUser(Request $request, DailyJournalAnalysisService $dailyService, GeminiMoodAnalysisService $analysisService): JsonResponse
+    {
+        try {
+            $validated = $request->validate([
+                'week_ending' => ['nullable', 'date'],
+                'start_date' => ['nullable', 'date'],
+                'end_date' => ['nullable', 'date'],
+            ]);
+
+            // Prefer the user authenticated via Authorization bearer token when present.
+            // This avoids cases where a session cookie for a different user is sent alongside a token.
+            $user = null;
+            try {
+                if ($request->header('Authorization')) {
+                    $userFromToken = JWTAuth::parseToken()->authenticate();
+                    if ($userFromToken && $userFromToken instanceof User) {
+                        $user = $userFromToken;
+                    }
+                }
+            } catch (\Exception $e) {
+                // Token parse/auth may fail; we'll fall back to request->user()
+                \Log::info('JWT parseToken failed in generateWeeklyForUser: ' . $e->getMessage());
+            }
+
+            if (! $user) {
+                $user = $request->user();
+            }
+
+            if (! $user || !($user instanceof User)) {
+                return response()->json([ 'status' => 'error', 'message' => 'Unauthorized' ], 401);
+            }
+
+            if (isset($validated['start_date']) && isset($validated['end_date'])) {
+                $weekStart = CarbonImmutable::parse($validated['start_date']);
+                $weekEnding = CarbonImmutable::parse($validated['end_date']);
+            } else {
+                $weekEnding = isset($validated['week_ending']) && $validated['week_ending']
+                    ? CarbonImmutable::parse($validated['week_ending'])
+                    : CarbonImmutable::now();
+
+                $weekStart = $weekEnding->startOfWeek(CarbonImmutable::MONDAY);
+                $weekEnding = $weekEnding->endOfWeek(CarbonImmutable::SUNDAY);
+            }
+
+            // Log the requested week for debugging
+            \Log::info('generateWeeklyForUser called', [
+                'user_id' => $user->id,
+                'start_date' => $weekStart->toDateString(),
+                'end_date' => $weekEnding->toDateString(),
+            ]);
+
+            // Ensure daily analyses exist (or are created) for this user's week
+            $dailyAnalyses = $dailyService->ensureWeekForUser($user, $weekEnding);
+
+            $analysis = $analysisService->analyzeWeeklyFromDaily($dailyAnalyses, $weekEnding);
+
+            $analysis['noteCount'] = $dailyAnalyses->sum(function ($daily) {
+                $payload = $daily->analysis ?? [];
+                return (int) ($payload['noteCount'] ?? 0);
+            });
+
+            $analysis['dailyBreakdown'] = $dailyAnalyses
+                ->map(function ($daily) {
+                    return [
+                        'date' => $daily->analysis_date ? CarbonImmutable::parse($daily->analysis_date)->toDateString() : null,
+                        'analysis' => $daily->analysis,
+                    ];
+                })
+                ->values()
+                ->all();
+
+            WeeklyJournalAnalysis::updateOrCreate(
+                [
+                    'user_id' => $user->id,
+                    'week_start' => $weekStart->toDateString(),
+                ],
+                [
+                    'week_end' => $weekEnding->toDateString(),
+                    'analysis' => $analysis,
+                ],
+            );
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Weekly analysis generated for user.',
+                'week' => [ 'start' => $weekStart->toDateString(), 'end' => $weekEnding->toDateString() ],
+                'analysis' => $analysis,
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error generating weekly analysis for user: ' . $e->getMessage(), [
+                'exception' => $e,
+                'user' => $request->user()?->id,
+            ]);
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Gagal menghasilkan ringkasan mingguan. Cek log untuk detail.',
+                'error' => config('app.debug') ? $e->getMessage() : null,
+            ], 500);
+        }
+    }
+
+    private function formatNote(JournalNote $note): array
+    {
+        return [
+            'id' => $note->id,
+            'user_id' => $note->user_id,
+            'title' => $note->title ?? null,
+            'body' => $note->body ?? null,
+            'note_date' => !empty($note->note_date) ? (
+                $note->note_date instanceof \DateTimeInterface ? $note->note_date->format('Y-m-d') : CarbonImmutable::parse($note->note_date)->toDateString()
+            ) : null,
+            'created_at' => !empty($note->created_at) ? (
+                $note->created_at instanceof \DateTimeInterface ? $note->created_at->format(DATE_ATOM) : CarbonImmutable::parse($note->created_at)->toIso8601String()
+            ) : null,
+            'updated_at' => !empty($note->updated_at) ? (
+                $note->updated_at instanceof \DateTimeInterface ? $note->updated_at->format(DATE_ATOM) : CarbonImmutable::parse($note->updated_at)->toIso8601String()
+            ) : null,
         ];
+    }
 
-        return response()->json([
-            'week' => $week,
-            'filters' => [
-                'userId' => $validated['user_id'] ?? null,
-            ],
-            'notes' => $notes->map(fn ($note) => [
-                'id' => $note->id,
-                'userId' => $note->user_id,
-                'title' => $note->title,
-                'body' => $note->body,
-                'createdAt' => $note->created_at?->toAtomString(),
-            ]),
-            'analysis' => $analysis,
-        ]);
+    private function formatDaily(DailyJournalAnalysis $daily): array
+    {
+        return [
+            'id' => $daily->id,
+            'userId' => $daily->user_id,
+            'date' => !empty($daily->analysis_date) ? (
+                $daily->analysis_date instanceof \DateTimeInterface ? $daily->analysis_date->format('Y-m-d') : CarbonImmutable::parse($daily->analysis_date)->toDateString()
+            ) : null,
+            'analysis' => $daily->analysis,
+        ];
     }
 }
