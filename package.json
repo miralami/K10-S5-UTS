@@ -1,0 +1,13 @@
+{
+  "name": "uts_sem5-workspace",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Workspace runner to start Laravel, Express WebSocket and React dev server together",
+  "scripts": {
+    "dev": "concurrently \"cd laravel && php artisan serve --host=127.0.0.1 --port=8000\" \"cd expressJS && npm run server:start\" \"cd reactjs && npm run dev\"",
+    "install-all": "npm --prefix expressJS install && npm --prefix reactjs install && (cd laravel && echo 'Run composer install in laravel if needed')"
+  },
+  "devDependencies": {
+    "concurrently": "^7.6.0"
+  }
+}

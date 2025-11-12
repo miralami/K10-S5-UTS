@@ -9,7 +9,7 @@ import {
   Text,
   useColorModeValue,
 } from '@chakra-ui/react';
-import { CalendarIcon, ChatIcon } from '@chakra-ui/icons';
+import { AtSignIcon, CalendarIcon, ChatIcon } from '@chakra-ui/icons';
 import { logout } from '../services/authService';
 
 const navItems = [
@@ -24,6 +24,12 @@ const navItems = [
     description: 'Ringkasan mingguan & semua catatan',
     to: '/dashboard',
     icon: CalendarIcon,
+  },
+  {
+    label: 'Chat Langsung',
+    description: 'Ngobrol real-time bersama teman',
+    to: '/chat',
+    icon: AtSignIcon,
   },
 ];
 

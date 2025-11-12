@@ -1,0 +1,18 @@
+{
+  "name": "uts_sem5",
+  "version": "1.0.0",
+  "description": "Workspace scripts for running the WebSocket server for Mood Journal",
+  "type": "module",
+  "main": "server/websocket-server.js",
+  "scripts": {
+    "server:start": "node server/websocket-server.js",
+    "server:dev": "nodemon --watch server --ext js --exec node server/websocket-server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "ws": "^8.18.3"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.22"
+  }
+}
