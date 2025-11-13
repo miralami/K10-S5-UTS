@@ -34,7 +34,7 @@ class DailyJournalAnalysisService
         $notes = $user->journalNotes()
             ->whereBetween('created_at', [$day, $dayEnd])
             ->orderBy('created_at')
-            ->get(['id', 'title', 'body', 'created_at']);
+            ->get(['id', 'title', 'body', 'vibe', 'created_at']);
 
         if ($notes->isEmpty()) {
             $analysis = $this->emptyAnalysisPayload();

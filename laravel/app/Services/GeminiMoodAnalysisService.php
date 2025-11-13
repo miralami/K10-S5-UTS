@@ -188,6 +188,7 @@ PROMPT,
                         'created_at' => $note->created_at,
                         'title' => $note->title,
                         'body' => $note->body,
+                        'vibe' => $note->vibe ?? null,
                     ]
                     : $note;
 
@@ -200,8 +201,10 @@ PROMPT,
                 $body = isset($data['body']) && $data['body']
                     ? Str::of($data['body'])->trim()
                     : '(no content)';
+                $vibe = isset($data['vibe']) && $data['vibe'] ? Str::of($data['vibe'])->trim() : null;
 
-                return sprintf("Date: %s\nTitle: %s\nContent: %s", $date, $title, $body);
+                $vibeLine = $vibe ? ("\nVibe: " . $vibe) : '';
+                return sprintf("Date: %s\nTitle: %s\nContent: %s%s", $date, $title, $body, $vibeLine);
             })
             ->implode("\n\n---\n\n");
 
@@ -249,8 +252,10 @@ PROMPT,
                 $body = isset($data['body']) && $data['body']
                     ? Str::of($data['body'])->trim()
                     : '(tidak ada isi)';
+                $vibe = isset($data['vibe']) && $data['vibe'] ? Str::of($data['vibe'])->trim() : null;
 
-                return sprintf("Waktu: %s\nJudul: %s\nIsi: %s", $time, $title, $body);
+                $vibeLine = $vibe ? ("\nVibe: " . $vibe) : '';
+                return sprintf("Waktu: %s\nJudul: %s\nIsi: %s%s", $time, $title, $body, $vibeLine);
             })
             ->implode("\n\n---\n\n");
 
@@ -269,7 +274,7 @@ Berikan tanggapan dalam format JSON dengan struktur:
   "advice": string[],
   "affirmation": string
 }
-Gunakan bahasa Indonesia dan sertakan rujukan spesifik ke catatan saat relevan.
+Gunakan bahasa Indonesia dan sertakan rujukan spesifik ke catatan saat relevan. Jika tersedia, prioritaskan sinyal dari "Vibe" pengguna ketika menyimpulkan "dominantMood" dan "moodScore".
 PROMPT,
             $dayStart->toDateString(),
             $serializedNotes

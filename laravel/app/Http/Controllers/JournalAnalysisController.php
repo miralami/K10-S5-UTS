@@ -13,6 +13,7 @@ use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 
 class JournalAnalysisController extends Controller
 {
@@ -88,6 +89,7 @@ class JournalAnalysisController extends Controller
             if (is_array($analysisPayload) && !empty($analysisPayload)) {
                 // Gunakan mood mingguan untuk memetakan rekomendasi film tematik.
                 $recommendations = $this->movieRecommendations->buildRecommendations($analysisPayload);
+                $recommendations = $this->enrichWeeklyRecommendationsWithOmdbPosters($recommendations);
             }
 
             $dailySummaries = DailyJournalAnalysis::query()
@@ -309,5 +311,55 @@ class JournalAnalysisController extends Controller
             ) : null,
             'analysis' => $daily->analysis,
         ];
+    }
+
+    private function enrichWeeklyRecommendationsWithOmdbPosters(?array $payload): ?array
+    {
+        if (!is_array($payload) || empty($payload['items']) || !is_array($payload['items'])) {
+            return $payload;
+        }
+
+        $apiKey = (string) (config('services.omdb.key') ?: '19886b2');
+        $rawBase = (string) config('services.omdb.base_uri');
+        $baseUri = rtrim((string) preg_replace('/\?.*$/', '', $rawBase), '/');
+
+        if ($apiKey === '' || $baseUri === '') {
+            return $payload;
+        }
+
+        $payload['items'] = array_map(function (array $item) use ($apiKey, $baseUri) {
+            $imdbId = isset($item['imdbId']) ? (string) $item['imdbId'] : '';
+            $title = isset($item['title']) ? (string) $item['title'] : '';
+            $year = isset($item['year']) ? (string) $item['year'] : '';
+
+            try {
+                $query = [];
+                if ($imdbId !== '') {
+                    $query['i'] = $imdbId;
+                } elseif ($title !== '') {
+                    $query['t'] = $title;
+                    if ($year !== '') {
+                        $query['y'] = $year;
+                    }
+                }
+
+                if (!empty($query)) {
+                    $query['apikey'] = $apiKey;
+                    $resp = Http::timeout(10)->get($baseUri, $query);
+                    if ($resp->ok()) {
+                        $poster = (string) ($resp->json('Poster') ?? '');
+                        if ($poster !== '' && strtoupper($poster) !== 'N/A') {
+                            $item['posterUrl'] = $poster;
+                        }
+                    }
+                }
+            } catch (\Throwable $e) {
+                // ignore
+            }
+
+            return $item;
+        }, $payload['items']);
+
+        return $payload;
     }
 }

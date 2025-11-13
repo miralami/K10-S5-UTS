@@ -28,6 +28,16 @@ import {
   HStack,
   IconButton,
   Image,
+  Link,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  ModalCloseButton,
+  Input,
+  Textarea,
   SimpleGrid,
   Spinner,
   Stack,
@@ -75,6 +85,18 @@ const POSTER_FALLBACK = "data:image/svg+xml;utf8," + encodeURIComponent(
   "</svg>"
 );
 
+function getOmdbHref(movie) {
+  const imdbId = movie?.imdbId;
+  const title = movie?.title || '';
+  const year = movie?.year ? String(movie.year) : '';
+  if (imdbId) return `https://www.imdb.com/title/${imdbId}/`;
+  const qs = new URLSearchParams();
+  if (title) qs.set('t', title);
+  if (year) qs.set('y', year);
+  qs.set('apikey', '19886b2');
+  return `https://www.omdbapi.com/?${qs.toString()}`;
+}
+
 function MoodMovieCard({ movie, index }) {
   return (
     <Box
@@ -92,16 +114,19 @@ function MoodMovieCard({ movie, index }) {
       transition="all 0.3s"
     >
       {movie.posterUrl ? (
-        <Image
-          src={movie.posterUrl}
-          alt={movie.title}
-          objectFit="cover"
-          w="100%"
-          h="120px"
-          loading="lazy"
-          decoding="async"
-          fallbackSrc={POSTER_FALLBACK}
-        />
+        <Link href={getOmdbHref(movie)} isExternal>
+          <Image
+            src={movie.posterUrl}
+            alt={movie.title}
+            objectFit="cover"
+            w="100%"
+            h="120px"
+            loading="lazy"
+            decoding="async"
+            referrerPolicy="no-referrer"
+            fallbackSrc={POSTER_FALLBACK}
+          />
+        </Link>
       ) : (
         <Flex
           align="center"
@@ -152,6 +177,7 @@ function MoodMovieCard({ movie, index }) {
 
 export default function Dashboard() {
   const { isOpen: isSidebarOpen, onToggle: onSidebarToggle } = useDisclosure({ defaultIsOpen: true });
+  const { isOpen: isEditOpen, onOpen: onEditOpen, onClose: onEditClose } = useDisclosure();
   const showSidebarToggle = useBreakpointValue({ base: true, xl: false });
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [greeting, setGreeting] = useState({ greeting: '', message: '' });
@@ -162,6 +188,8 @@ export default function Dashboard() {
       end: endOfWeek(today, { locale: id, weekStartsOn: 1 })
     };
   });
+
+const VIBE_OPTIONS = ['Lega', 'Lelah', 'Bersyukur', 'Penasaran'];
 
   // Set greeting saat mount
   useEffect(() => {
@@ -185,6 +213,7 @@ export default function Dashboard() {
   const [isGeneratingWeekly, setIsGeneratingWeekly] = useState(false);
   const [editTitle, setEditTitle] = useState('');
   const [editBody, setEditBody] = useState('');
+  const [editVibe, setEditVibe] = useState('');
   const toast = useToast();
 
   // Get notes for the selected date
@@ -193,8 +222,8 @@ export default function Dashboard() {
     // Filter notes by selectedDate using normalized `note_date` or `createdAt` fields.
     const seen = new Set();
     const filtered = allNotes.filter((note) => {
-      // prefer updatedAt (latest) for daily filters; fall back to note_date or createdAt
-      const dateStr = note.updatedAt || note.updated_at || note.note_date || note.noteDate || note.createdAt || note.created_at;
+      // group strictly by note_date to avoid moving to today after edits
+      const dateStr = note.note_date || note.noteDate || note.createdAt || note.created_at || note.updatedAt || note.updated_at;
       if (!dateStr) return false;
       const noteDate = new Date(dateStr);
       if (!isSameDay(noteDate, selectedDate)) return false;
@@ -235,9 +264,10 @@ export default function Dashboard() {
           id: note.id,
           title: note.title,
           body: note.body,
-          note_date: note.note_date || note.noteDate || note.updatedAt || note.updated_at || note.createdAt || note.created_at,
+          note_date: note.noteDate || note.note_date || note.createdAt || note.created_at || note.updatedAt || note.updated_at,
           createdAt: note.createdAt || note.created_at,
           updatedAt: note.updatedAt || note.updated_at,
+          vibe: note.vibe || null,
           ...note,
         }))
         .sort((a, b) => new Date(b.updatedAt || b.note_date || b.createdAt) - new Date(a.updatedAt || a.note_date || a.createdAt));
@@ -352,7 +382,46 @@ export default function Dashboard() {
     }
   }, [fetchWeeklySummaryData, fetchAllNotes, toast, dateRange.start, dateRange.end]);
 
-  // Handle note deletion
+  const canEdit = useCallback((note) => {
+    if (!note) return false;
+    const now = new Date();
+    const noteDateStr = note.updatedAt || note.note_date || note.createdAt;
+    if (!noteDateStr) return false;
+    const noteDate = new Date(noteDateStr);
+    if (isNaN(noteDate.getTime())) return false;
+    if (noteDate > now) return false;
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const startOfNote = new Date(noteDate.getFullYear(), noteDate.getMonth(), noteDate.getDate());
+    const diffDays = Math.floor((startOfToday - startOfNote) / (1000 * 60 * 60 * 24));
+    return diffDays >= 0 && diffDays <= 3;
+  }, []);
+
+  const handleStartEdit = useCallback((note) => {
+    if (!canEdit(note)) return;
+    setSelectedNote(note);
+    setEditTitle(note.title || '');
+    setEditBody(note.body || '');
+    setEditVibe(note.vibe || '');
+    onEditOpen();
+  }, [canEdit, onEditOpen]);
+
+  const handleSaveEdit = useCallback(async () => {
+    if (!selectedNote) return;
+    setIsSavingEdit(true);
+    try {
+      const payload = await updateNote(selectedNote.id, { title: editTitle, body: editBody, vibe: editVibe });
+      setAllNotes((prev) => prev.map((n) => n.id === selectedNote.id ? { ...n, title: editTitle, body: editBody, vibe: editVibe, updatedAt: new Date().toISOString() } : n));
+      await fetchWeeklySummaryData();
+      await fetchAllNotes();
+      toast({ title: 'Catatan diperbarui', status: 'success', duration: 3000, isClosable: true });
+      onEditClose();
+    } catch (e) {
+      toast({ title: 'Gagal menyimpan', description: e.message, status: 'error', duration: 5000, isClosable: true });
+    } finally {
+      setIsSavingEdit(false);
+    }
+  }, [selectedNote, editTitle, editBody, editVibe, toast, onEditClose, fetchWeeklySummaryData, fetchAllNotes]);
+
   const handleDeleteNote = async (note) => {
     if (!note) return;
     
@@ -642,7 +711,7 @@ export default function Dashboard() {
                                     {note.title || 'Tanpa Judul'}
                                   </Text>
                                   <Text fontSize="xs" color="whiteAlpha.600" ml={2} flexShrink={0}>
-                                    {format(new Date(note.updatedAt || note.createdAt || note.note_date), 'HH:mm')}
+                                    {format(new Date(note.createdAt || note.note_date || note.updatedAt), 'HH:mm')}
                                   </Text>
                                 </Flex>
                                 <Text 
@@ -661,6 +730,8 @@ export default function Dashboard() {
                                   variant="ghost"
                                   aria-label="Edit"
                                   colorScheme="purple"
+                                  isDisabled={!canEdit(note)}
+                                  onClick={() => handleStartEdit(note)}
                                 />
                                 <IconButton
                                   icon={<DeleteIcon />}
@@ -942,6 +1013,50 @@ export default function Dashboard() {
           </Grid>
         </Stack>
       </Container>
+
+      <Modal isOpen={isEditOpen} onClose={onEditClose} isCentered>
+        <ModalOverlay />
+        <ModalContent bg="rgba(15, 23, 42, 0.98)" border="1px solid" borderColor="whiteAlpha.200">
+          <ModalHeader>Edit Catatan</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <Stack spacing={3}>
+              <Box>
+                <Text fontSize="xs" color="whiteAlpha.700" mb={1}>Pilih vibe</Text>
+                <Wrap spacing={2}>
+                  {VIBE_OPTIONS.map((v) => (
+                    <WrapItem key={v}>
+                      <Button
+                        size="xs"
+                        variant={editVibe === v ? 'solid' : 'outline'}
+                        colorScheme="pink"
+                        onClick={() => setEditVibe(v)}
+                      >
+                        {v}
+                      </Button>
+                    </WrapItem>
+                  ))}
+                </Wrap>
+              </Box>
+              <Input
+                placeholder="Judul (opsional)"
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+              />
+              <Textarea
+                placeholder="Tulis isi catatan"
+                rows={8}
+                value={editBody}
+                onChange={(e) => setEditBody(e.target.value)}
+              />
+            </Stack>
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="ghost" mr={3} onClick={onEditClose}>Batal</Button>
+            <Button colorScheme="pink" onClick={handleSaveEdit} isLoading={isSavingEdit} isDisabled={!editBody?.trim()?.length}>Simpan</Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </Box>
   );
 }

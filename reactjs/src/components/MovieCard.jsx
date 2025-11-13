@@ -21,6 +21,18 @@ const POSTER_FALLBACK = "data:image/svg+xml;utf8," + encodeURIComponent(
   "</svg>"
 );
 
+function getOmdbHref(movie) {
+  const imdbId = movie?.imdbId;
+  if (imdbId) return `https://www.imdb.com/title/${imdbId}/`;
+  const title = movie?.title || '';
+  const year = movie?.year ? String(movie.year) : '';
+  const qs = new URLSearchParams();
+  if (title) qs.set('t', title);
+  if (year) qs.set('y', year);
+  qs.set('apikey', '19886b2');
+  return `https://www.omdbapi.com/?${qs.toString()}`;
+}
+
 const MovieCard = ({ movie, variant, getPrimaryWatchProvider }) => {
   const isRecommendation = variant === 'recommendations';
   const primaryProvider = isRecommendation ? getPrimaryWatchProvider(movie.watchProviders) : null;
@@ -32,18 +44,21 @@ const MovieCard = ({ movie, variant, getPrimaryWatchProvider }) => {
     >
       {movie.posterUrl ? (
         <Box overflow="hidden">
-          <Image 
-            src={movie.posterUrl} 
-            alt={movie.title} 
-            objectFit="cover" 
-            w="100%" 
-            h="360px"
-            transition="transform 0.3s ease"
-            _groupHover={{ transform: 'scale(1.05)' }}
-            loading="lazy"
-            decoding="async"
-            fallbackSrc={POSTER_FALLBACK}
-          />
+          <Link href={movie.letterboxdUrl || getOmdbHref(movie)} isExternal>
+            <Image 
+              src={movie.posterUrl} 
+              alt={movie.title} 
+              objectFit="cover" 
+              w="100%" 
+              h="360px"
+              transition="transform 0.3s ease"
+              _groupHover={{ transform: 'scale(1.05)' }}
+              loading="lazy"
+              decoding="async"
+              referrerPolicy="no-referrer"
+              fallbackSrc={POSTER_FALLBACK}
+            />
+          </Link>
         </Box>
       ) : (
         <Flex

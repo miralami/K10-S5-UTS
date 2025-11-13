@@ -37,7 +37,7 @@ return [
 
     'omdb' => [
         'base_uri' => env('OMDB_API_BASE_URL', 'https://www.omdbapi.com/'),
-        'key' => env('OMDB_API_KEY'),
+        'key' => env('OMDB_API_KEY', '9f2e66a9'),
     ],
 
     'openai' => [

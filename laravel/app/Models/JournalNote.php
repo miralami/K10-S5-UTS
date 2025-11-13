@@ -17,6 +17,7 @@ class JournalNote extends Model
         'user_id',
         'title',
         'body',
+        'vibe',
         'note_date',
     ];
 
@@ -42,6 +43,7 @@ class JournalNote extends Model
                 $existingNote->update([
                     'title' => $note->title,
                     'body' => $note->body,
+                    'vibe' => $note->vibe ?? $existingNote->vibe,
                 ]);
                 
                 // Return false to prevent creating a new record

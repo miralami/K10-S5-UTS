@@ -6,6 +6,8 @@ use App\Models\JournalNote;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
+use Carbon\CarbonImmutable;
+use App\Services\DailyJournalAnalysisService;
 
 class JournalNoteController extends Controller
 {
@@ -22,7 +24,7 @@ class JournalNoteController extends Controller
         // order by updated_at so frontend that relies on `updatedAt` sees the latest items first
         $notes = $notesQuery
             ->orderByDesc('updated_at')
-            ->get(['id', 'user_id', 'title', 'body', 'note_date', 'created_at', 'updated_at']);
+            ->get(['id', 'user_id', 'title', 'body', 'vibe', 'note_date', 'created_at', 'updated_at']);
 
         return response()->json([
             'data' => $notes->map(fn (JournalNote $note) => $this->transformNote($note)),
@@ -39,6 +41,7 @@ class JournalNoteController extends Controller
         $validated = $request->validate([
             'title' => ['nullable', 'string', 'max:255'],
             'body' => ['required', 'string'],
+            'vibe' => ['sometimes', 'nullable', 'string', 'max:50'],
         ]);
 
         $validated['user_id'] = $user->id;
@@ -57,12 +60,21 @@ class JournalNoteController extends Controller
         ]);
     }
 
-    public function update(Request $request, JournalNote $note): JsonResponse
+    public function update(Request $request, JournalNote $note, DailyJournalAnalysisService $dailyService): JsonResponse
     {
+        $user = auth()->user();
+        if (!$user) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+        if ((int) $note->user_id !== (int) $user->id) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
         $validated = $request->validate([
             'user_id' => ['sometimes', 'nullable', 'integer', 'exists:users,id'],
             'title' => ['sometimes', 'nullable', 'string', 'max:255'],
             'body' => ['sometimes', 'string'],
+            'vibe' => ['sometimes', 'nullable', 'string', 'max:50'],
         ]);
 
         if (empty($validated)) {
@@ -71,7 +83,61 @@ class JournalNoteController extends Controller
             ], 422);
         }
 
+        unset($validated['user_id']);
+
+        $tz = new \DateTimeZone('Asia/Jakarta');
+        $todayStart = Carbon::now($tz)->startOfDay();
+
+        $ref = null;
+        if (!empty($note->note_date)) {
+            try { $ref = Carbon::parse($note->note_date, $tz)->startOfDay(); } catch (\Throwable $e) {}
+        }
+        if (!$ref && !empty($note->created_at)) {
+            try { $ref = ($note->created_at instanceof \DateTimeInterface)
+                ? Carbon::instance($note->created_at)->setTimezone($tz)->startOfDay()
+                : Carbon::parse($note->created_at, $tz)->startOfDay(); } catch (\Throwable $e) {}
+        }
+        if (!$ref && !empty($note->updated_at)) {
+            try { $ref = ($note->updated_at instanceof \DateTimeInterface)
+                ? Carbon::instance($note->updated_at)->setTimezone($tz)->startOfDay()
+                : Carbon::parse($note->updated_at, $tz)->startOfDay(); } catch (\Throwable $e) {}
+        }
+        if (!$ref) {
+            $ref = $todayStart;
+        }
+
+        $diff = $ref->diffInDays($todayStart, false);
+        if ($diff < 0) {
+            return response()->json(['message' => 'Tidak dapat mengedit catatan pada tanggal masa depan.'], 403);
+        }
+        if ($diff > 3) {
+            return response()->json(['message' => 'Hanya dapat mengedit catatan hingga 3 hari ke belakang.'], 403);
+        }
+
         $note->update($validated);
+
+        try {
+            $tz = new \DateTimeZone('Asia/Jakarta');
+            $day = null;
+            if (!empty($note->note_date)) {
+                try { $day = CarbonImmutable::parse($note->note_date, $tz)->startOfDay(); } catch (\Throwable $e) {}
+            }
+            if (!$day && !empty($note->created_at)) {
+                try { $day = ($note->created_at instanceof \DateTimeInterface)
+                    ? CarbonImmutable::instance($note->created_at)->setTimezone($tz)->startOfDay()
+                    : CarbonImmutable::parse($note->created_at, $tz)->startOfDay(); } catch (\Throwable $e) {}
+            }
+            if (!$day) {
+                $day = CarbonImmutable::now($tz)->startOfDay();
+            }
+
+            $user = auth()->user();
+            if ($user) {
+                $dailyService->generateForUser($user, $day, true);
+            }
+        } catch (\Throwable $e) {
+            \Log::error('Failed to recompute daily analysis after note update', [ 'error' => $e->getMessage() ]);
+        }
 
         return response()->json([
             'data' => $this->transformNote($note->refresh()),
@@ -93,6 +159,7 @@ class JournalNoteController extends Controller
             'userId' => $note->user_id ?? null,
             'title' => $note->title ?? null,
             'body' => $note->body ?? null,
+            'vibe' => $note->vibe ?? null,
         ];
 
         // note_date may be a date-only string in DB; normalize to ISO if present
