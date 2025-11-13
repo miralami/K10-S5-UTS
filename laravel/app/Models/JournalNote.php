@@ -17,7 +17,6 @@ class JournalNote extends Model
         'user_id',
         'title',
         'body',
-        'vibe',
         'note_date',
     ];
 
@@ -32,24 +31,23 @@ class JournalNote extends Model
             if (empty($note->note_date)) {
                 $note->note_date = now()->toDateString();
             }
-            
+
             // Check if a note already exists for this user and date
             $existingNote = static::where('user_id', $note->user_id)
                 ->where('note_date', $note->note_date)
                 ->first();
-                
+
             if ($existingNote) {
                 // Update the existing note instead of creating a new one
                 $existingNote->update([
                     'title' => $note->title,
                     'body' => $note->body,
-                    'vibe' => $note->vibe ?? $existingNote->vibe,
                 ]);
-                
+
                 // Return false to prevent creating a new record
                 return false;
             }
-            
+
             return true;
         });
     }

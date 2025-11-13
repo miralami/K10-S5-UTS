@@ -24,7 +24,7 @@ class JournalNoteController extends Controller
         // order by updated_at so frontend that relies on `updatedAt` sees the latest items first
         $notes = $notesQuery
             ->orderByDesc('updated_at')
-            ->get(['id', 'user_id', 'title', 'body', 'vibe', 'note_date', 'created_at', 'updated_at']);
+            ->get(['id', 'user_id', 'title', 'body', 'note_date', 'created_at', 'updated_at']);
 
         return response()->json([
             'data' => $notes->map(fn (JournalNote $note) => $this->transformNote($note)),
@@ -41,7 +41,6 @@ class JournalNoteController extends Controller
         $validated = $request->validate([
             'title' => ['nullable', 'string', 'max:255'],
             'body' => ['required', 'string'],
-            'vibe' => ['sometimes', 'nullable', 'string', 'max:50'],
         ]);
 
         $validated['user_id'] = $user->id;
@@ -74,7 +73,6 @@ class JournalNoteController extends Controller
             'user_id' => ['sometimes', 'nullable', 'integer', 'exists:users,id'],
             'title' => ['sometimes', 'nullable', 'string', 'max:255'],
             'body' => ['sometimes', 'string'],
-            'vibe' => ['sometimes', 'nullable', 'string', 'max:50'],
         ]);
 
         if (empty($validated)) {
@@ -159,7 +157,6 @@ class JournalNoteController extends Controller
             'userId' => $note->user_id ?? null,
             'title' => $note->title ?? null,
             'body' => $note->body ?? null,
-            'vibe' => $note->vibe ?? null,
         ];
 
         // note_date may be a date-only string in DB; normalize to ISO if present

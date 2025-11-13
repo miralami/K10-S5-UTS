@@ -189,7 +189,6 @@ export default function Dashboard() {
     };
   });
 
-const VIBE_OPTIONS = ['Lega', 'Lelah', 'Bersyukur', 'Penasaran'];
 
   // Set greeting saat mount
   useEffect(() => {
@@ -213,7 +212,6 @@ const VIBE_OPTIONS = ['Lega', 'Lelah', 'Bersyukur', 'Penasaran'];
   const [isGeneratingWeekly, setIsGeneratingWeekly] = useState(false);
   const [editTitle, setEditTitle] = useState('');
   const [editBody, setEditBody] = useState('');
-  const [editVibe, setEditVibe] = useState('');
   const toast = useToast();
 
   // Get notes for the selected date
@@ -267,7 +265,6 @@ const VIBE_OPTIONS = ['Lega', 'Lelah', 'Bersyukur', 'Penasaran'];
           note_date: note.noteDate || note.note_date || note.createdAt || note.created_at || note.updatedAt || note.updated_at,
           createdAt: note.createdAt || note.created_at,
           updatedAt: note.updatedAt || note.updated_at,
-          vibe: note.vibe || null,
           ...note,
         }))
         .sort((a, b) => new Date(b.updatedAt || b.note_date || b.createdAt) - new Date(a.updatedAt || a.note_date || a.createdAt));
@@ -401,7 +398,6 @@ const VIBE_OPTIONS = ['Lega', 'Lelah', 'Bersyukur', 'Penasaran'];
     setSelectedNote(note);
     setEditTitle(note.title || '');
     setEditBody(note.body || '');
-    setEditVibe(note.vibe || '');
     onEditOpen();
   }, [canEdit, onEditOpen]);
 
@@ -409,8 +405,8 @@ const VIBE_OPTIONS = ['Lega', 'Lelah', 'Bersyukur', 'Penasaran'];
     if (!selectedNote) return;
     setIsSavingEdit(true);
     try {
-      const payload = await updateNote(selectedNote.id, { title: editTitle, body: editBody, vibe: editVibe });
-      setAllNotes((prev) => prev.map((n) => n.id === selectedNote.id ? { ...n, title: editTitle, body: editBody, vibe: editVibe, updatedAt: new Date().toISOString() } : n));
+      await updateNote(selectedNote.id, { title: editTitle, body: editBody });
+      setAllNotes((prev) => prev.map((n) => n.id === selectedNote.id ? { ...n, title: editTitle, body: editBody, updatedAt: new Date().toISOString() } : n));
       await fetchWeeklySummaryData();
       await fetchAllNotes();
       toast({ title: 'Catatan diperbarui', status: 'success', duration: 3000, isClosable: true });
@@ -420,7 +416,7 @@ const VIBE_OPTIONS = ['Lega', 'Lelah', 'Bersyukur', 'Penasaran'];
     } finally {
       setIsSavingEdit(false);
     }
-  }, [selectedNote, editTitle, editBody, editVibe, toast, onEditClose, fetchWeeklySummaryData, fetchAllNotes]);
+  }, [selectedNote, editTitle, editBody, toast, onEditClose, fetchWeeklySummaryData, fetchAllNotes]);
 
   const handleDeleteNote = async (note) => {
     if (!note) return;
@@ -1021,23 +1017,6 @@ const VIBE_OPTIONS = ['Lega', 'Lelah', 'Bersyukur', 'Penasaran'];
           <ModalCloseButton />
           <ModalBody>
             <Stack spacing={3}>
-              <Box>
-                <Text fontSize="xs" color="whiteAlpha.700" mb={1}>Pilih vibe</Text>
-                <Wrap spacing={2}>
-                  {VIBE_OPTIONS.map((v) => (
-                    <WrapItem key={v}>
-                      <Button
-                        size="xs"
-                        variant={editVibe === v ? 'solid' : 'outline'}
-                        colorScheme="pink"
-                        onClick={() => setEditVibe(v)}
-                      >
-                        {v}
-                      </Button>
-                    </WrapItem>
-                  ))}
-                </Wrap>
-              </Box>
               <Input
                 placeholder="Judul (opsional)"
                 value={editTitle}

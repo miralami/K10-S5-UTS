@@ -283,7 +283,7 @@ export async function listNotes({ userId, startDate, endDate } = {}) {
   }
 }
 
-export async function createNote({ userId, title, body, vibe }) {
+export async function createNote({ userId, title, body }) {
   try {
     const now = new Date();
     const response = await fetch(
@@ -294,7 +294,6 @@ export async function createNote({ userId, title, body, vibe }) {
           user_id: userId || null,
           title: title || null,
           body,
-          vibe: vibe || null,
           // Add server-side timestamps if needed
           created_at: now.toISOString(),
           updated_at: now.toISOString(),
@@ -312,7 +311,7 @@ export async function createNote({ userId, title, body, vibe }) {
   }
 }
 
-export async function updateNote(id, { userId, title, body, vibe }) {
+export async function updateNote(id, { userId, title, body }) {
   try {
     const response = await fetch(
       `${API_BASE_URL}/journal/notes/${id}`,
@@ -322,7 +321,6 @@ export async function updateNote(id, { userId, title, body, vibe }) {
           user_id: userId,
           title,
           body,
-          vibe,
           // Add server-side timestamp if needed
           updated_at: new Date().toISOString(),
         }),
