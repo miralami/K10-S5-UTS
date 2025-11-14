@@ -13,8 +13,70 @@ use RuntimeException;
 
 class GeminiMoodAnalysisService
 {
+    private const MAX_RETRIES = 3;
+    private const RETRY_DELAY = 2; // in seconds
+    private const MAX_JITTER = 1000; // 1 second in milliseconds
     private string $apiKey;
     private string $model;
+
+    /**
+     * Execute HTTP request with retry mechanism and exponential backoff
+     */
+    private function httpRequestWithRetry(string $url, array $data, array $headers = [])
+    {
+        $lastException = null;
+        
+        for ($attempt = 1; $attempt <= self::MAX_RETRIES; $attempt++) {
+            try {
+                // Add jitter to prevent thundering herd
+                $jitter = rand(0, self::MAX_JITTER) / 1000; // Random delay up to 1 second
+                $delay = (self::RETRY_DELAY * $attempt) + $jitter;
+                
+                if ($attempt > 1) {
+                    usleep($delay * 1000000); // Convert to microseconds
+                }
+                
+                $response = Http::timeout(30 + ($attempt * 5)) // Increase timeout for retries
+                    ->withHeaders($headers)
+                    ->post($url, $data);
+
+                if ($response->successful()) {
+                    return $response;
+                }
+
+                $errorMessage = strtolower($response->json('error.message') ?? $response->body());
+                
+                // Check if error is retryable
+                $isRetryable = str_contains($errorMessage, 'overloaded') || 
+                              str_contains($errorMessage, 'try again') ||
+                              str_contains($errorMessage, 'quota') ||
+                              $response->status() === 429 || 
+                              $response->status() >= 500;
+                
+                if (!$isRetryable || $attempt >= self::MAX_RETRIES) {
+                    throw new RuntimeException('API request failed: ' . $errorMessage);
+                }
+                
+                \Log::warning("API request attempt $attempt failed, retrying in {$delay}s", [
+                    'error' => $errorMessage,
+                    'status' => $response->status()
+                ]);
+                
+            } catch (\Exception $e) {
+                $lastException = $e;
+                \Log::error("API request attempt $attempt failed", [
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
+                ]);
+                
+                if ($attempt >= self::MAX_RETRIES) {
+                    throw $e;
+                }
+            }
+        }
+        
+        throw $lastException ?? new RuntimeException('Failed to complete API request after ' . self::MAX_RETRIES . ' attempts');
+    }
 
     public function __construct()
     {
