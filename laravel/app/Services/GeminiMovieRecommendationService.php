@@ -24,10 +24,9 @@ class GeminiMovieRecommendationService
         }
         $prompt = $this->buildPrompt($mood);
 
-        $response = Http::withHeaders([
-            'Content-Type' => 'application/json',
-            'x-goog-api-key' => $this->apiKey,
-        ])->post('https://generativelanguage.googleapis.com/v1beta/models/' . $this->model . ':generateContent', [
+        $url = 'https://generativelanguage.googleapis.com/v1beta/models/' . $this->model . ':generateContent?key=' . $this->apiKey;
+        
+        $payload = [
             'contents' => [
                 [
                     'role' => 'user',
@@ -37,9 +36,35 @@ class GeminiMovieRecommendationService
                 ],
             ],
             'generationConfig' => [
-                'responseMimeType' => 'application/json',
+                'response_mime_type' => 'application/json',
+                'temperature' => 0.5,
+                'top_p' => 0.95,
+                'top_k' => 40,
+                'max_output_tokens' => 2048,
             ],
-        ]);
+            'safetySettings' => [
+                [
+                    'category' => 'HARM_CATEGORY_HARASSMENT',
+                    'threshold' => 'BLOCK_NONE'
+                ],
+                [
+                    'category' => 'HARM_CATEGORY_HATE_SPEECH',
+                    'threshold' => 'BLOCK_NONE'
+                ],
+                [
+                    'category' => 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
+                    'threshold' => 'BLOCK_NONE'
+                ],
+                [
+                    'category' => 'HARM_CATEGORY_DANGEROUS_CONTENT',
+                    'threshold' => 'BLOCK_NONE'
+                ]
+            ]
+        ];
+
+        $response = Http::withHeaders([
+            'Content-Type' => 'application/json',
+        ])->post($url, $payload);
 
         if ($response->failed()) {
             throw new RuntimeException('Failed to get Gemini movie recommendations: ' . ($response->json('error.message') ?? $response->body()));
@@ -91,13 +116,15 @@ class GeminiMovieRecommendationService
 Anda adalah asisten rekomendasi film. Berdasarkan deskripsi mood berikut (bahasa Indonesia):
 "%s"
 
-Kembalikan keluaran DALAM FORMAT JSON valid dengan struktur persis berikut:
+Beri 5 rekomendasi film yang sesuai dengan mood tersebut. Pastikan judul film dalam bahasa Inggris.
+
+Kembalikan DALAM FORMAT JSON dengan struktur berikut:
 {
   "recommendations": [
     {
-      "title": string,
-      "overview": string,
-      "year": string | null,
+      "title": "Judul Film (Tahun)",
+      "overview": "Deskripsi singkat film",
+      "year": "Tahun rilis",
       "imdbId": string | null,
       "posterUrl": string | null,
       "letterboxdUrl": string | null,
