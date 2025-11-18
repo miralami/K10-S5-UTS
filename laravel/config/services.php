@@ -40,14 +40,6 @@ return [
         'key' => env('OMDB_API_KEY', '9f2e66a9'),
     ],
 
-    'openai' => [
-        'base_uri' => env('OPENAI_API_BASE_URL', 'https://api.openai.com/v1'),
-        'key' => env('OPENAI_API_KEY'),
-        'chat_model' => env('OPENAI_CHAT_MODEL', 'gpt-oss-20b'),
-        'stream_model' => env('OPENAI_STREAM_MODEL', 'gpt-oss-120b'),
-        'system_prompt' => env('OPENAI_SYSTEM_PROMPT'),
-    ],
-
     'google_genai' => [
         'api_key' => env('GOOGLE_GENAI_API_KEY'),
         'model' => env('GOOGLE_GENAI_MODEL', 'gemini-2.5-flash'),
