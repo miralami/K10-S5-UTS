@@ -6,9 +6,12 @@
   "main": "server/websocket-server.js",
   "scripts": {
     "server:start": "node server/websocket-server.js",
-    "server:dev": "nodemon --watch server --ext js --exec node server/websocket-server.js"
+    "server:dev": "nodemon --watch server --ext js --exec node server/websocket-server.js",
+    "grpc:start": "node grpc-server.js"
   },
   "dependencies": {
+    "@grpc/grpc-js": "^1.9.0",
+    "@grpc/proto-loader": "^0.7.8",
     "express": "^4.18.2",
     "ws": "^8.18.3"
   },

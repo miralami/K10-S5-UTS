@@ -12,6 +12,8 @@ import {
   Text,
   useColorModeValue,
 } from '@chakra-ui/react';
+import TypingIndicator from '../components/TypingIndicator';
+import { typingService } from '../services/typingService';
 
 const DEFAULT_WS_URL = import.meta.env.VITE_WEBSOCKET_URL ?? 'ws://localhost:8080';
 
@@ -33,6 +35,7 @@ export default function Chat() {
 
   const wsRef = useRef(null);
   const messagesEndRef = useRef(null);
+  const typingTimeoutRef = useRef(null);
 
   const wsUrl = useMemo(() => DEFAULT_WS_URL, []);
 
@@ -90,6 +93,22 @@ export default function Chat() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  const handleInputChange = (event) => {
+    setInputValue(event.target.value);
+
+    if (userName) {
+      typingService.sendTyping('global', true);
+
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+
+      typingTimeoutRef.current = setTimeout(() => {
+        typingService.sendTyping('global', false);
+      }, 2000);
+    }
+  };
 
   const handleStartChat = () => {
     if (!tempUserName.trim()) {
@@ -262,12 +281,16 @@ export default function Chat() {
                 <span ref={messagesEndRef} />
               </Stack>
 
-              <HStack mt={6} spacing={3} align="flex-end">
+              <Box minH="24px" px={2} py={1}>
+                <TypingIndicator channelId="global" currentUserId={userName} />
+              </Box>
+
+              <HStack mt={2} spacing={3} align="flex-end">
                 <Box flex="1">
                   <Input
                     value={inputValue}
                     placeholder="Tulis pesan..."
-                    onChange={(event) => setInputValue(event.target.value)}
+                    onChange={handleInputChange}
                     onKeyDown={handleEnterPress}
                     bg={inputBg}
                     borderColor="rgba(148, 163, 184, 0.35)"
