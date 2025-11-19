@@ -3,6 +3,22 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
+  define: {
+    'global': 'globalThis',
+  },
+  resolve: {
+    alias: {
+      'grpc-web': 'grpc-web',
+    }
+  },
+  optimizeDeps: {
+    include: ['grpc-web', 'google-protobuf'],
+    esbuildOptions: {
+      define: {
+        global: 'globalThis'
+      }
+    }
+  },
   server: {
     port: 5173,
     strictPort: true,

@@ -127,13 +127,36 @@ wss.on('connection', function connection(ws, request) {
                     connectionManager.broadcast(`${userName} joined the chat.`, ws);
                     return;
                 }
+                // Typing indicator message
+                if (parsedData.type === 'typing') {
+                    // { type: 'typing', channel: 'global', isTyping: true }
+                    const serverPayload = JSON.stringify({
+                        type: 'typing',
+                        user_id: userName || 'anon',
+                        user_name: userName || 'anon',
+                        channel_id: parsedData.channel || 'global',
+                        is_typing: !!parsedData.isTyping,
+                        timestamp: Date.now(),
+                    });
+                    // Broadcast to other clients so they can show typing indicator
+                    connectionManager.broadcast(serverPayload, ws);
+                    return;
+                }
             } catch (e) {
                 // Not JSON, treat as regular message
             }
 
-            // Regular message
+            // Skip broadcasting if message looks like JSON (even if parse failed)
+            // This prevents malformed JSON from appearing in chat
+            if (messageText.trim().startsWith('{') && messageText.trim().endsWith('}')) {
+                console.log(`[${userName}] Skipping JSON-like message:`, messageText);
+                return;
+            }
+
+            // Regular message (plain text, not JSON)
             if (userName && ws.readyState === WebSocket.OPEN) {
                 console.log(`[${userName}] Received:`, messageText);
+                // Broadcast with username prefix for chat display
                 connectionManager.broadcast(`${userName}: ${messageText}`, ws);
             }
         } catch (error) {

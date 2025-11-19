@@ -1,69 +1,106 @@
 import React, { useState, useEffect } from 'react';
+import { Box, HStack, Text, Flex } from '@chakra-ui/react';
+import { keyframes } from '@emotion/react';
 import { typingService } from '../services/typingService';
+
+const bounce = keyframes`
+  0% { transform: translateY(0); opacity: 0.5; }
+  50% { transform: translateY(-6px); opacity: 1; }
+  100% { transform: translateY(0); opacity: 0.5; }
+`;
 
 const TypingIndicator = ({ channelId, currentUserId }) => {
   const [typingUsers, setTypingUsers] = useState(new Map());
 
   useEffect(() => {
     const handleTypingEvent = (event) => {
+      const data = event.detail || event;
+
       // Ignore own events
-      if (event.userId === currentUserId) return;
+      if (data.userId === currentUserId) return;
 
       setTypingUsers((prev) => {
         const newMap = new Map(prev);
-        if (event.isTyping) {
-          newMap.set(event.userId, {
-            name: event.userName,
-            timestamp: Date.now(),
-          });
+        if (data.isTyping) {
+          newMap.set(data.userId, { name: data.userName || 'Unknown', timestamp: Date.now() });
         } else {
-          newMap.delete(event.userId);
+          newMap.delete(data.userId);
         }
         return newMap;
       });
     };
 
-    // Start the stream
-    // Note: In a real app, you might want to lift the stream connection to a context or parent
-    // to avoid reconnecting on every render if this component unmounts/remounts often.
-    // For now, we assume this component lives as long as the chat is open.
+    window.addEventListener('typingEvent', handleTypingEvent);
     const stream = typingService.startStream(channelId, currentUserId, handleTypingEvent);
 
-    // Cleanup interval to remove stale typing users (e.g. if missed 'false' event)
+    // Remove stale typing users after TTL
     const interval = setInterval(() => {
       const now = Date.now();
       setTypingUsers((prev) => {
         let changed = false;
-        const newMap = new Map(prev);
-        for (const [id, data] of newMap.entries()) {
-          if (now - data.timestamp > 5000) { // 5 seconds TTL
-            newMap.delete(id);
+        const next = new Map(prev);
+        for (const [id, info] of next.entries()) {
+          if (now - info.timestamp > 5000) {
+            next.delete(id);
             changed = true;
           }
         }
-        return changed ? newMap : prev;
+        return changed ? next : prev;
       });
     }, 1000);
 
     return () => {
+      window.removeEventListener('typingEvent', handleTypingEvent);
       typingService.endStream();
       clearInterval(interval);
     };
   }, [channelId, currentUserId]);
 
-  const users = Array.from(typingUsers.values());
-
+  const users = Array.from(typingUsers.values()).map((u) => u.name);
   if (users.length === 0) return null;
 
-  if (users.length === 1) {
-    return <div className="text-sm text-gray-500 italic">{users[0].name} is typing...</div>;
-  }
+  const namesText = (() => {
+    if (users.length === 1) return `${users[0]} sedang mengetik...`;
+    if (users.length === 2) return `${users[0]} dan ${users[1]} sedang mengetik...`;
+    return `${users.slice(0, 2).join(', ')} dan lainnya sedang mengetik...`;
+  })();
 
-  if (users.length === 2) {
-    return <div className="text-sm text-gray-500 italic">{users[0].name} and {users[1].name} are typing...</div>;
-  }
+  return (
+    <Flex align="center" gap={3} px={2}>
+      <HStack spacing={2} align="center">
+        <Box display="flex" alignItems="flex-end" gap={1} aria-hidden>
+          <Box
+            w="6px"
+            h="6px"
+            bg="gray.300"
+            borderRadius="full"
+            animation={`${bounce} 1s infinite ease-in-out`}
+            style={{ animationDelay: '0s' }}
+          />
+          <Box
+            w="6px"
+            h="6px"
+            bg="gray.300"
+            borderRadius="full"
+            animation={`${bounce} 1s infinite ease-in-out`}
+            style={{ animationDelay: '0.12s' }}
+          />
+          <Box
+            w="6px"
+            h="6px"
+            bg="gray.300"
+            borderRadius="full"
+            animation={`${bounce} 1s infinite ease-in-out`}
+            style={{ animationDelay: '0.24s' }}
+          />
+        </Box>
+      </HStack>
 
-  return <div className="text-sm text-gray-500 italic">Several people are typing...</div>;
+      <Box>
+        <Text fontSize="sm" color="gray.300">{namesText}</Text>
+      </Box>
+    </Flex>
+  );
 };
 
 export default TypingIndicator;

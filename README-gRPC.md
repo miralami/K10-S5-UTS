@@ -140,6 +140,18 @@ npm run grpc:start
 
 This proxies port `8081` (browser/grpc-web) to `50051` (gRPC server).
 
+**Option A: Using npm script (recommended, runs with `npm run dev`):**
+
+The root `package.json` includes a helper that starts Envoy automatically:
+
+```powershell
+npm run envoy:start
+# or stop it with
+npm run envoy:stop
+```
+
+**Option B: Manual Docker command:**
+
 Unix example:
 
 ```bash
@@ -147,6 +159,22 @@ docker run -d -v "$(pwd)/deploy/envoy/grpc-web-envoy.yaml:/etc/envoy/envoy.yaml:
   -p 8081:8081 \
   envoyproxy/envoy:v1.22.0
 ```
+
+Windows PowerShell:
+
+```powershell
+docker run -d -v "${PWD}\deploy\envoy\grpc-web-envoy.yaml:/etc/envoy/envoy.yaml:ro" -p 8081:8081 envoyproxy/envoy:v1.22.0
+```
+
+**If you don't have Docker:**
+
+You can disable gRPC typing indicator feature by setting environment variable in `reactjs/.env`:
+
+```
+VITE_ENABLE_GRPC=false
+```
+
+The app will fallback to WebSocket-only for typing indicators.
 
 Windows notes:
 - On Windows `--network host` often doesn't work. The provided `grpc-web-envoy.yaml` uses `host.docker.internal` when appropriate — map ports and use the example above.
