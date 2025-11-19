@@ -5,10 +5,12 @@
   "description": "Workspace runner to start Laravel, Express WebSocket and React dev server together",
   "scripts": {
     "dev": "concurrently \"cd laravel && php artisan serve --host=127.0.0.1 --port=8000\" \"cd expressJS && npm run server:start\" \"cd reactjs && npm run dev\"",
-    "install-all": "npm --prefix expressJS install && npm --prefix reactjs install && (cd laravel && echo 'Run composer install in laravel if needed')"
+    "install-all": "npm --prefix expressJS install && npm --prefix reactjs install && (cd laravel && echo 'Run composer install in laravel if needed')",
+    "gen:proto": "node ./scripts/gen-proto.js"
   },
   "devDependencies": {
-    "concurrently": "^7.6.0"
+    "concurrently": "^7.6.0",
+    "grpc-tools": "^1.11.5"
   },
   "dependencies": {
     "protoc-gen-grpc-web": "^1.5.0"
