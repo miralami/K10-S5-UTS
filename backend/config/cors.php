@@ -11,10 +11,11 @@ $allowedOrigins = array_values(array_unique(array_merge($allowedOrigins, $defaul
 
 return [
     'paths' => ['api/*', 'sanctum/csrf-cookie'],
-    'allowed_origins' => ['http://localhost:5173'],
+    'allowed_origins' => $allowedOrigins,
     'allowed_methods' => ['*'],
     'allowed_headers' => ['*'],
     'exposed_headers' => [],
     'max_age' => 0,
     'supports_credentials' => true,
 ];
+
