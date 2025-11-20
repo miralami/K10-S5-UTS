@@ -1,0 +1,29 @@
+{
+  "name": "websocket-service",
+  "version": "1.0.0",
+  "description": "Workspace scripts for running the WebSocket server for Mood Journal",
+  "type": "module",
+  "main": "server/websocket-server.js",
+  "scripts": {
+    "server:start": "node server/websocket-server.js",
+    "server:dev": "nodemon --watch server --ext js --exec node server/websocket-server.js",
+    "grpc:start": "node grpc-server.js",
+    "lint": "eslint . --report-unused-disable-directives --max-warnings 0",
+    "lint:fix": "eslint . --fix --report-unused-disable-directives || true",
+    "format": "prettier --write ."
+  },
+  "dependencies": {
+    "@grpc/grpc-js": "^1.9.0",
+    "@grpc/proto-loader": "^0.7.8",
+    "express": "^4.18.2",
+    "uts_sem5-workspace": "file:..",
+    "ws": "^8.18.3"
+  },
+  "devDependencies": {
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-prettier": "^5.1.3",
+    "nodemon": "^2.0.22",
+    "prettier": "^3.2.5"
+  }
+}

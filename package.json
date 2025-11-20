@@ -1,0 +1,21 @@
+{
+  "name": "uts_sem5-workspace",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Workspace runner to start Laravel, Express WebSocket and React dev server together",
+  "scripts": {
+    "dev": "concurrently \"cd backend && php artisan serve --host=127.0.0.1 --port=8000\" \"node ./scripts/start-envoy.js\" \"cd websocket-service && npm run server:start\" \"cd websocket-service && npm run grpc:start\" \"cd frontend && npm run dev\"",
+    "dev:simple": "concurrently \"cd backend && php artisan serve --host=127.0.0.1 --port=8000\" \"cd websocket-service && npm run server:start\" \"cd frontend && npm run dev\"",
+    "envoy:start": "node ./scripts/start-envoy.js",
+    "envoy:stop": "node ./scripts/stop-envoy.js",
+    "install-all": "npm --prefix websocket-service install && npm --prefix frontend install && (cd backend && echo 'Run composer install in backend if needed')",
+    "gen:proto": "node ./scripts/gen-proto.js"
+  },
+  "devDependencies": {
+    "concurrently": "^7.6.0",
+    "grpc-tools": "^1.11.5"
+  },
+  "dependencies": {
+    "protoc-gen-grpc-web": "^1.5.0"
+  }
+}
