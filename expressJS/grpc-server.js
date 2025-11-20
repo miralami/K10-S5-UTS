@@ -37,13 +37,15 @@ function typingStream(call) {
     // For this demo, let's assume the client sends it or we generate a temp one if missing,
     // but the proto doesn't have user_id in ClientTypingEvent.
     // We'll rely on metadata or just mock it for now if not provided.
-    
+
     // Mock user extraction if not set
     if (!userId) {
-        // In production: userId = verifyToken(metadata['authorization']).sub
-        // For demo: use a random ID or one passed in metadata if we added it there
-        userId = call.metadata.get('user_id')[0] || 'anon_' + Math.floor(Math.random() * 1000);
-        userName = call.metadata.get('user_name')[0] || userId;
+      // In production: userId = verifyToken(metadata['authorization']).sub
+      // For demo: use a random ID or one passed in metadata if we added it there
+      userId =
+        call.metadata.get('user_id')[0] ||
+        'anon_' + Math.floor(Math.random() * 1000);
+      userName = call.metadata.get('user_name')[0] || userId;
     }
 
     const { channel_id, is_typing } = clientEvent;
@@ -87,19 +89,19 @@ function typingStream(call) {
       channels.get(currentChannel).delete(call);
       // Broadcast stopped typing on disconnect
       if (userId) {
-         const serverEvent = {
-            user_id: userId,
-            user_name: userName,
-            channel_id: currentChannel,
-            is_typing: false,
-            timestamp: Date.now(),
-          };
-          const subscribers = channels.get(currentChannel);
-          if (subscribers) {
-            for (const subscriber of subscribers) {
-                subscriber.write(serverEvent);
-            }
+        const serverEvent = {
+          user_id: userId,
+          user_name: userName,
+          channel_id: currentChannel,
+          is_typing: false,
+          timestamp: Date.now(),
+        };
+        const subscribers = channels.get(currentChannel);
+        if (subscribers) {
+          for (const subscriber of subscribers) {
+            subscriber.write(serverEvent);
           }
+        }
       }
     }
   });
@@ -114,13 +116,19 @@ function typingStream(call) {
 
 function main() {
   const server = new grpc.Server();
-  server.addService(typingProto.TypingService.service, { TypingStream: typingStream });
-  
-  const PORT = process.env.GRPC_PORT || '50051';
-  server.bindAsync(`0.0.0.0:${PORT}`, grpc.ServerCredentials.createInsecure(), () => {
-    console.log(`gRPC server running on port ${PORT}`);
-    server.start();
+  server.addService(typingProto.TypingService.service, {
+    TypingStream: typingStream,
   });
+
+  const PORT = process.env.GRPC_PORT || '50051';
+  server.bindAsync(
+    `0.0.0.0:${PORT}`,
+    grpc.ServerCredentials.createInsecure(),
+    () => {
+      console.log(`gRPC server running on port ${PORT}`);
+      server.start();
+    }
+  );
 }
 
 main();

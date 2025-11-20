@@ -38,6 +38,7 @@ class GenerateDailyAnalysis extends Command
                 : CarbonImmutable::now();
         } catch (\Throwable $exception) {
             $this->error('Format tanggal tidak valid. Gunakan YYYY-MM-DD.');
+
             return self::INVALID;
         }
 
@@ -56,6 +57,7 @@ class GenerateDailyAnalysis extends Command
 
         if ($users->isEmpty()) {
             $this->info('Tidak ada pengguna yang perlu diproses.');
+
             return self::SUCCESS;
         }
 

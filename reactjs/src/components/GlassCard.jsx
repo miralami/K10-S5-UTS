@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import { Box } from '@chakra-ui/react';
 import { motion } from 'framer-motion';
 
@@ -25,3 +26,8 @@ export const GlassCard = ({ children, hover = true, ...props }) => (
     {children}
   </MotionBox>
 );
+
+GlassCard.propTypes = {
+  children: PropTypes.node.isRequired,
+  hover: PropTypes.bool,
+};

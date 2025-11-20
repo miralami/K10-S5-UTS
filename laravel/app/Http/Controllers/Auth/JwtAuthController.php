@@ -31,7 +31,7 @@ class JwtAuthController extends Controller
             ]);
 
             $token = JWTAuth::fromUser($user);
-            if (!$token) {
+            if (! $token) {
                 throw new \Exception('Could not create access token');
             }
 
@@ -43,7 +43,8 @@ class JwtAuthController extends Controller
                 'errors' => $e->errors(),
             ], 422);
         } catch (\Exception $e) {
-            \Log::error('Registration Error: ' . $e->getMessage());
+            \Log::error('Registration Error: '.$e->getMessage());
+
             return response()->json([
                 'status' => 'error',
                 'message' => 'Terjadi kesalahan saat registrasi. Silakan coba lagi.',
@@ -60,7 +61,7 @@ class JwtAuthController extends Controller
             ]);
 
             $token = JWTAuth::attempt($credentials);
-            if (!$token) {
+            if (! $token) {
                 return response()->json([
                     'status' => 'error',
                     'message' => 'Email atau password salah',
@@ -76,7 +77,8 @@ class JwtAuthController extends Controller
                 'errors' => $e->errors(),
             ], 422);
         } catch (JWTException $e) {
-            Log::error('JWT Error: ' . $e->getMessage());
+            Log::error('JWT Error: '.$e->getMessage());
+
             return response()->json([
                 'status' => 'error',
                 'message' => 'Terjadi kesalahan pada sistem. Silakan coba lagi.',
@@ -88,20 +90,21 @@ class JwtAuthController extends Controller
     {
         try {
             $user = Auth::guard('api')->user();
-            if (!$user) {
+            if (! $user) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'User tidak ditemukan'
+                    'message' => 'User tidak ditemukan',
                 ], 401);
             }
 
             return response()->json([
                 'status' => 'success',
-                'data' => $user
+                'data' => $user,
             ]);
 
         } catch (\Exception $e) {
-            Log::error('Get User Error: ' . $e->getMessage());
+            Log::error('Get User Error: '.$e->getMessage());
+
             return response()->json([
                 'status' => 'error',
                 'message' => 'Terjadi kesalahan saat mengambil data user.',
@@ -121,7 +124,8 @@ class JwtAuthController extends Controller
             ]);
 
         } catch (JWTException $e) {
-            Log::error('Logout Error: ' . $e->getMessage());
+            Log::error('Logout Error: '.$e->getMessage());
+
             return response()->json([
                 'status' => 'error',
                 'message' => 'Terjadi kesalahan saat logout.',
@@ -137,7 +141,8 @@ class JwtAuthController extends Controller
             return $this->respondWithToken($token);
 
         } catch (JWTException $e) {
-            Log::error('Token Refresh Error: ' . $e->getMessage());
+            Log::error('Token Refresh Error: '.$e->getMessage());
+
             return response()->json([
                 'status' => 'error',
                 'message' => 'Terjadi kesalahan saat memperbaharui token.',
@@ -158,7 +163,7 @@ class JwtAuthController extends Controller
                 'expires_in' => $ttl * 60,
                 'refresh_expires_in' => $refreshTtl ? $refreshTtl * 60 : null,
                 'user' => Auth::guard('api')->user(),
-            ]
+            ],
         ], $status);
     }
 }

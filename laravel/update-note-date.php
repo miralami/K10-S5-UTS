@@ -17,8 +17,8 @@ if ($note) {
     $startOfWeek = Carbon::now()->startOfWeek();
     $note->created_at = $startOfWeek;
     $note->save();
-    
-    echo "Updated note ID {$note->id} date to: " . $startOfWeek->format('Y-m-d H:i:s') . "\n";
+
+    echo "Updated note ID {$note->id} date to: ".$startOfWeek->format('Y-m-d H:i:s')."\n";
 } else {
     echo "No journal notes found.\n";
 }

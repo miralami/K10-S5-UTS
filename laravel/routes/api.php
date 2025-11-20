@@ -1,10 +1,10 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\JwtAuthController;
 use App\Http\Controllers\JournalAnalysisController;
 use App\Http\Controllers\JournalNoteController;
 use App\Http\Controllers\RecommendationController;
+use Illuminate\Support\Facades\Route;
 
 Route::post('recommendations', [RecommendationController::class, 'create']);
 

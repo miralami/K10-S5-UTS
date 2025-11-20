@@ -2,17 +2,17 @@
 
 namespace App\Exports;
 
-use Maatwebsite\Excel\Concerns\FromCollection;
-use Maatwebsite\Excel\Concerns\WithHeadings;
-use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Illuminate\Support\Collection;
+use Maatwebsite\Excel\Concerns\FromCollection;
+use Maatwebsite\Excel\Concerns\ShouldAutoSize;
+use Maatwebsite\Excel\Concerns\WithHeadings;
 
 /**
  * Placeholder InstansiExport: export functionality removed but class kept to
  * avoid autoload/classmap issues. Methods throw to make accidental usage fail
  * clearly.
  */
-class InstansiExport implements FromCollection, WithHeadings, ShouldAutoSize
+class InstansiExport implements FromCollection, ShouldAutoSize, WithHeadings
 {
     public function __construct(int $kategoriId = 0)
     {

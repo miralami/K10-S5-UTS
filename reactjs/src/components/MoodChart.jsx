@@ -1,4 +1,5 @@
 import { Box, useToken } from '@chakra-ui/react';
+import PropTypes from 'prop-types';
 import {
   AreaChart,
   Area,
@@ -60,3 +61,12 @@ export default function MoodChart({ data }) {
     </Box>
   );
 }
+
+MoodChart.propTypes = {
+  data: PropTypes.arrayOf(
+    PropTypes.shape({
+      date: PropTypes.string.isRequired,
+      moodScore: PropTypes.number,
+    })
+  ).isRequired,
+};

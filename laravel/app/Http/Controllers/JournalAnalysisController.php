@@ -4,22 +4,20 @@ namespace App\Http\Controllers;
 
 use App\Models\DailyJournalAnalysis;
 use App\Models\JournalNote;
+use App\Models\User;
 use App\Models\WeeklyJournalAnalysis;
-use App\Services\WeeklyMovieRecommendationService;
 use App\Services\DailyJournalAnalysisService;
 use App\Services\GeminiMoodAnalysisService;
-use Tymon\JWTAuth\Facades\JWTAuth;
-use App\Models\User;
+use App\Services\WeeklyMovieRecommendationService;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use Tymon\JWTAuth\Facades\JWTAuth;
 
 class JournalAnalysisController extends Controller
 {
-    public function __construct(private readonly WeeklyMovieRecommendationService $movieRecommendations)
-    {
-    }
+    public function __construct(private readonly WeeklyMovieRecommendationService $movieRecommendations) {}
 
     public function weeklySummary(Request $request): JsonResponse
     {
@@ -45,7 +43,7 @@ class JournalAnalysisController extends Controller
                     }
                 } catch (\Exception $e) {
                     // Failed to parse token: fall back to request->user() below
-                    \Log::info('JWT parseToken failed in weeklySummary: ' . $e->getMessage());
+                    \Log::info('JWT parseToken failed in weeklySummary: '.$e->getMessage());
                 }
             }
 
@@ -67,7 +65,7 @@ class JournalAnalysisController extends Controller
             }
 
             // Ensure we have valid dates
-            if (!$weekStart || !$weekEnd) {
+            if (! $weekStart || ! $weekEnd) {
                 throw new \InvalidArgumentException('Tanggal tidak valid');
             }
 
@@ -80,13 +78,13 @@ class JournalAnalysisController extends Controller
             $analysisRecord = WeeklyJournalAnalysis::query()
                 ->whereDate('week_start', $weekStart->toDateString())
                 ->when(isset($validated['user_id']), fn ($query) => $query->where('user_id', $validated['user_id']))
-                ->when(!isset($validated['user_id']), fn ($query) => $query->orderByDesc('created_at'))
+                ->when(! isset($validated['user_id']), fn ($query) => $query->orderByDesc('created_at'))
                 ->first();
 
             $analysisPayload = $analysisRecord?->analysis;
             $recommendations = null;
 
-            if (is_array($analysisPayload) && !empty($analysisPayload)) {
+            if (is_array($analysisPayload) && ! empty($analysisPayload)) {
                 // Gunakan mood mingguan untuk memetakan rekomendasi film tematik.
                 $recommendations = $this->movieRecommendations->buildRecommendations($analysisPayload);
                 $recommendations = $this->enrichWeeklyRecommendationsWithOmdbPosters($recommendations);
@@ -94,7 +92,7 @@ class JournalAnalysisController extends Controller
 
             $dailySummaries = DailyJournalAnalysis::query()
                 ->when(isset($validated['user_id']), fn ($query) => $query->where('user_id', $validated['user_id']))
-                ->when(!isset($validated['user_id']), fn ($query) => $query->orderByDesc('analysis_date'))
+                ->when(! isset($validated['user_id']), fn ($query) => $query->orderByDesc('analysis_date'))
                 ->whereBetween('analysis_date', [$weekStart->toDateString(), $weekEnd->toDateString()])
                 ->get(['id', 'user_id', 'analysis_date', 'analysis'])
                 ->map(fn (DailyJournalAnalysis $daily) => $this->formatDaily($daily)) ?? [];
@@ -117,9 +115,9 @@ class JournalAnalysisController extends Controller
                     : 'Ringkasan mingguan belum tersedia. Cron akan memperbarui setiap Senin 02:00.',
             ]);
         } catch (\Exception $e) {
-            \Log::error('Error in weeklySummary: ' . $e->getMessage(), [
+            \Log::error('Error in weeklySummary: '.$e->getMessage(), [
                 'exception' => $e,
-                'request' => $request->all()
+                'request' => $request->all(),
             ]);
 
             return response()->json([
@@ -142,14 +140,14 @@ class JournalAnalysisController extends Controller
                 ? CarbonImmutable::parse($validated['date'])->toDateString()
                 : CarbonImmutable::now()->toDateString();
 
-            if (!$targetDate) {
+            if (! $targetDate) {
                 throw new \InvalidArgumentException('Tanggal tidak valid');
             }
 
             $record = DailyJournalAnalysis::query()
                 ->whereDate('analysis_date', $targetDate)
                 ->when(isset($validated['user_id']), fn ($builder) => $builder->where('user_id', $validated['user_id']))
-                ->when(!isset($validated['user_id']), fn ($builder) => $builder->orderByDesc('analysis_date'))
+                ->when(! isset($validated['user_id']), fn ($builder) => $builder->orderByDesc('analysis_date'))
                 ->first();
 
             return response()->json([
@@ -164,9 +162,9 @@ class JournalAnalysisController extends Controller
                     : 'Ringkasan harian belum tersedia untuk tanggal tersebut.',
             ]);
         } catch (\Exception $e) {
-            \Log::error('Error in dailySummary: ' . $e->getMessage(), [
+            \Log::error('Error in dailySummary: '.$e->getMessage(), [
                 'exception' => $e,
-                'request' => $request->all()
+                'request' => $request->all(),
             ]);
 
             return response()->json([
@@ -202,15 +200,15 @@ class JournalAnalysisController extends Controller
                 }
             } catch (\Exception $e) {
                 // Token parse/auth may fail; we'll fall back to request->user()
-                \Log::info('JWT parseToken failed in generateWeeklyForUser: ' . $e->getMessage());
+                \Log::info('JWT parseToken failed in generateWeeklyForUser: '.$e->getMessage());
             }
 
             if (! $user) {
                 $user = $request->user();
             }
 
-            if (! $user || !($user instanceof User)) {
-                return response()->json([ 'status' => 'error', 'message' => 'Unauthorized' ], 401);
+            if (! $user || ! ($user instanceof User)) {
+                return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 401);
             }
 
             if (isset($validated['start_date']) && isset($validated['end_date'])) {
@@ -239,6 +237,7 @@ class JournalAnalysisController extends Controller
 
             $analysis['noteCount'] = $dailyAnalyses->sum(function ($daily) {
                 $payload = $daily->analysis ?? [];
+
                 return (int) ($payload['noteCount'] ?? 0);
             });
 
@@ -266,14 +265,15 @@ class JournalAnalysisController extends Controller
             return response()->json([
                 'status' => 'success',
                 'message' => 'Weekly analysis generated for user.',
-                'week' => [ 'start' => $weekStart->toDateString(), 'end' => $weekEnding->toDateString() ],
+                'week' => ['start' => $weekStart->toDateString(), 'end' => $weekEnding->toDateString()],
                 'analysis' => $analysis,
             ]);
         } catch (\Exception $e) {
-            \Log::error('Error generating weekly analysis for user: ' . $e->getMessage(), [
+            \Log::error('Error generating weekly analysis for user: '.$e->getMessage(), [
                 'exception' => $e,
                 'user' => $request->user()?->id,
             ]);
+
             return response()->json([
                 'status' => 'error',
                 'message' => 'Gagal menghasilkan ringkasan mingguan. Cek log untuk detail.',
@@ -289,13 +289,13 @@ class JournalAnalysisController extends Controller
             'user_id' => $note->user_id,
             'title' => $note->title ?? null,
             'body' => $note->body ?? null,
-            'note_date' => !empty($note->note_date) ? (
+            'note_date' => ! empty($note->note_date) ? (
                 $note->note_date instanceof \DateTimeInterface ? $note->note_date->format('Y-m-d') : CarbonImmutable::parse($note->note_date)->toDateString()
             ) : null,
-            'created_at' => !empty($note->created_at) ? (
+            'created_at' => ! empty($note->created_at) ? (
                 $note->created_at instanceof \DateTimeInterface ? $note->created_at->format(DATE_ATOM) : CarbonImmutable::parse($note->created_at)->toIso8601String()
             ) : null,
-            'updated_at' => !empty($note->updated_at) ? (
+            'updated_at' => ! empty($note->updated_at) ? (
                 $note->updated_at instanceof \DateTimeInterface ? $note->updated_at->format(DATE_ATOM) : CarbonImmutable::parse($note->updated_at)->toIso8601String()
             ) : null,
         ];
@@ -306,7 +306,7 @@ class JournalAnalysisController extends Controller
         return [
             'id' => $daily->id,
             'userId' => $daily->user_id,
-            'date' => !empty($daily->analysis_date) ? (
+            'date' => ! empty($daily->analysis_date) ? (
                 $daily->analysis_date instanceof \DateTimeInterface ? $daily->analysis_date->format('Y-m-d') : CarbonImmutable::parse($daily->analysis_date)->toDateString()
             ) : null,
             'analysis' => $daily->analysis,
@@ -315,7 +315,7 @@ class JournalAnalysisController extends Controller
 
     private function enrichWeeklyRecommendationsWithOmdbPosters(?array $payload): ?array
     {
-        if (!is_array($payload) || empty($payload['items']) || !is_array($payload['items'])) {
+        if (! is_array($payload) || empty($payload['items']) || ! is_array($payload['items'])) {
             return $payload;
         }
 
@@ -343,7 +343,7 @@ class JournalAnalysisController extends Controller
                     }
                 }
 
-                if (!empty($query)) {
+                if (! empty($query)) {
                     $query['apikey'] = $apiKey;
                     $resp = Http::timeout(10)->get($baseUri, $query);
                     if ($resp->ok()) {

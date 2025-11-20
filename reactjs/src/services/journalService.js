@@ -50,7 +50,7 @@ function processDates(obj) {
   const result = Array.isArray(obj) ? [...obj] : { ...obj };
 
   for (const key in result) {
-    if (result.hasOwnProperty(key)) {
+    if (Object.prototype.hasOwnProperty.call(result, key)) {
       // Handle date fields
       if (
         key.endsWith('_at') ||
@@ -129,15 +129,6 @@ async function handleResponse(response) {
       message: 'Gagal memproses respons dari server',
       _isError: true,
     };
-  }
-}
-
-async function extractErrorMessage(response) {
-  try {
-    const payload = await response.json();
-    return payload?.message || payload?.error;
-  } catch (error) {
-    return null;
   }
 }
 

@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import { Box, Text, VStack, useToken } from '@chakra-ui/react';
 import { motion } from 'framer-motion';
 
@@ -59,6 +60,13 @@ const CircularProgress = ({ value, size = 120, strokeWidth = 8, color = 'cyan.40
       </VStack>
     </Box>
   );
+};
+
+CircularProgress.propTypes = {
+  value: PropTypes.number.isRequired,
+  size: PropTypes.number,
+  strokeWidth: PropTypes.number,
+  color: PropTypes.string,
 };
 
 export default CircularProgress;

@@ -12,6 +12,7 @@ import {
   WrapItem,
   Flex,
 } from '@chakra-ui/react';
+import PropTypes from 'prop-types';
 
 // lightweight SVG fallback used when poster fails to load or is aborted
 const POSTER_FALLBACK =
@@ -161,6 +162,32 @@ const MovieCard = ({ movie, variant, getPrimaryWatchProvider }) => {
       </VStack>
     </Box>
   );
+};
+
+MovieCard.propTypes = {
+  movie: PropTypes.shape({
+    title: PropTypes.string.isRequired,
+    posterUrl: PropTypes.string,
+    letterboxdUrl: PropTypes.string,
+    year: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    type: PropTypes.string,
+    imdbUrl: PropTypes.string,
+    overview: PropTypes.string,
+    watchProviders: PropTypes.arrayOf(
+      PropTypes.shape({
+        provider: PropTypes.string,
+        url: PropTypes.string,
+      })
+    ),
+    imdbId: PropTypes.string,
+  }).isRequired,
+  variant: PropTypes.oneOf(['recommendations', 'search', 'history']),
+  getPrimaryWatchProvider: PropTypes.func,
+};
+
+MovieCard.defaultProps = {
+  variant: 'search',
+  getPrimaryWatchProvider: () => null,
 };
 
 export default MovieCard;

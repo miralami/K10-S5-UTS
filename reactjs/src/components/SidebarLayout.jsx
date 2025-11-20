@@ -1,4 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom';
+import PropTypes from 'prop-types';
 import { Box, Button, Flex, Heading, Icon, Stack, Text, useColorModeValue } from '@chakra-ui/react';
 import { AtSignIcon, CalendarIcon, ChatIcon } from '@chakra-ui/icons';
 import { logout } from '../services/authService';
@@ -132,3 +133,18 @@ function NavItem({ item, activeBg, activeColor }) {
     </NavLink>
   );
 }
+
+SidebarLayout.propTypes = {
+  children: PropTypes.node.isRequired,
+};
+
+NavItem.propTypes = {
+  item: PropTypes.shape({
+    label: PropTypes.string.isRequired,
+    to: PropTypes.string.isRequired,
+    icon: PropTypes.elementType,
+    description: PropTypes.string,
+  }).isRequired,
+  activeBg: PropTypes.string.isRequired,
+  activeColor: PropTypes.string.isRequired,
+};

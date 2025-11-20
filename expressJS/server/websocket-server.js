@@ -10,7 +10,7 @@ app.use(express.static('public'));
 const PORT = process.env.PORT || 8080;
 
 app.get('/', (req, res) => {
-    res.send(`
+  res.send(`
         <!DOCTYPE html>
         <html>
             <head>
@@ -59,147 +59,156 @@ app.get('/', (req, res) => {
 });
 
 class ConnectionManager {
-    constructor() {
-        this.clients = new Map();
-    }
+  constructor() {
+    this.clients = new Map();
+  }
 
-    addClient(ws, userName) {
-        this.clients.set(ws, { userName, connectedAt: new Date() });
-        console.log(`Client added: ${userName}. Total clients: ${this.clients.size}`);
-    }
+  addClient(ws, userName) {
+    this.clients.set(ws, { userName, connectedAt: new Date() });
+    console.log(
+      `Client added: ${userName}. Total clients: ${this.clients.size}`
+    );
+  }
 
-    removeClient(ws) {
-        const clientData = this.clients.get(ws);
-        if (clientData) {
-            console.log(`Client removed: ${clientData.userName}. Total clients: ${this.clients.size - 1}`);
+  removeClient(ws) {
+    const clientData = this.clients.get(ws);
+    if (clientData) {
+      console.log(
+        `Client removed: ${clientData.userName}. Total clients: ${this.clients.size - 1}`
+      );
+    }
+    this.clients.delete(ws);
+  }
+
+  getClientName(ws) {
+    const clientData = this.clients.get(ws);
+    return clientData ? clientData.userName : 'Unknown';
+  }
+
+  // Menyebarkan pesan ke semua klien lain kecuali pengirim untuk menjaga percakapan tetap sinkron
+  broadcast(message, sender = null) {
+    this.clients.forEach((clientData, client) => {
+      if (client !== sender && client.readyState === WebSocket.OPEN) {
+        try {
+          client.send(message);
+        } catch (error) {
+          console.error('Error broadcasting to client:', error);
+          this.removeClient(client);
         }
-        this.clients.delete(ws);
-    }
+      }
+    });
+  }
 
-    getClientName(ws) {
-        const clientData = this.clients.get(ws);
-        return clientData ? clientData.userName : 'Unknown';
-    }
-
-    // Menyebarkan pesan ke semua klien lain kecuali pengirim untuk menjaga percakapan tetap sinkron
-    broadcast(message, sender = null) {
-        this.clients.forEach((clientData, client) => {
-            if (client !== sender && client.readyState === WebSocket.OPEN) {
-                try {
-                    client.send(message);
-                } catch (error) {
-                    console.error('Error broadcasting to client:', error);
-                    this.removeClient(client);
-                }
-            }
-        });
-    }
-
-    getClientCount() {
-        return this.clients.size;
-    }
+  getClientCount() {
+    return this.clients.size;
+  }
 }
 
 const connectionManager = new ConnectionManager();
 
-const wss = new WebSocketServer({ 
-    server,
-    clientTracking: true
+const wss = new WebSocketServer({
+  server,
+  clientTracking: true,
 });
 
 wss.on('connection', function connection(ws, request) {
-    const clientIP = request.socket.remoteAddress;
-    console.log(`New client connected from ${clientIP}`);
+  const clientIP = request.socket.remoteAddress;
+  console.log(`New client connected from ${clientIP}`);
 
-    let userName = null;
+  let userName = null;
 
-    ws.on('message', function message(data) {
-        try {
-            const messageText = data.toString();
-            
-            // Check if this is a username message
-            try {
-                const parsedData = JSON.parse(messageText);
-                if (parsedData.type === 'username') {
-                    userName = parsedData.name;
-                    connectionManager.addClient(ws, userName);
-                    ws.send(`Welcome to the WebSocket server, ${userName}!`);
-                    connectionManager.broadcast(`${userName} joined the chat.`, ws);
-                    return;
-                }
-                // Typing indicator message
-                if (parsedData.type === 'typing') {
-                    // { type: 'typing', channel: 'global', isTyping: true }
-                    const serverPayload = JSON.stringify({
-                        type: 'typing',
-                        user_id: userName || 'anon',
-                        user_name: userName || 'anon',
-                        channel_id: parsedData.channel || 'global',
-                        is_typing: !!parsedData.isTyping,
-                        timestamp: Date.now(),
-                    });
-                    // Broadcast to other clients so they can show typing indicator
-                    connectionManager.broadcast(serverPayload, ws);
-                    return;
-                }
-            } catch (e) {
-                // Not JSON, treat as regular message
-            }
+  ws.on('message', function message(data) {
+    try {
+      const messageText = data.toString();
 
-            // Skip broadcasting if message looks like JSON (even if parse failed)
-            // This prevents malformed JSON from appearing in chat
-            if (messageText.trim().startsWith('{') && messageText.trim().endsWith('}')) {
-                console.log(`[${userName}] Skipping JSON-like message:`, messageText);
-                return;
-            }
-
-            // Regular message (plain text, not JSON)
-            if (userName && ws.readyState === WebSocket.OPEN) {
-                console.log(`[${userName}] Received:`, messageText);
-                // Broadcast with username prefix for chat display
-                connectionManager.broadcast(`${userName}: ${messageText}`, ws);
-            }
-        } catch (error) {
-            console.error('Error processing message:', error);
+      // Check if this is a username message
+      try {
+        const parsedData = JSON.parse(messageText);
+        if (parsedData.type === 'username') {
+          userName = parsedData.name;
+          connectionManager.addClient(ws, userName);
+          ws.send(`Welcome to the WebSocket server, ${userName}!`);
+          connectionManager.broadcast(`${userName} joined the chat.`, ws);
+          return;
         }
-    });
-
-    ws.on('close', function close(code, reason) {
-        if (userName) {
-            connectionManager.broadcast(`${userName} left the chat.`);
-            connectionManager.removeClient(ws);
-            console.log(`[${userName}] Client disconnected - Code: ${code}, Reason: ${reason}`);
+        // Typing indicator message
+        if (parsedData.type === 'typing') {
+          // { type: 'typing', channel: 'global', isTyping: true }
+          const serverPayload = JSON.stringify({
+            type: 'typing',
+            user_id: userName || 'anon',
+            user_name: userName || 'anon',
+            channel_id: parsedData.channel || 'global',
+            is_typing: !!parsedData.isTyping,
+            timestamp: Date.now(),
+          });
+          // Broadcast to other clients so they can show typing indicator
+          connectionManager.broadcast(serverPayload, ws);
+          return;
         }
-    });
+      } catch (e) {
+        // Not JSON, treat as regular message
+      }
 
-    ws.on('error', function error(err) {
-        console.error('WebSocket error:', err);
-    });
+      // Skip broadcasting if message looks like JSON (even if parse failed)
+      // This prevents malformed JSON from appearing in chat
+      if (
+        messageText.trim().startsWith('{') &&
+        messageText.trim().endsWith('}')
+      ) {
+        console.log(`[${userName}] Skipping JSON-like message:`, messageText);
+        return;
+      }
 
-    ws.on('pong', function heartbeat() {
-        ws.isAlive = true;
-    });
+      // Regular message (plain text, not JSON)
+      if (userName && ws.readyState === WebSocket.OPEN) {
+        console.log(`[${userName}] Received:`, messageText);
+        // Broadcast with username prefix for chat display
+        connectionManager.broadcast(`${userName}: ${messageText}`, ws);
+      }
+    } catch (error) {
+      console.error('Error processing message:', error);
+    }
+  });
 
+  ws.on('close', function close(code, reason) {
+    if (userName) {
+      connectionManager.broadcast(`${userName} left the chat.`);
+      connectionManager.removeClient(ws);
+      console.log(
+        `[${userName}] Client disconnected - Code: ${code}, Reason: ${reason}`
+      );
+    }
+  });
+
+  ws.on('error', function error(err) {
+    console.error('WebSocket error:', err);
+  });
+
+  ws.on('pong', function heartbeat() {
     ws.isAlive = true;
+  });
+
+  ws.isAlive = true;
 });
 
 // Ping clients periodically to detect broken connections
 // Komentar: mekanisme heartbeat ini memastikan koneksi mati terputus otomatis agar server tetap bersih
 const interval = setInterval(function ping() {
-    wss.clients.forEach(function each(ws) {
-        if (ws.isAlive === false) {
-            return ws.terminate();
-        }
+  wss.clients.forEach(function each(ws) {
+    if (ws.isAlive === false) {
+      return ws.terminate();
+    }
 
-        ws.isAlive = false;
-        ws.ping();
-    });
+    ws.isAlive = false;
+    ws.ping();
+  });
 }, 3000);
 
 wss.on('close', function close() {
-    clearInterval(interval);
+  clearInterval(interval);
 });
 
 server.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+  console.log(`Server running on http://localhost:${PORT}`);
 });

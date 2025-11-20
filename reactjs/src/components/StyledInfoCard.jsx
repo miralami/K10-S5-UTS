@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import { Box, Text, VStack } from '@chakra-ui/react';
 import { motion } from 'framer-motion';
 
@@ -31,3 +32,10 @@ export default function StyledInfoCard({ label, value, icon, color = 'whiteAlpha
     </MotionBox>
   );
 }
+
+StyledInfoCard.propTypes = {
+  label: PropTypes.string.isRequired,
+  value: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+  icon: PropTypes.node,
+  color: PropTypes.string,
+};

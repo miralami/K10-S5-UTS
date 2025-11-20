@@ -3,18 +3,18 @@
 namespace App\Http\Controllers;
 
 use App\Models\JournalNote;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
+use App\Services\DailyJournalAnalysisService;
 use Carbon\Carbon;
 use Carbon\CarbonImmutable;
-use App\Services\DailyJournalAnalysisService;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class JournalNoteController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
         $user = auth()->user();
-        if (!$user) {
+        if (! $user) {
             return response()->json(['message' => 'Unauthorized'], 401);
         }
 
@@ -34,7 +34,7 @@ class JournalNoteController extends Controller
     public function store(Request $request): JsonResponse
     {
         $user = auth()->user();
-        if (!$user) {
+        if (! $user) {
             return response()->json(['message' => 'Unauthorized'], 401);
         }
 
@@ -62,7 +62,7 @@ class JournalNoteController extends Controller
     public function update(Request $request, JournalNote $note, DailyJournalAnalysisService $dailyService): JsonResponse
     {
         $user = auth()->user();
-        if (!$user) {
+        if (! $user) {
             return response()->json(['message' => 'Unauthorized'], 401);
         }
         if ((int) $note->user_id !== (int) $user->id) {
@@ -87,20 +87,29 @@ class JournalNoteController extends Controller
         $todayStart = Carbon::now($tz)->startOfDay();
 
         $ref = null;
-        if (!empty($note->note_date)) {
-            try { $ref = Carbon::parse($note->note_date, $tz)->startOfDay(); } catch (\Throwable $e) {}
+        if (! empty($note->note_date)) {
+            try {
+                $ref = Carbon::parse($note->note_date, $tz)->startOfDay();
+            } catch (\Throwable $e) {
+            }
         }
-        if (!$ref && !empty($note->created_at)) {
-            try { $ref = ($note->created_at instanceof \DateTimeInterface)
-                ? Carbon::instance($note->created_at)->setTimezone($tz)->startOfDay()
-                : Carbon::parse($note->created_at, $tz)->startOfDay(); } catch (\Throwable $e) {}
+        if (! $ref && ! empty($note->created_at)) {
+            try {
+                $ref = ($note->created_at instanceof \DateTimeInterface)
+                    ? Carbon::instance($note->created_at)->setTimezone($tz)->startOfDay()
+                    : Carbon::parse($note->created_at, $tz)->startOfDay();
+            } catch (\Throwable $e) {
+            }
         }
-        if (!$ref && !empty($note->updated_at)) {
-            try { $ref = ($note->updated_at instanceof \DateTimeInterface)
-                ? Carbon::instance($note->updated_at)->setTimezone($tz)->startOfDay()
-                : Carbon::parse($note->updated_at, $tz)->startOfDay(); } catch (\Throwable $e) {}
+        if (! $ref && ! empty($note->updated_at)) {
+            try {
+                $ref = ($note->updated_at instanceof \DateTimeInterface)
+                    ? Carbon::instance($note->updated_at)->setTimezone($tz)->startOfDay()
+                    : Carbon::parse($note->updated_at, $tz)->startOfDay();
+            } catch (\Throwable $e) {
+            }
         }
-        if (!$ref) {
+        if (! $ref) {
             $ref = $todayStart;
         }
 
@@ -117,15 +126,21 @@ class JournalNoteController extends Controller
         try {
             $tz = new \DateTimeZone('Asia/Jakarta');
             $day = null;
-            if (!empty($note->note_date)) {
-                try { $day = CarbonImmutable::parse($note->note_date, $tz)->startOfDay(); } catch (\Throwable $e) {}
+            if (! empty($note->note_date)) {
+                try {
+                    $day = CarbonImmutable::parse($note->note_date, $tz)->startOfDay();
+                } catch (\Throwable $e) {
+                }
             }
-            if (!$day && !empty($note->created_at)) {
-                try { $day = ($note->created_at instanceof \DateTimeInterface)
-                    ? CarbonImmutable::instance($note->created_at)->setTimezone($tz)->startOfDay()
-                    : CarbonImmutable::parse($note->created_at, $tz)->startOfDay(); } catch (\Throwable $e) {}
+            if (! $day && ! empty($note->created_at)) {
+                try {
+                    $day = ($note->created_at instanceof \DateTimeInterface)
+                        ? CarbonImmutable::instance($note->created_at)->setTimezone($tz)->startOfDay()
+                        : CarbonImmutable::parse($note->created_at, $tz)->startOfDay();
+                } catch (\Throwable $e) {
+                }
             }
-            if (!$day) {
+            if (! $day) {
                 $day = CarbonImmutable::now($tz)->startOfDay();
             }
 
@@ -134,7 +149,7 @@ class JournalNoteController extends Controller
                 $dailyService->generateForUser($user, $day, true);
             }
         } catch (\Throwable $e) {
-            \Log::error('Failed to recompute daily analysis after note update', [ 'error' => $e->getMessage() ]);
+            \Log::error('Failed to recompute daily analysis after note update', ['error' => $e->getMessage()]);
         }
 
         return response()->json([
@@ -160,7 +175,7 @@ class JournalNoteController extends Controller
         ];
 
         // note_date may be a date-only string in DB; normalize to ISO if present
-        if (!empty($note->note_date)) {
+        if (! empty($note->note_date)) {
             try {
                 $data['noteDate'] = Carbon::parse($note->note_date)->setTimezone('Asia/Jakarta')->toAtomString();
             } catch (\Throwable $e) {
@@ -168,7 +183,7 @@ class JournalNoteController extends Controller
             }
         }
 
-        if (!empty($note->created_at)) {
+        if (! empty($note->created_at)) {
             // Eloquent commonly provides Carbon instances for created_at/updated_at,
             // but guard to avoid warnings if they are strings.
             if ($note->created_at instanceof \DateTimeInterface) {
@@ -182,7 +197,7 @@ class JournalNoteController extends Controller
             }
         }
 
-        if (!empty($note->updated_at)) {
+        if (! empty($note->updated_at)) {
             if ($note->updated_at instanceof \DateTimeInterface) {
                 $data['updatedAt'] = $note->updated_at->setTimezone(new \DateTimeZone('Asia/Jakarta'))->format(DATE_ATOM);
             } else {

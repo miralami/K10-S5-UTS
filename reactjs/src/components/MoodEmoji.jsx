@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import { Box } from '@chakra-ui/react';
 import { motion } from 'framer-motion';
 
@@ -39,3 +40,8 @@ export default function MoodEmoji({ mood, size = '64px' }) {
     </MotionBox>
   );
 }
+
+MoodEmoji.propTypes = {
+  mood: PropTypes.string.isRequired,
+  size: PropTypes.string,
+};

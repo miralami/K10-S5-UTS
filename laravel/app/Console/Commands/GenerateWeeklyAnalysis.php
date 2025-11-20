@@ -13,13 +13,13 @@ use Illuminate\Console\Command;
 class GenerateWeeklyAnalysis extends Command
 {
     protected $signature = 'journal:generate-weekly-analysis';
+
     protected $description = 'Generate weekly journal analysis for all users';
 
     public function handle(
         DailyJournalAnalysisService $dailyService,
         GeminiMoodAnalysisService $analysisService
-    ): int
-    {
+    ): int {
         $weekEnding = CarbonImmutable::now()
             ->subWeek()
             ->endOfWeek(CarbonInterface::SUNDAY);
@@ -43,6 +43,7 @@ class GenerateWeeklyAnalysis extends Command
 
         if ($userIds->isEmpty()) {
             $this->info('Tidak ada pengguna yang perlu diproses untuk minggu ini.');
+
             return self::SUCCESS;
         }
 
@@ -58,6 +59,7 @@ class GenerateWeeklyAnalysis extends Command
 
             $analysis['noteCount'] = $dailyAnalyses->sum(function ($daily) {
                 $payload = $daily->analysis ?? [];
+
                 return (int) ($payload['noteCount'] ?? 0);
             });
 
@@ -66,6 +68,7 @@ class GenerateWeeklyAnalysis extends Command
                     $date = $daily->analysis_date instanceof \Carbon\Carbon
                         ? $daily->analysis_date->toDateString()
                         : ($daily->analysis_date ? date('Y-m-d', strtotime($daily->analysis_date)) : null);
+
                     return [
                         'date' => $daily->analysis_date ? CarbonImmutable::parse($daily->analysis_date)->toDateString() : null,
                         'analysis' => $daily->analysis,

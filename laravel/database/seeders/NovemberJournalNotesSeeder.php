@@ -53,7 +53,7 @@ class NovemberJournalNotesSeeder extends Seeder
             'Menjaga hidrasi hari ini, berhasil.',
             'Berjalan singkat di taman, menyegarkan.',
             'Mencoba menyusun rutinitas baru.',
-            'Berterima kasih atas hari ini.'
+            'Berterima kasih atas hari ini.',
         ];
 
         JournalNote::unguarded(function () use ($user, $year, $month, $templates) {

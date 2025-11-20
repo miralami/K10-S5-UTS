@@ -14,9 +14,13 @@ use RuntimeException;
 class GeminiMoodAnalysisService
 {
     private const MAX_RETRIES = 3;
+
     private const RETRY_DELAY = 2; // in seconds
+
     private const MAX_JITTER = 1000; // 1 second in milliseconds
+
     private string $apiKey;
+
     private string $model;
 
     /**
@@ -25,17 +29,17 @@ class GeminiMoodAnalysisService
     private function httpRequestWithRetry(string $url, array $data, array $headers = [])
     {
         $lastException = null;
-        
+
         for ($attempt = 1; $attempt <= self::MAX_RETRIES; $attempt++) {
             try {
                 // Add jitter to prevent thundering herd
                 $jitter = rand(0, self::MAX_JITTER) / 1000; // Random delay up to 1 second
                 $delay = (self::RETRY_DELAY * $attempt) + $jitter;
-                
+
                 if ($attempt > 1) {
                     usleep($delay * 1000000); // Convert to microseconds
                 }
-                
+
                 $response = Http::timeout(30 + ($attempt * 5)) // Increase timeout for retries
                     ->withHeaders($headers)
                     ->post($url, $data);
@@ -45,37 +49,37 @@ class GeminiMoodAnalysisService
                 }
 
                 $errorMessage = strtolower($response->json('error.message') ?? $response->body());
-                
+
                 // Check if error is retryable
-                $isRetryable = str_contains($errorMessage, 'overloaded') || 
+                $isRetryable = str_contains($errorMessage, 'overloaded') ||
                               str_contains($errorMessage, 'try again') ||
                               str_contains($errorMessage, 'quota') ||
-                              $response->status() === 429 || 
+                              $response->status() === 429 ||
                               $response->status() >= 500;
-                
-                if (!$isRetryable || $attempt >= self::MAX_RETRIES) {
-                    throw new RuntimeException('API request failed: ' . $errorMessage);
+
+                if (! $isRetryable || $attempt >= self::MAX_RETRIES) {
+                    throw new RuntimeException('API request failed: '.$errorMessage);
                 }
-                
+
                 \Log::warning("API request attempt $attempt failed, retrying in {$delay}s", [
                     'error' => $errorMessage,
-                    'status' => $response->status()
+                    'status' => $response->status(),
                 ]);
-                
+
             } catch (\Exception $e) {
                 $lastException = $e;
                 \Log::error("API request attempt $attempt failed", [
                     'error' => $e->getMessage(),
-                    'trace' => $e->getTraceAsString()
+                    'trace' => $e->getTraceAsString(),
                 ]);
-                
+
                 if ($attempt >= self::MAX_RETRIES) {
                     throw $e;
                 }
             }
         }
-        
-        throw $lastException ?? new RuntimeException('Failed to complete API request after ' . self::MAX_RETRIES . ' attempts');
+
+        throw $lastException ?? new RuntimeException('Failed to complete API request after '.self::MAX_RETRIES.' attempts');
     }
 
     public function __construct()
@@ -89,8 +93,8 @@ class GeminiMoodAnalysisService
     }
 
     /**
-     * @param Collection<int, array{id:int,title:string|null,body:string|null,created_at:CarbonInterface|string}|JournalNote> $notes
-     * @param CarbonInterface $weekEnding
+     * @param  Collection<int, array{id:int,title:string|null,body:string|null,created_at:CarbonInterface|string}|JournalNote>  $notes
+     * @param  CarbonInterface  $weekEnding
      * @return array<string, mixed>
      */
     public function analyzeDailyNotes(Collection $notes, CarbonInterface $day): array
@@ -114,7 +118,7 @@ class GeminiMoodAnalysisService
         $response = Http::withHeaders([
             'Content-Type' => 'application/json',
             'x-goog-api-key' => $this->apiKey,
-        ])->post('https://generativelanguage.googleapis.com/v1beta/models/' . $this->model . ':generateContent', [
+        ])->post('https://generativelanguage.googleapis.com/v1beta/models/'.$this->model.':generateContent', [
             'contents' => [
                 [
                     'role' => 'user',
@@ -132,7 +136,7 @@ class GeminiMoodAnalysisService
 
         if ($response->failed()) {
             throw new RuntimeException(
-                'Failed to get Gemini analysis: ' . ($response->json('error.message') ?? $response->body())
+                'Failed to get Gemini analysis: '.($response->json('error.message') ?? $response->body())
             );
         }
 
@@ -149,7 +153,7 @@ class GeminiMoodAnalysisService
         $response = Http::withHeaders([
             'Content-Type' => 'application/json',
             'x-goog-api-key' => $this->apiKey,
-        ])->post('https://generativelanguage.googleapis.com/v1beta/models/' . $this->model . ':generateContent', [
+        ])->post('https://generativelanguage.googleapis.com/v1beta/models/'.$this->model.':generateContent', [
             'contents' => [
                 [
                     'role' => 'user',
@@ -167,7 +171,7 @@ class GeminiMoodAnalysisService
 
         if ($response->failed()) {
             throw new RuntimeException(
-                'Failed to get Gemini analysis: ' . ($response->json('error.message') ?? $response->body())
+                'Failed to get Gemini analysis: '.($response->json('error.message') ?? $response->body())
             );
         }
 
@@ -175,7 +179,7 @@ class GeminiMoodAnalysisService
     }
 
     /**
-     * @param Collection<int, DailyJournalAnalysis|array<string, mixed>> $dailyAnalyses
+     * @param  Collection<int, DailyJournalAnalysis|array<string, mixed>>  $dailyAnalyses
      */
     public function analyzeWeeklyFromDaily(Collection $dailyAnalyses, CarbonInterface $weekEnding): array
     {
@@ -188,7 +192,7 @@ class GeminiMoodAnalysisService
                 : ($daily['analysis'] ?? []);
 
             return ($analysis['noteCount'] ?? 0) > 0
-                || !empty($analysis['summary'] ?? null);
+                || ! empty($analysis['summary'] ?? null);
         });
 
         if (! $hasEntries) {
@@ -207,7 +211,7 @@ class GeminiMoodAnalysisService
         $response = Http::withHeaders([
             'Content-Type' => 'application/json',
             'x-goog-api-key' => $this->apiKey,
-        ])->post('https://generativelanguage.googleapis.com/v1beta/models/' . $this->model . ':generateContent', [
+        ])->post('https://generativelanguage.googleapis.com/v1beta/models/'.$this->model.':generateContent', [
             'contents' => [
                 [
                     'role' => 'user',
@@ -225,7 +229,7 @@ class GeminiMoodAnalysisService
 
         if ($response->failed()) {
             throw new RuntimeException(
-                'Failed to get Gemini analysis: ' . ($response->json('error.message') ?? $response->body())
+                'Failed to get Gemini analysis: '.($response->json('error.message') ?? $response->body())
             );
         }
 
@@ -235,7 +239,7 @@ class GeminiMoodAnalysisService
     private function buildWeeklyPrompt(Collection $notes, CarbonInterface $weekStart, CarbonInterface $weekEnd): string
     {
         if ($notes->isEmpty()) {
-            return sprintf(<<<PROMPT
+            return sprintf(<<<'PROMPT'
 You are a reflective journaling assistant. No notes were written between %s and %s. Provide a gentle summary noting the absence of entries and encouraging the user to record their feelings next week. Return the response as a JSON object with keys: summary, dominantMood, moodScore (0-100), highlights (array), advice (array).
 PROMPT,
                 $weekStart->toDateString(),
@@ -262,11 +266,12 @@ PROMPT,
                 $body = isset($data['body']) && $data['body']
                     ? Str::of($data['body'])->trim()
                     : '(no content)';
+
                 return sprintf("Date: %s\nTitle: %s\nContent: %s", $date, $title, $body);
             })
             ->implode("\n\n---\n\n");
 
-        return sprintf(<<<PROMPT
+        return sprintf(<<<'PROMPT'
 You are a compassionate journaling coach. Review the following journal notes written between %s and %s. Analyze the emotional tone and provide insights.
 
 Notes:
@@ -310,11 +315,12 @@ PROMPT,
                 $body = isset($data['body']) && $data['body']
                     ? Str::of($data['body'])->trim()
                     : '(tidak ada isi)';
+
                 return sprintf("Waktu: %s\nJudul: %s\nIsi: %s", $time, $title, $body);
             })
             ->implode("\n\n---\n\n");
 
-        return sprintf(<<<PROMPT
+        return sprintf(<<<'PROMPT'
 Anda adalah mentor journaling yang empatik. Tinjau catatan harian yang ditulis pada %s.
 
 Catatan:
@@ -337,7 +343,7 @@ PROMPT,
     }
 
     /**
-     * @param Collection<int, DailyJournalAnalysis|array<string, mixed>> $dailyAnalyses
+     * @param  Collection<int, DailyJournalAnalysis|array<string, mixed>>  $dailyAnalyses
      */
     private function buildWeeklyFromDailyPrompt(Collection $dailyAnalyses, CarbonInterface $weekStart, CarbonInterface $weekEnd): string
     {
@@ -377,7 +383,7 @@ PROMPT,
             })
             ->implode("\n\n---\n\n");
 
-        return sprintf(<<<PROMPT
+        return sprintf(<<<'PROMPT'
 Anda adalah analis jurnal mingguan. Berikut adalah rangkuman harian antara %s dan %s.
 
 Rangkuman harian:
@@ -401,14 +407,14 @@ PROMPT,
     }
 
     /**
-     * @param array<string, mixed>|null $payload
+     * @param  array<string, mixed>|null  $payload
      * @return array<string, mixed>
      */
     private function transformResponse(?array $payload): array
     {
         $text = $payload['candidates'][0]['content']['parts'][0]['text'] ?? null;
 
-        if (!is_string($text) || trim($text) === '') {
+        if (! is_string($text) || trim($text) === '') {
             return [
                 'summary' => 'Tidak ada tanggapan dari model AI.',
                 'dominantMood' => 'unknown',
@@ -421,7 +427,7 @@ PROMPT,
 
         $decoded = json_decode($text, true);
 
-        if (json_last_error() !== JSON_ERROR_NONE || !is_array($decoded)) {
+        if (json_last_error() !== JSON_ERROR_NONE || ! is_array($decoded)) {
             return [
                 'summary' => trim($text),
                 'dominantMood' => 'unknown',

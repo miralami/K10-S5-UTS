@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import PropTypes from 'prop-types';
 import { Box, Grid, Text, Flex, IconButton } from '@chakra-ui/react';
 import { ChevronLeftIcon, ChevronRightIcon } from '@chakra-ui/icons';
 import {
@@ -122,3 +123,14 @@ export default function JournalCalendar({ selectedDate, onSelectDate, notes = []
     </Box>
   );
 }
+
+JournalCalendar.propTypes = {
+  selectedDate: PropTypes.instanceOf(Date),
+  onSelectDate: PropTypes.func.isRequired,
+  notes: PropTypes.arrayOf(
+    PropTypes.shape({
+      note_date: PropTypes.string,
+      createdAt: PropTypes.string,
+    })
+  ),
+};

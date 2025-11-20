@@ -86,7 +86,7 @@ export async function getRecommendations(moodDescription) {
 
     return data.recommendations;
   } catch (error) {
-    if (process.env.NODE_ENV === 'development' || SHOULD_USE_FALLBACK) {
+    if (import.meta.env.DEV || SHOULD_USE_FALLBACK) {
       console.warn('[recommendationService] Using fallback recommendations.', error);
       return FALLBACK_RECOMMENDATIONS;
     }

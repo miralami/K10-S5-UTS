@@ -9,6 +9,7 @@ use RuntimeException;
 class GeminiMovieRecommendationService
 {
     private string $apiKey;
+
     private string $model;
 
     public function __construct()
@@ -24,8 +25,8 @@ class GeminiMovieRecommendationService
         }
         $prompt = $this->buildPrompt($mood);
 
-        $url = 'https://generativelanguage.googleapis.com/v1beta/models/' . $this->model . ':generateContent?key=' . $this->apiKey;
-        
+        $url = 'https://generativelanguage.googleapis.com/v1beta/models/'.$this->model.':generateContent?key='.$this->apiKey;
+
         $payload = [
             'contents' => [
                 [
@@ -45,21 +46,21 @@ class GeminiMovieRecommendationService
             'safetySettings' => [
                 [
                     'category' => 'HARM_CATEGORY_HARASSMENT',
-                    'threshold' => 'BLOCK_NONE'
+                    'threshold' => 'BLOCK_NONE',
                 ],
                 [
                     'category' => 'HARM_CATEGORY_HATE_SPEECH',
-                    'threshold' => 'BLOCK_NONE'
+                    'threshold' => 'BLOCK_NONE',
                 ],
                 [
                     'category' => 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
-                    'threshold' => 'BLOCK_NONE'
+                    'threshold' => 'BLOCK_NONE',
                 ],
                 [
                     'category' => 'HARM_CATEGORY_DANGEROUS_CONTENT',
-                    'threshold' => 'BLOCK_NONE'
-                ]
-            ]
+                    'threshold' => 'BLOCK_NONE',
+                ],
+            ],
         ];
 
         $response = Http::withHeaders([
@@ -67,30 +68,34 @@ class GeminiMovieRecommendationService
         ])->post($url, $payload);
 
         if ($response->failed()) {
-            throw new RuntimeException('Failed to get Gemini movie recommendations: ' . ($response->json('error.message') ?? $response->body()));
+            throw new RuntimeException('Failed to get Gemini movie recommendations: '.($response->json('error.message') ?? $response->body()));
         }
 
         $payload = $response->json();
         $text = $payload['candidates'][0]['content']['parts'][0]['text'] ?? null;
-        if (!is_string($text) || trim($text) === '') {
+        if (! is_string($text) || trim($text) === '') {
             return [];
         }
 
         $decoded = json_decode($text, true);
-        if (!is_array($decoded)) {
+        if (! is_array($decoded)) {
             return [];
         }
 
         $items = $decoded['recommendations'] ?? null;
-        if (!is_array($items)) {
+        if (! is_array($items)) {
             return [];
         }
 
         $normalized = [];
         foreach ($items as $item) {
-            if (!is_array($item)) continue;
+            if (! is_array($item)) {
+                continue;
+            }
             $title = isset($item['title']) ? (string) $item['title'] : '';
-            if ($title === '') continue;
+            if ($title === '') {
+                continue;
+            }
 
             $normalized[] = [
                 'id' => (string) Str::uuid(),
@@ -101,8 +106,11 @@ class GeminiMovieRecommendationService
                 'posterUrl' => isset($item['posterUrl']) ? (string) $item['posterUrl'] : null,
                 'letterboxdUrl' => isset($item['letterboxdUrl']) ? (string) $item['letterboxdUrl'] : null,
                 'watchProviders' => array_values(array_filter(array_map(function ($p) {
-                    if (!is_array($p) || empty($p['provider']) || empty($p['url'])) return null;
-                    return [ 'provider' => (string) $p['provider'], 'url' => (string) $p['url'] ];
+                    if (! is_array($p) || empty($p['provider']) || empty($p['url'])) {
+                        return null;
+                    }
+
+                    return ['provider' => (string) $p['provider'], 'url' => (string) $p['url']];
                 }, $item['watchProviders'] ?? []))),
             ];
         }

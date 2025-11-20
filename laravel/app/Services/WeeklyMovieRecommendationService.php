@@ -225,7 +225,7 @@ class WeeklyMovieRecommendationService
     /**
      * Bangun rekomendasi film berdasarkan analisis mingguan.
      *
-     * @param array<string, mixed>|null $analysis
+     * @param  array<string, mixed>|null  $analysis
      * @return array<string, mixed>
      */
     public function buildRecommendations(?array $analysis): array

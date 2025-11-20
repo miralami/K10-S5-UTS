@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import PropTypes from 'prop-types';
 import { format, startOfWeek, endOfWeek, isSameDay } from 'date-fns';
 import { id } from 'date-fns/locale';
 
@@ -43,11 +44,8 @@ import {
   Stack,
   Text,
   useToast,
-  Collapse,
   SlideFade,
   ScaleFade,
-  Progress,
-  Divider,
   useDisclosure,
   useBreakpointValue,
   Badge,
@@ -58,7 +56,6 @@ import { GlassCard } from '../components/GlassCard';
 import CircularProgress from '../components/CircularProgress';
 import { motion } from 'framer-motion';
 import MoodEmoji from '../components/MoodEmoji';
-import StyledInfoCard from '../components/StyledInfoCard';
 import {
   AddIcon,
   ChevronLeftIcon,
@@ -77,19 +74,19 @@ import {
   generateWeeklyForCurrentUser,
 } from '../services/journalService';
 
-// Helper component for info cards
-function InfoCard({ label, value, color = 'whiteAlpha.800' }) {
-  return (
-    <Box bg="whiteAlpha.100" p={4} borderRadius="lg">
-      <Text fontSize="sm" color="whiteAlpha.600" mb={1}>
-        {label}
-      </Text>
-      <Text color={color} fontWeight="medium">
-        {value}
-      </Text>
-    </Box>
-  );
-}
+// Helper component for info cards - commented out as it's unused currently
+// function InfoCard({ label, value, color = 'whiteAlpha.800' }) {
+//   return (
+//     <Box bg="whiteAlpha.100" p={4} borderRadius="lg">
+//       <Text fontSize="sm" color="whiteAlpha.600" mb={1}>
+//         {label}
+//       </Text>
+//       <Text color={color} fontWeight="medium">
+//         {value}
+//       </Text>
+//     </Box>
+//   );
+// }
 
 // lightweight SVG fallback used when poster fails to load or is aborted
 const POSTER_FALLBACK =
@@ -113,7 +110,7 @@ function getOmdbHref(movie) {
   return `https://www.omdbapi.com/?${qs.toString()}`;
 }
 
-function MoodMovieCard({ movie, index }) {
+function MoodMovieCard({ movie }) {
   return (
     <Box
       bg="whiteAlpha.100"
@@ -184,6 +181,17 @@ function MoodMovieCard({ movie, index }) {
     </Box>
   );
 }
+
+MoodMovieCard.propTypes = {
+  movie: PropTypes.shape({
+    posterUrl: PropTypes.string,
+    title: PropTypes.string,
+    year: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    imdbId: PropTypes.string,
+    reason: PropTypes.string,
+    genres: PropTypes.arrayOf(PropTypes.string),
+  }).isRequired,
+};
 
 export default function Dashboard() {
   const { isOpen: isSidebarOpen, onToggle: onSidebarToggle } = useDisclosure({
@@ -318,7 +326,7 @@ export default function Dashboard() {
     } finally {
       setNotesLoading(false);
     }
-  }, [dateRange.start, dateRange.end, toast]);
+  }, [dateRange, toast]);
 
   // Fetch weekly summary data
   const fetchWeeklySummaryData = useCallback(async () => {
@@ -359,7 +367,7 @@ export default function Dashboard() {
     } finally {
       setWeeklyLoading(false);
     }
-  }, [dateRange.start, dateRange.end, toast]);
+  }, [dateRange, toast]);
 
   // Initial data fetch
   useEffect(() => {

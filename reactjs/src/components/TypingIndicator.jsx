@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import PropTypes from 'prop-types';
 import { Box, HStack, Text, Flex } from '@chakra-ui/react';
 import { keyframes } from '@emotion/react';
 import { typingService } from '../services/typingService';
@@ -31,7 +32,7 @@ const TypingIndicator = ({ channelId, currentUserId }) => {
     };
 
     window.addEventListener('typingEvent', handleTypingEvent);
-    const stream = typingService.startStream(channelId, currentUserId, handleTypingEvent);
+    typingService.startStream(channelId, currentUserId, handleTypingEvent);
 
     // Remove stale typing users after TTL
     const interval = setInterval(() => {
@@ -103,6 +104,11 @@ const TypingIndicator = ({ channelId, currentUserId }) => {
       </Box>
     </Flex>
   );
+};
+
+TypingIndicator.propTypes = {
+  channelId: PropTypes.string.isRequired,
+  currentUserId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
 };
 
 export default TypingIndicator;

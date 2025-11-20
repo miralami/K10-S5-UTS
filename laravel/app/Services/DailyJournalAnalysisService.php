@@ -10,9 +10,7 @@ use Illuminate\Support\Collection;
 
 class DailyJournalAnalysisService
 {
-    public function __construct(private readonly GeminiMoodAnalysisService $analysisService)
-    {
-    }
+    public function __construct(private readonly GeminiMoodAnalysisService $analysisService) {}
 
     public function generateForUser(User $user, CarbonInterface $date, bool $force = false): DailyJournalAnalysis
     {
