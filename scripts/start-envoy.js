@@ -4,7 +4,7 @@ const path = require('path');
 function log(...a) { console.log('[envoy]', ...a); }
 
 const repoRoot = path.resolve(__dirname, '..');
-const yamlPath = path.join(repoRoot, 'deploy', 'envoy', 'grpc-web-envoy.yaml');
+const yamlPath = path.join(repoRoot, 'infrastructure', 'envoy', 'grpc-web-envoy.yaml');
 const containerName = 'uts_envoy';
 
 // Check if Docker is available
@@ -12,7 +12,7 @@ const dockerCheck = spawnSync('docker', ['--version'], { stdio: 'pipe', shell: f
 if (dockerCheck.error || dockerCheck.status !== 0) {
   console.warn('[envoy] Docker not found or not running. Skipping Envoy start.');
   console.warn('[envoy] gRPC typing feature will not work without Envoy proxy.');
-  console.warn('[envoy] Set VITE_ENABLE_GRPC=false in reactjs/.env to disable gRPC.');
+  console.warn('[envoy] Set VITE_ENABLE_GRPC=false in frontend/.env to disable gRPC.');
   process.exit(0); // Exit gracefully
 }
 

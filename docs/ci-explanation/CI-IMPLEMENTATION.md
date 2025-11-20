@@ -38,13 +38,13 @@ Concrete improvements:
 - `react-lint`:
   - Runs on `ubuntu-latest`.
   - Uses `actions/setup-node@v4` with Node.js 20.
-  - Runs `npm install` and `npm run lint` in `reactjs`.
+  - Runs `npm install` and `npm run lint` in `frontend`.
 
 ## How to reproduce CI checks locally
-- Laravel (from repo root):
+- Backend (Laravel) (from repo root):
 
 ```powershell
-cd laravel
+cd backend
 composer install
 # Run tests
 composer run test
@@ -54,19 +54,19 @@ composer run lint
 composer run lint:fix
 ```
 
-- React (from repo root):
+- Frontend (React) (from repo root):
 
 ```powershell
-cd reactjs
+cd frontend
 npm install
 npm run lint
 npm run lint:fix
 ```
 
-- ExpressJS (if you want the same checks locally):
+- Middleware (ExpressJS) (if you want the same checks locally):
 
 ```powershell
-cd expressJS
+cd middleware
 npm install
 npm run lint
 npm run lint:fix

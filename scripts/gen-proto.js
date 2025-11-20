@@ -5,7 +5,7 @@ const path = require('path');
 function log(...args) { console.log('[gen-proto]', ...args); }
 
 const repoRoot = path.resolve(__dirname, '..');
-const outDir = path.join(repoRoot, 'reactjs', 'src', 'proto');
+const outDir = path.join(repoRoot, 'frontend', 'src', 'proto');
 fs.mkdirSync(outDir, { recursive: true });
 
 // Resolve protoc: prefer env.PROTOC, otherwise prefer local grpc_tools_node_protoc, then 'protoc'
@@ -19,7 +19,7 @@ function resolveLocalProtoc() {
     candidates.push(path.join(binDir, 'protoc'));
   }
   // reactjs local node_modules
-  const reactBin = path.join(repoRoot, 'reactjs', 'node_modules', '.bin');
+  const reactBin = path.join(repoRoot, 'frontend', 'node_modules', '.bin');
   if (fs.existsSync(reactBin)) {
     candidates.push(path.join(reactBin, 'grpc_tools_node_protoc.cmd'));
     candidates.push(path.join(reactBin, 'grpc_tools_node_protoc'));
@@ -44,7 +44,7 @@ function resolveLocalPlugin() {
     candidates.push(path.join(binDir, 'protoc-gen-grpc-web.exe'));
   }
   // also check reactjs/node_modules if plugin installed there
-  const reactBin = path.join(repoRoot, 'reactjs', 'node_modules', '.bin');
+  const reactBin = path.join(repoRoot, 'frontend', 'node_modules', '.bin');
   if (fs.existsSync(reactBin)) {
     candidates.push(path.join(reactBin, 'protoc-gen-grpc-web.cmd'));
     candidates.push(path.join(reactBin, 'protoc-gen-grpc-web'));
@@ -66,10 +66,10 @@ const args = [];
 if (pluginPath) {
   args.push(`--plugin=protoc-gen-grpc-web=${pluginPath}`);
 }
-args.push('-I=proto');
-args.push('proto/typing.proto');
-args.push(`--js_out=import_style=commonjs:reactjs/src/proto`);
-args.push(`--grpc-web_out=import_style=commonjs,mode=grpcwebtext:reactjs/src/proto`);
+args.push('-I=shared/proto');
+args.push('shared/proto/typing.proto');
+args.push(`--js_out=import_style=commonjs:frontend/src/proto`);
+args.push(`--grpc-web_out=import_style=commonjs,mode=grpcwebtext:frontend/src/proto`);
 
 log('Running protoc:', protocCmd, args.join(' '));
 
