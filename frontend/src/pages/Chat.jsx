@@ -1,30 +1,39 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Badge,
   Box,
   Button,
   Container,
   Flex,
   HStack,
   Heading,
+  Icon,
   Input,
   Stack,
   Text,
-  useColorModeValue,
+  VStack,
+  useToast,
+  Avatar,
+  Tooltip,
 } from '@chakra-ui/react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ArrowUpIcon, ChatIcon, InfoIcon } from '@chakra-ui/icons';
 import TypingIndicator from '../components/TypingIndicator';
 import { typingService } from '../services/typingService';
+import { GlassCard } from '../components/GlassCard';
+import { ChatBubble } from '../components/ChatBubble';
 
 const MotionBox = motion(Box);
 
+
 const DEFAULT_WS_URL = import.meta.env.VITE_WEBSOCKET_URL ?? 'ws://localhost:8080';
 
-function buildMessageEntry({ text, type }) {
+function buildMessageEntry({ text, type, sender }) {
   return {
     id: `${Date.now()}-${Math.random()}`,
     text,
     type,
+    sender,
+    timestamp: new Date(),
   };
 }
 
@@ -34,19 +43,15 @@ export default function Chat() {
   const [inputValue, setInputValue] = useState('');
   const [messages, setMessages] = useState([]);
   const [isConnected, setIsConnected] = useState(false);
-  const [connectionError, setConnectionError] = useState('');
 
   const wsRef = useRef(null);
   const messagesEndRef = useRef(null);
   const typingTimeoutRef = useRef(null);
+  const toast = useToast();
 
   const wsUrl = useMemo(() => DEFAULT_WS_URL, []);
 
-  const headerBg = useColorModeValue('rgba(15, 23, 42, 0.7)', 'rgba(15, 23, 42, 0.85)');
-  const messagesBg = useColorModeValue('rgba(15, 20, 40, 0.8)', 'rgba(12, 18, 32, 0.85)');
-  const inputBg = useColorModeValue('rgba(17, 25, 42, 0.9)', 'rgba(17, 25, 42, 0.9)');
-
-  // Komentar: efek ini membuka koneksi WebSocket hanya setelah pengguna memilih nama, sehingga sesi tetap personal.
+  // Efek ini membuka koneksi WebSocket hanya setelah pengguna memilih nama
   useEffect(() => {
     if (!userName) {
       return undefined;
@@ -57,12 +62,11 @@ export default function Chat() {
 
     ws.onopen = () => {
       setIsConnected(true);
-      setConnectionError('');
       ws.send(JSON.stringify({ type: 'username', name: userName }));
       setMessages((prev) => [
         ...prev,
         buildMessageEntry({
-          text: `Terhubung ke server chat sebagai ${userName}.`,
+          text: `Selamat datang, ${userName}! Kamu sudah terhubung.`,
           type: 'system',
         }),
       ]);
@@ -70,10 +74,8 @@ export default function Chat() {
 
     ws.onmessage = (event) => {
       const payload = event.data;
-      // Try to parse JSON for structured messages (typing events)
       try {
         const parsed = JSON.parse(payload);
-        // Handle typing events
         if (parsed && parsed.type === 'typing') {
           const detail = {
             userId: parsed.user_id || parsed.userId,
@@ -82,25 +84,39 @@ export default function Chat() {
             isTyping: parsed.is_typing !== undefined ? parsed.is_typing : parsed.isTyping,
             timestamp: parsed.timestamp || Date.now(),
           };
-          console.log('[Chat] Dispatching typing event:', detail);
           window.dispatchEvent(new CustomEvent('typingEvent', { detail }));
-          return; // Don't show typing JSON in chat messages
+          return;
         }
-        // If JSON but not a typing event, ignore (don't display in chat)
         return;
       } catch (e) {
         // Not JSON, treat as plain text chat message
       }
 
-      // Only add plain text messages to chat
-      setMessages((prev) => [...prev, buildMessageEntry({ text: payload, type: 'received' })]);
+      // Parse sender and message from "sender: message" format
+      let sender = null;
+      let messageText = payload;
+      const colonIndex = payload.indexOf(': ');
+      if (colonIndex > -1) {
+        sender = payload.slice(0, colonIndex);
+        messageText = payload.slice(colonIndex + 2);
+      }
+
+      setMessages((prev) => [
+        ...prev,
+        buildMessageEntry({ text: messageText, type: 'received', sender }),
+      ]);
     };
 
     ws.onerror = (error) => {
       console.error('WebSocket error:', error);
-      setConnectionError(
-        'Terjadi gangguan koneksi. Coba muat ulang halaman untuk menyambung ulang.'
-      );
+      toast({
+        title: 'Koneksi Bermasalah',
+        description: 'Coba muat ulang halaman jika pesan tidak masuk.',
+        status: 'warning',
+        duration: 5000,
+        isClosable: true,
+        position: 'top',
+      });
     };
 
     ws.onclose = () => {
@@ -115,9 +131,9 @@ export default function Chat() {
       ws.close();
       wsRef.current = null;
     };
-  }, [userName, wsUrl]);
+  }, [userName, wsUrl, toast]);
 
-  // Komentar: auto-scroll memastikan pesan terbaru selalu terlihat tanpa harus menggulir manual.
+  // Auto-scroll ke pesan terbaru
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
@@ -126,7 +142,6 @@ export default function Chat() {
     setInputValue(event.target.value);
 
     if (userName) {
-      // Send typing via WebSocket for realtime, and also attempt gRPC if available
       try {
         if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
           wsRef.current.send(JSON.stringify({ type: 'typing', channel: 'global', isTyping: true }));
@@ -134,7 +149,6 @@ export default function Chat() {
       } catch (e) {
         console.warn('Failed to send typing via WebSocket', e);
       }
-      // Also call typingService (it will fallback or log if gRPC not available)
       typingService.sendTyping('global', true);
 
       if (typingTimeoutRef.current) {
@@ -157,9 +171,7 @@ export default function Chat() {
   };
 
   const handleStartChat = () => {
-    if (!tempUserName.trim()) {
-      return;
-    }
+    if (!tempUserName.trim()) return;
     setMessages([]);
     setTempUserName(tempUserName.trim());
     setUserName(tempUserName.trim());
@@ -174,7 +186,7 @@ export default function Chat() {
     wsRef.current.send(message);
     setMessages((prev) => [
       ...prev,
-      buildMessageEntry({ text: `${userName}: ${message}`, type: 'sent' }),
+      buildMessageEntry({ text: message, type: 'sent', sender: userName }),
     ]);
     setInputValue('');
   };
@@ -186,223 +198,241 @@ export default function Chat() {
     }
   };
 
+  // Login Screen
   if (!userName) {
     return (
       <Box
         minH="100vh"
-        bgGradient="linear(to-br, #0f172a, #1e293b, #334155)"
+        bgGradient="linear(to-br, #1a1a2e, #16213e, #0f3460, #533483)"
         display="flex"
         alignItems="center"
         justifyContent="center"
         px={4}
+        position="relative"
+        overflow="hidden"
+        _before={{
+          content: '""',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          bgImage:
+            'radial-gradient(circle at 50% 50%, rgba(56, 189, 248, 0.1) 0%, transparent 50%)',
+          pointerEvents: 'none',
+        }}
       >
-        <Box
-          w="full"
-          maxW="lg"
-          bg="rgba(15, 23, 42, 0.85)"
-          borderRadius="2xl"
-          border="1px solid rgba(148, 163, 184, 0.2)"
-          p={10}
-          boxShadow="2xl"
-        >
-          <Stack spacing={6} color="whiteAlpha.900">
-            <Heading size="lg" textAlign="center">
-              Mulai ngobrol
-            </Heading>
-            <Text textAlign="center" color="whiteAlpha.700">
-              Pilih nama panggilan agar teman chat tahu kamu siapa.
-            </Text>
-            <Stack spacing={4}>
-              <Input
-                placeholder="Contoh: Aurora"
-                value={tempUserName}
-                onChange={(event) => setTempUserName(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter') {
-                    handleStartChat();
-                  }
-                }}
-                bg="rgba(148, 163, 184, 0.15)"
-                borderColor="rgba(148, 163, 184, 0.3)"
-                _focus={{ borderColor: 'cyan.300', boxShadow: '0 0 0 1px rgba(8, 145, 178, 0.5)' }}
-              />
-              <Button
-                colorScheme="cyan"
-                onClick={handleStartChat}
-                isDisabled={!tempUserName.trim()}
-              >
-                Gabung Chat
-              </Button>
-            </Stack>
-          </Stack>
-        </Box>
+        <Container maxW="md" position="relative" zIndex={1}>
+          <MotionBox
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+          >
+            <GlassCard p={8} textAlign="center">
+              <VStack spacing={6}>
+                <Box
+                  p={4}
+                  bg="whiteAlpha.100"
+                  borderRadius="full"
+                  boxShadow="0 0 20px rgba(56, 189, 248, 0.2)"
+                >
+                  <Icon as={ChatIcon} w={8} h={8} color="cyan.300" />
+                </Box>
+                <Box>
+                  <Heading
+                    size="lg"
+                    mb={2}
+                    bgGradient="linear(to-r, cyan.200, purple.200)"
+                    bgClip="text"
+                  >
+                    Mulai Mengobrol
+                  </Heading>
+                  <Text color="whiteAlpha.600">
+                    Bergabunglah dengan komunitas dan bagikan ceritamu.
+                  </Text>
+                </Box>
+                <VStack spacing={4} w="full">
+                  <Input
+                    placeholder="Nama panggilanmu..."
+                    value={tempUserName}
+                    onChange={(event) => setTempUserName(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') handleStartChat();
+                    }}
+                    bg="whiteAlpha.50"
+                    borderColor="whiteAlpha.200"
+                    borderRadius="xl"
+                    height="50px"
+                    _focus={{
+                      borderColor: 'cyan.300',
+                      bg: 'whiteAlpha.100',
+                      boxShadow: '0 0 0 1px rgba(56, 189, 248, 0.5)',
+                    }}
+                    _placeholder={{ color: 'whiteAlpha.400' }}
+                    textAlign="center"
+                    fontSize="lg"
+                  />
+                  <Button
+                    colorScheme="cyan"
+                    size="lg"
+                    w="full"
+                    borderRadius="xl"
+                    onClick={handleStartChat}
+                    isDisabled={!tempUserName.trim()}
+                    bgGradient="linear(to-r, cyan.500, blue.500)"
+                    _hover={{
+                      bgGradient: 'linear(to-r, cyan.400, blue.400)',
+                      transform: 'translateY(-2px)',
+                      boxShadow: 'lg',
+                    }}
+                  >
+                    Gabung Chat
+                  </Button>
+                </VStack>
+              </VStack>
+            </GlassCard>
+          </MotionBox>
+        </Container>
       </Box>
     );
   }
 
+  // Chat Interface
   return (
-    <Box minH="100vh" bgGradient="linear(to-br, #0f172a, #1e293b, #334155)" py={12}>
-      <Container maxW="5xl">
-        <Stack spacing={6}>
-          <Box
-            borderRadius="2xl"
-            border="1px solid rgba(148, 163, 184, 0.2)"
-            overflow="hidden"
-            bg={headerBg}
-            backdropFilter="blur(12px)"
-          >
-            <Flex align="center" justify="space-between" px={{ base: 4, md: 6 }} py={4}>
-              <Box>
-                <Heading size="md" color="whiteAlpha.900">
-                  Ruang Chat Real-time
-                </Heading>
-                <Text color="whiteAlpha.600" fontSize="sm">
-                  Logged in sebagai {userName}
-                </Text>
-              </Box>
-              <HStack spacing={3}>
-                <Badge
-                  colorScheme={isConnected ? 'green' : 'red'}
-                  variant="subtle"
-                  borderRadius="full"
-                  px={3}
-                  py={1}
-                >
-                  {isConnected ? 'Terhubung' : 'Terputus'}
-                </Badge>
-                {connectionError ? (
-                  <Text color="red.300" fontSize="xs" maxW="xs" textAlign="right">
-                    {connectionError}
-                  </Text>
-                ) : null}
-              </HStack>
-            </Flex>
-
-            <Flex
-              direction="column"
-              px={{ base: 3, md: 6 }}
-              py={6}
-              bg={messagesBg}
-              h="calc(100vh - 220px)"
-              overflow="hidden"
-            >
-              <Stack flex="1" spacing={3} overflowY="auto" pr={2}>
-                {messages.length === 0 ? (
-                  <Box
-                    flex="1"
-                    display="flex"
-                    alignItems="center"
-                    justifyContent="center"
-                    color="whiteAlpha.600"
-                    textAlign="center"
-                    py={12}
-                  >
-                    <Text>Belum ada pesan. Kirim sesuatu untuk memulai percakapan!</Text>
-                  </Box>
-                ) : (
-                  messages.map((message) => {
-                    // Separate sender and body so sender label sits above the bubble
-                    let sender = null;
-                    let body = message.text;
-                    const isSystem = message.type === 'system';
-                    const isSent = message.type === 'sent';
-
-                    if (!isSystem) {
-                      const idx = message.text.indexOf(': ');
-                      if (idx > -1) {
-                        sender = message.text.slice(0, idx);
-                        body = message.text.slice(idx + 2);
-                      }
-                    }
-
-                    // Use Flex justify to position the message container; the inner Box
-                    // should have a constrained maxWidth so it doesn't fill the whole row.
-                    const justify = isSystem ? 'center' : isSent ? 'flex-end' : 'flex-start';
-
-                    return (
-                      <Flex key={message.id} w="full" justify={justify}>
-                        <Box maxW={isSystem ? '80%' : '70%'}>
-                          {sender ? (
-                            <Text
-                              fontSize="xs"
-                              color={isSent ? 'whiteAlpha.800' : 'whiteAlpha.700'}
-                              mb={1}
-                              textAlign={isSent ? 'right' : 'left'}
-                            >
-                              {sender}
-                            </Text>
-                          ) : null}
-
-                          <MotionBox
-                            initial={{
-                              opacity: 0,
-                              y: isSystem ? 6 : 8,
-                              scale: isSystem ? 1 : 0.98,
-                            }}
-                            animate={{ opacity: 1, y: 0, scale: 1 }}
-                            transition={{ duration: 0.18 }}
-                            bg={
-                              isSystem
-                                ? 'whiteAlpha.200'
-                                : isSent
-                                  ? 'cyan.500'
-                                  : 'rgba(148, 163, 184, 0.18)'
-                            }
-                            color={isSent ? 'white' : 'whiteAlpha.900'}
-                            px={4}
-                            py={2.5}
-                            borderRadius="xl"
-                            boxShadow="md"
-                            fontSize="sm"
-                          >
-                            {body}
-                          </MotionBox>
-                        </Box>
-                      </Flex>
-                    );
-                  })
-                )}
-                <span ref={messagesEndRef} />
-              </Stack>
-
-              <Box minH="28px" px={2} py={1}>
-                <MotionBox
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <TypingIndicator channelId="global" currentUserId={userName} />
-                </MotionBox>
-              </Box>
-
-              <HStack mt={2} spacing={3} align="flex-end">
-                <Box flex="1">
-                  <Input
-                    value={inputValue}
-                    placeholder="Tulis pesan..."
-                    onChange={handleInputChange}
-                    onKeyDown={handleEnterPress}
-                    bg={inputBg}
-                    borderColor="rgba(148, 163, 184, 0.35)"
-                    color="whiteAlpha.900"
-                    _placeholder={{ color: 'whiteAlpha.500' }}
-                    _focus={{
-                      borderColor: 'cyan.300',
-                      boxShadow: '0 0 0 1px rgba(8, 145, 178, 0.5)',
-                    }}
-                    isDisabled={!isConnected}
-                  />
+    <Box
+      h="100vh"
+      bgGradient="linear(to-br, #1a1a2e, #16213e, #0f3460, #533483)"
+      position="relative"
+      overflow="hidden"
+    >
+      <Container maxW="5xl" h="full" py={{ base: 4, md: 6 }}>
+        <Stack spacing={4} h="full">
+          {/* Header */}
+          <GlassCard p={4}>
+            <Flex align="center" justify="space-between">
+              <HStack spacing={4}>
+                <Avatar size="sm" name={userName} bgGradient="linear(to-br, cyan.400, blue.500)" />
+                <Box>
+                  <Heading size="sm" color="whiteAlpha.900">
+                    Community Chat
+                  </Heading>
+                  <HStack spacing={2}>
+                    <Box
+                      w={2}
+                      h={2}
+                      borderRadius="full"
+                      bg={isConnected ? 'green.400' : 'red.400'}
+                      boxShadow={isConnected ? '0 0 8px #4ade80' : 'none'}
+                    />
+                    <Text fontSize="xs" color="whiteAlpha.600">
+                      {isConnected ? 'Online' : 'Terputus'}
+                    </Text>
+                  </HStack>
                 </Box>
+              </HStack>
+              <Tooltip label="Pesan di sini bersifat publik untuk semua pengguna yang sedang online.">
+                <Icon as={InfoIcon} color="whiteAlpha.400" />
+              </Tooltip>
+            </Flex>
+          </GlassCard>
+
+          {/* Messages Area */}
+          <GlassCard
+            flex="1"
+            overflow="hidden"
+            display="flex"
+            flexDirection="column"
+            p={0}
+            bg="rgba(15, 23, 42, 0.6)"
+          >
+            <Box
+              flex="1"
+              overflowY="auto"
+              p={6}
+              css={{
+                '&::-webkit-scrollbar': { width: '6px' },
+                '&::-webkit-scrollbar-track': { background: 'transparent' },
+                '&::-webkit-scrollbar-thumb': {
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  borderRadius: '20px',
+                },
+              }}
+            >
+              <Stack spacing={4}>
+                <AnimatePresence initial={false}>
+                  {messages.length === 0 ? (
+                    <MotionBox
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      display="flex"
+                      flexDirection="column"
+                      alignItems="center"
+                      justifyContent="center"
+                      h="full"
+                      color="whiteAlpha.500"
+                      py={10}
+                    >
+                      <Icon as={ChatIcon} w={12} h={12} mb={4} opacity={0.5} />
+                      <Text>Belum ada pesan. Jadilah yang pertama menyapa!</Text>
+                    </MotionBox>
+                  ) : (
+                    messages.map((message) => (
+                      <ChatBubble
+                        key={message.id}
+                        message={message}
+                        isOwn={message.type === 'sent'}
+                        currentUserName={userName}
+                      />
+                    ))
+                  )}
+                </AnimatePresence>
+                <div ref={messagesEndRef} />
+              </Stack>
+            </Box>
+
+            {/* Typing Indicator Area */}
+            <Box px={6} py={2} minH="24px">
+              <TypingIndicator channelId="global" currentUserId={userName} />
+            </Box>
+
+            {/* Input Area */}
+            <Box p={4} bg="whiteAlpha.50" borderTop="1px solid" borderColor="whiteAlpha.100">
+              <HStack spacing={3}>
+                <Input
+                  value={inputValue}
+                  placeholder="Ketik pesan..."
+                  onChange={handleInputChange}
+                  onKeyDown={handleEnterPress}
+                  bg="whiteAlpha.100"
+                  borderColor="transparent"
+                  borderRadius="full"
+                  _focus={{
+                    bg: 'whiteAlpha.200',
+                    borderColor: 'cyan.300',
+                    boxShadow: '0 0 0 1px rgba(56, 189, 248, 0.5)',
+                  }}
+                  _placeholder={{ color: 'whiteAlpha.400' }}
+                  isDisabled={!isConnected}
+                />
                 <Button
                   colorScheme="cyan"
+                  borderRadius="full"
+                  w="12"
+                  h="12"
                   onClick={handleSendMessage}
                   isDisabled={!isConnected || !inputValue.trim()}
+                  bgGradient="linear(to-r, cyan.500, blue.500)"
+                  _hover={{
+                    bgGradient: 'linear(to-r, cyan.400, blue.400)',
+                    transform: 'scale(1.05)',
+                  }}
+                  boxShadow="0 0 15px rgba(6, 182, 212, 0.4)"
                 >
-                  Kirim
+                  <ArrowUpIcon w={5} h={5} />
                 </Button>
               </HStack>
-            </Flex>
-          </Box>
+            </Box>
+          </GlassCard>
         </Stack>
       </Container>
     </Box>

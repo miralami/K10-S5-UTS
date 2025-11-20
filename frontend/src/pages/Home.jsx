@@ -23,6 +23,7 @@ import {
 import { ArrowForwardIcon, LockIcon } from '@chakra-ui/icons';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createNote } from '../services/journalService';
+import { GlassCard } from '../components/GlassCard';
 
 // Framer Motion wrapper untuk komponen Chakra UI
 const MotionBox = motion(Box);
@@ -214,10 +215,10 @@ export default function DailyEntry() {
   return (
     <Box
       minH="100vh"
-      bgGradient={activeMood?.gradient || 'linear(to-br, #1a1a2e, #16213e, #0f3460, #533483)'}
+      bgGradient="linear(to-br, #1a1a2e, #16213e, #0f3460, #533483)"
       py={{ base: 10, md: 16 }}
-      transition="background 0.6s ease-in-out"
       position="relative"
+      overflow="hidden"
       _before={{
         content: '""',
         position: 'absolute',
@@ -226,12 +227,12 @@ export default function DailyEntry() {
         right: 0,
         bottom: 0,
         bgImage:
-          'radial-gradient(circle at 20% 50%, rgba(56, 189, 248, 0.05) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(167, 139, 250, 0.05) 0%, transparent 50%)',
+          'radial-gradient(circle at 20% 50%, rgba(56, 189, 248, 0.1) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(167, 139, 250, 0.1) 0%, transparent 50%)',
         pointerEvents: 'none',
       }}
     >
-      <Container maxW="5xl" position="relative" zIndex={1}>
-        <Stack spacing={14} color="whiteAlpha.900">
+      <Container maxW="4xl" position="relative" zIndex={1}>
+        <Stack spacing={10} color="whiteAlpha.900">
           <MotionBox
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -246,13 +247,13 @@ export default function DailyEntry() {
                   Mood Journal
                 </Badge>
               </HStack>
-              <Heading size="2xl" mt={2}>
+              <Heading size="2xl" mt={2} bgGradient="linear(to-r, cyan.200, purple.200)" bgClip="text">
                 {greeting.greeting}
               </Heading>
               <Text color="orange.200" fontSize="xl" fontWeight="medium">
                 {greeting.message}
               </Text>
-              <Text color="whiteAlpha.700" fontSize="md" maxW="3xl" mt={2}>
+              <Text color="whiteAlpha.700" fontSize="md" maxW="2xl" mt={2}>
                 Curhatlah seolah kamu sedang ngobrol dengan sahabat. Tulisanmu hanya untukmu— tidak
                 ada yang bisa membacanya tanpa izinmu.
               </Text>
@@ -263,6 +264,8 @@ export default function DailyEntry() {
                 colorScheme="cyan"
                 rightIcon={<ArrowForwardIcon />}
                 mt={2}
+                borderRadius="full"
+                _hover={{ bg: 'whiteAlpha.200' }}
               >
                 Lihat refleksi harianmu
               </Button>
@@ -273,17 +276,9 @@ export default function DailyEntry() {
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.5, delay: 0.2 }}
-            bg="rgba(15, 23, 42, 0.75)"
-            border="1px solid"
-            borderColor="whiteAlpha.200"
-            borderRadius="3xl"
-            px={{ base: 6, md: 12 }}
-            py={{ base: 10, md: 14 }}
-            boxShadow={activeMood ? `0 0 60px ${activeMood.glowColor}` : 'xl'}
-            backdropFilter="blur(20px)"
-            sx={{ transition: 'box-shadow 0.5s ease-in-out' }}
           >
-            <Stack spacing={10} align="center">
+            <GlassCard p={{ base: 6, md: 10 }}>
+              <Stack spacing={8} align="center">
               <Stack spacing={4} align="center" w="full">
                 <Text color="whiteAlpha.700" fontSize="md">
                   Pilih vibe harianmu sebagai pemantik cerita:
@@ -340,12 +335,13 @@ export default function DailyEntry() {
                       value={title}
                       onChange={(event) => setTitle(event.target.value)}
                       placeholder="Contoh: Hari produktif di kantor"
-                      bg="whiteAlpha.100"
+                      bg="whiteAlpha.50"
                       borderColor="whiteAlpha.200"
                       borderRadius="xl"
                       _focus={{
                         borderColor: 'cyan.300',
                         boxShadow: '0 0 0 1px rgba(56, 189, 248, 0.6)',
+                        bg: 'whiteAlpha.100'
                       }}
                       isDisabled={isSubmitting}
                     />
@@ -362,7 +358,7 @@ export default function DailyEntry() {
                       }
                       rows={8}
                       fontSize="lg"
-                      bg="rgba(8, 47, 73, 0.35)"
+                      bg="whiteAlpha.50"
                       borderColor="whiteAlpha.200"
                       borderRadius="3xl"
                       px={6}
@@ -372,6 +368,7 @@ export default function DailyEntry() {
                         boxShadow: activeMood
                           ? `0 0 0 1px ${activeMood.glowColor}, 0 0 20px ${activeMood.glowColor}`
                           : '0 0 0 1px rgba(56, 189, 248, 0.6)',
+                        bg: 'whiteAlpha.100'
                       }}
                       transition="all 0.3s ease-in-out"
                       isDisabled={isSubmitting}
@@ -387,12 +384,22 @@ export default function DailyEntry() {
 
                   <Button
                     type="submit"
-                    colorScheme="cyan"
+                    bgGradient="linear(to-r, cyan.500, blue.500)"
+                    color="white"
                     size="lg"
                     height="56px"
                     borderRadius="full"
                     isLoading={isSubmitting}
                     loadingText="Menyimpan catatan..."
+                    _hover={{
+                      bgGradient: "linear(to-r, cyan.600, blue.600)",
+                      transform: "translateY(-2px)",
+                      boxShadow: "0 8px 20px rgba(6, 182, 212, 0.4)"
+                    }}
+                    _active={{
+                      transform: "translateY(0)"
+                    }}
+                    transition="all 0.2s"
                   >
                     Simpan cerita hari ini
                   </Button>
@@ -423,6 +430,7 @@ export default function DailyEntry() {
                 </Text>
               </Stack>
             </Stack>
+            </GlassCard>
           </MotionBox>
 
           {/* Footer dengan reassurance privasi */}

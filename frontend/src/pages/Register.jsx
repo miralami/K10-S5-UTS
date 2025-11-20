@@ -2,18 +2,27 @@ import { useState } from 'react';
 import {
   Box,
   Button,
+  Container,
   FormControl,
   FormLabel,
-  Input,
-  VStack,
-  Text,
-  useToast,
-  Container,
   Heading,
+  Input,
+  InputGroup,
+  InputLeftElement,
+  Stack,
+  Text,
+  VStack,
+  useToast,
   FormErrorMessage,
+  Icon,
 } from '@chakra-ui/react';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { EmailIcon, LockIcon, InfoIcon } from '@chakra-ui/icons';
 import { register } from '../services/authService';
+import { GlassCard } from '../components/GlassCard';
+
+const MotionBox = motion(Box);
 
 export default function Register() {
   const [formData, setFormData] = useState({
@@ -88,6 +97,7 @@ export default function Register() {
           description: 'Selamat datang di aplikasi!',
           status: 'success',
           duration: 3000,
+          position: 'top',
         });
         navigate('/dashboard');
       }
@@ -106,6 +116,7 @@ export default function Register() {
         description: error.message || errorMessage,
         status: 'error',
         duration: 5000,
+        position: 'top',
       });
     } finally {
       setIsLoading(false);
@@ -115,135 +126,193 @@ export default function Register() {
   return (
     <Box
       minH="100vh"
-      bg="gray.900"
+      bgGradient="linear(to-br, #1a1a2e, #16213e, #0f3460, #533483)"
+      display="flex"
+      alignItems="center"
+      justifyContent="center"
+      position="relative"
+      overflow="hidden"
       py={10}
-      backgroundImage="linear-gradient(to bottom right, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.9))"
+      _before={{
+        content: '""',
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        bgImage:
+          'radial-gradient(circle at 50% 50%, rgba(56, 189, 248, 0.1) 0%, transparent 50%)',
+        pointerEvents: 'none',
+      }}
     >
-      <Container maxW="lg">
-        <VStack spacing={8} mx="auto" maxW="md" px={6}>
-          <Heading fontSize="4xl" bgGradient="linear(to-r, cyan.200, blue.200)" bgClip="text">
-            Daftar Akun
-          </Heading>
-
-          <Box
-            rounded="lg"
-            bg="rgba(15, 23, 42, 0.75)"
-            backdropFilter="blur(10px)"
-            border="1px solid"
-            borderColor="whiteAlpha.200"
-            p={8}
-            w="full"
-          >
-            <form onSubmit={handleSubmit}>
-              <VStack spacing={4}>
-                <FormControl isInvalid={!!errors.name} isRequired>
-                  <FormLabel color="whiteAlpha.900">Nama</FormLabel>
-                  <Input
-                    name="name"
-                    value={formData.name}
-                    onChange={handleChange}
-                    bg="whiteAlpha.50"
-                    border="1px solid"
-                    borderColor="whiteAlpha.200"
-                    _hover={{
-                      borderColor: 'whiteAlpha.300',
-                    }}
-                    _focus={{
-                      borderColor: 'cyan.200',
-                      boxShadow: '0 0 0 1px cyan.200',
-                    }}
-                    color="white"
-                  />
-                  <FormErrorMessage>{errors.name}</FormErrorMessage>
-                </FormControl>
-
-                <FormControl isInvalid={!!errors.email} isRequired>
-                  <FormLabel color="whiteAlpha.900">Email</FormLabel>
-                  <Input
-                    name="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    bg="whiteAlpha.50"
-                    border="1px solid"
-                    borderColor="whiteAlpha.200"
-                    _hover={{
-                      borderColor: 'whiteAlpha.300',
-                    }}
-                    _focus={{
-                      borderColor: 'cyan.200',
-                      boxShadow: '0 0 0 1px cyan.200',
-                    }}
-                    color="white"
-                  />
-                  <FormErrorMessage>{errors.email}</FormErrorMessage>
-                </FormControl>
-
-                <FormControl isInvalid={!!errors.password} isRequired>
-                  <FormLabel color="whiteAlpha.900">Password</FormLabel>
-                  <Input
-                    name="password"
-                    type="password"
-                    value={formData.password}
-                    onChange={handleChange}
-                    bg="whiteAlpha.50"
-                    border="1px solid"
-                    borderColor="whiteAlpha.200"
-                    _hover={{
-                      borderColor: 'whiteAlpha.300',
-                    }}
-                    _focus={{
-                      borderColor: 'cyan.200',
-                      boxShadow: '0 0 0 1px cyan.200',
-                    }}
-                    color="white"
-                  />
-                  <FormErrorMessage>{errors.password}</FormErrorMessage>
-                </FormControl>
-
-                <FormControl isInvalid={!!errors.password_confirmation} isRequired>
-                  <FormLabel color="whiteAlpha.900">Konfirmasi Password</FormLabel>
-                  <Input
-                    name="password_confirmation"
-                    type="password"
-                    value={formData.password_confirmation}
-                    onChange={handleChange}
-                    bg="whiteAlpha.50"
-                    border="1px solid"
-                    borderColor="whiteAlpha.200"
-                    _hover={{
-                      borderColor: 'whiteAlpha.300',
-                    }}
-                    _focus={{
-                      borderColor: 'cyan.200',
-                      boxShadow: '0 0 0 1px cyan.200',
-                    }}
-                    color="white"
-                  />
-                  <FormErrorMessage>{errors.password_confirmation}</FormErrorMessage>
-                </FormControl>
-
-                <Button
-                  type="submit"
-                  colorScheme="cyan"
-                  size="lg"
-                  fontSize="md"
-                  w="full"
-                  isLoading={isLoading}
+      <Container maxW="md" position="relative" zIndex={1}>
+        <MotionBox
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+        >
+          <GlassCard p={8}>
+            <VStack spacing={8}>
+              <Box textAlign="center">
+                <Heading
+                  fontSize="3xl"
+                  bgGradient="linear(to-r, cyan.200, purple.200)"
+                  bgClip="text"
+                  mb={2}
                 >
-                  Daftar
-                </Button>
-              </VStack>
-            </form>
-          </Box>
+                  Buat Akun Baru
+                </Heading>
+                <Text color="whiteAlpha.600">Bergabunglah dengan komunitas kami</Text>
+              </Box>
 
-          <Text color="whiteAlpha.700">
-            Sudah punya akun?{' '}
-            <Button variant="link" color="cyan.200" onClick={() => navigate('/login')}>
-              Login di sini
-            </Button>
-          </Text>
-        </VStack>
+              <form onSubmit={handleSubmit} style={{ width: '100%' }}>
+                <Stack spacing={5}>
+                  <FormControl isInvalid={!!errors.name} isRequired>
+                    <FormLabel color="whiteAlpha.900">Nama</FormLabel>
+                    <InputGroup>
+                      <InputLeftElement pointerEvents="none">
+                        <Icon as={InfoIcon} color="whiteAlpha.400" />
+                      </InputLeftElement>
+                      <Input
+                        name="name"
+                        placeholder="Nama Lengkap"
+                        value={formData.name}
+                        onChange={handleChange}
+                        bg="whiteAlpha.50"
+                        border="1px solid"
+                        borderColor="whiteAlpha.200"
+                        _hover={{ borderColor: 'whiteAlpha.300' }}
+                        _focus={{
+                          borderColor: 'cyan.300',
+                          bg: 'whiteAlpha.100',
+                          boxShadow: '0 0 0 1px rgba(56, 189, 248, 0.5)',
+                        }}
+                        _placeholder={{ color: 'whiteAlpha.300' }}
+                        color="white"
+                      />
+                    </InputGroup>
+                    <FormErrorMessage>{errors.name}</FormErrorMessage>
+                  </FormControl>
+
+                  <FormControl isInvalid={!!errors.email} isRequired>
+                    <FormLabel color="whiteAlpha.900">Email</FormLabel>
+                    <InputGroup>
+                      <InputLeftElement pointerEvents="none">
+                        <Icon as={EmailIcon} color="whiteAlpha.400" />
+                      </InputLeftElement>
+                      <Input
+                        name="email"
+                        type="email"
+                        placeholder="nama@email.com"
+                        value={formData.email}
+                        onChange={handleChange}
+                        bg="whiteAlpha.50"
+                        border="1px solid"
+                        borderColor="whiteAlpha.200"
+                        _hover={{ borderColor: 'whiteAlpha.300' }}
+                        _focus={{
+                          borderColor: 'cyan.300',
+                          bg: 'whiteAlpha.100',
+                          boxShadow: '0 0 0 1px rgba(56, 189, 248, 0.5)',
+                        }}
+                        _placeholder={{ color: 'whiteAlpha.300' }}
+                        color="white"
+                      />
+                    </InputGroup>
+                    <FormErrorMessage>{errors.email}</FormErrorMessage>
+                  </FormControl>
+
+                  <FormControl isInvalid={!!errors.password} isRequired>
+                    <FormLabel color="whiteAlpha.900">Password</FormLabel>
+                    <InputGroup>
+                      <InputLeftElement pointerEvents="none">
+                        <Icon as={LockIcon} color="whiteAlpha.400" />
+                      </InputLeftElement>
+                      <Input
+                        name="password"
+                        type="password"
+                        placeholder="••••••••"
+                        value={formData.password}
+                        onChange={handleChange}
+                        bg="whiteAlpha.50"
+                        border="1px solid"
+                        borderColor="whiteAlpha.200"
+                        _hover={{ borderColor: 'whiteAlpha.300' }}
+                        _focus={{
+                          borderColor: 'cyan.300',
+                          bg: 'whiteAlpha.100',
+                          boxShadow: '0 0 0 1px rgba(56, 189, 248, 0.5)',
+                        }}
+                        _placeholder={{ color: 'whiteAlpha.300' }}
+                        color="white"
+                      />
+                    </InputGroup>
+                    <FormErrorMessage>{errors.password}</FormErrorMessage>
+                  </FormControl>
+
+                  <FormControl isInvalid={!!errors.password_confirmation} isRequired>
+                    <FormLabel color="whiteAlpha.900">Konfirmasi Password</FormLabel>
+                    <InputGroup>
+                      <InputLeftElement pointerEvents="none">
+                        <Icon as={LockIcon} color="whiteAlpha.400" />
+                      </InputLeftElement>
+                      <Input
+                        name="password_confirmation"
+                        type="password"
+                        placeholder="••••••••"
+                        value={formData.password_confirmation}
+                        onChange={handleChange}
+                        bg="whiteAlpha.50"
+                        border="1px solid"
+                        borderColor="whiteAlpha.200"
+                        _hover={{ borderColor: 'whiteAlpha.300' }}
+                        _focus={{
+                          borderColor: 'cyan.300',
+                          bg: 'whiteAlpha.100',
+                          boxShadow: '0 0 0 1px rgba(56, 189, 248, 0.5)',
+                        }}
+                        _placeholder={{ color: 'whiteAlpha.300' }}
+                        color="white"
+                      />
+                    </InputGroup>
+                    <FormErrorMessage>{errors.password_confirmation}</FormErrorMessage>
+                  </FormControl>
+
+                  <Button
+                    type="submit"
+                    size="lg"
+                    w="full"
+                    isLoading={isLoading}
+                    bgGradient="linear(to-r, cyan.500, blue.500)"
+                    color="white"
+                    _hover={{
+                      bgGradient: 'linear(to-r, cyan.400, blue.400)',
+                      transform: 'translateY(-2px)',
+                      boxShadow: 'lg',
+                    }}
+                    _active={{ transform: 'translateY(0)' }}
+                    transition="all 0.2s"
+                  >
+                    Daftar
+                  </Button>
+                </Stack>
+              </form>
+
+              <Text color="whiteAlpha.600" fontSize="sm">
+                Sudah punya akun?{' '}
+                <Button
+                  variant="link"
+                  color="cyan.300"
+                  fontWeight="bold"
+                  onClick={() => navigate('/login')}
+                  _hover={{ textDecoration: 'none', color: 'cyan.200' }}
+                >
+                  Login sekarang
+                </Button>
+              </Text>
+            </VStack>
+          </GlassCard>
+        </MotionBox>
       </Container>
     </Box>
   );

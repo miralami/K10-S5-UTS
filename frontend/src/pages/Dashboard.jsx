@@ -522,6 +522,14 @@ export default function Dashboard() {
 
   // Loading state
   if (weeklyLoading || notesLoading) {
+    const quotes = [
+      "Refleksi adalah jembatan antara pengalaman dan kebijaksanaan ✨",
+      "Setiap catatan adalah langkah menuju pemahaman diri 🌟",
+      "Tulisanmu hari ini adalah hadiah untuk dirimu di masa depan 💫",
+      "Dalam ketenangan refleksi, kita menemukan kekuatan 🌙"
+    ];
+    const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
+
     return (
       <Flex
         justify="center"
@@ -529,28 +537,70 @@ export default function Dashboard() {
         minH="100vh"
         bgGradient="linear(to-br, #1a1a2e, #16213e, #0f3460, #533483)"
         flexDirection="column"
-        gap={4}
+        gap={6}
+        position="relative"
+        overflow="hidden"
+        _before={{
+          content: '""',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          bgImage:
+            'radial-gradient(circle at 20% 50%, rgba(56, 189, 248, 0.1) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(167, 139, 250, 0.1) 0%, transparent 50%)',
+          pointerEvents: 'none',
+        }}
       >
+        {/* Breathing Circle Animation */}
         <motion.div
           animate={{
             scale: [1, 1.2, 1],
-            rotate: [0, 360, 360],
+            opacity: [0.3, 0.6, 0.3],
           }}
           transition={{
-            duration: 2,
+            duration: 3,
             repeat: Infinity,
             ease: 'easeInOut',
           }}
         >
-          <Text fontSize="4xl">📔</Text>
+          <Box
+            w="200px"
+            h="200px"
+            borderRadius="full"
+            bgGradient="linear(to-br, cyan.400, purple.400)"
+            filter="blur(40px)"
+          />
         </motion.div>
-        <Spinner size="xl" color="pink.300" thickness="3px" />
-        <Text color="whiteAlpha.800" fontSize="lg" fontWeight="medium">
-          Memuat refleksi harianmu...
-        </Text>
-        <Text color="whiteAlpha.600" fontSize="sm">
-          Sebentar ya, kami sedang menyiapkan wawasanmu ✨
-        </Text>
+
+        {/* Icon with stagger animation */}
+        <motion.div
+          style={{ position: 'absolute' }}
+          initial={{ scale: 0, rotate: -180 }}
+          animate={{ scale: 1, rotate: 0 }}
+          transition={{
+            duration: 0.8,
+            ease: 'easeOut',
+          }}
+        >
+          <Text fontSize="6xl">📔</Text>
+        </motion.div>
+
+        {/* Loading text */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3, duration: 0.6 }}
+        >
+          <Stack spacing={3} align="center" textAlign="center" maxW="md" px={6}>
+            <Text color="whiteAlpha.900" fontSize="2xl" fontWeight="bold">
+              Memuat refleksi harianmu
+            </Text>
+            <Text color="whiteAlpha.600" fontSize="sm" fontStyle="italic">
+              {randomQuote}
+            </Text>
+          </Stack>
+        </motion.div>
       </Flex>
     );
   }
@@ -691,16 +741,7 @@ export default function Dashboard() {
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.5, delay: 0.1 }}
                 >
-                  <Box
-                    bg="rgba(15, 23, 42, 0.75)"
-                    borderRadius="xl"
-                    p={3}
-                    border="1px solid"
-                    borderColor="whiteAlpha.200"
-                    backdropFilter="blur(20px)"
-                    _hover={{ borderColor: 'purple.300' }}
-                    transition="all 0.3s"
-                  >
+                  <GlassCard p={3} _hover={{ borderColor: 'purple.300' }} transition="all 0.3s">
                     <JournalCalendar
                       selectedDate={selectedDate}
                       onSelectDate={handleDateSelect}
@@ -728,7 +769,7 @@ export default function Dashboard() {
                         aria-label="Next week"
                       />
                     </Flex>
-                  </Box>
+                  </GlassCard>
                 </motion.div>
 
                 {/* Daily Notes */}
@@ -737,13 +778,8 @@ export default function Dashboard() {
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.5, delay: 0.2 }}
                 >
-                  <Box
-                    bg="rgba(15, 23, 42, 0.75)"
-                    borderRadius="xl"
+                  <GlassCard
                     p={3}
-                    border="1px solid"
-                    borderColor="whiteAlpha.200"
-                    backdropFilter="blur(20px)"
                     _hover={{ borderColor: 'pink.300' }}
                     transition="all 0.3s"
                     maxH="calc(100vh - 420px)"
@@ -849,7 +885,7 @@ export default function Dashboard() {
                         ))}
                       </Stack>
                     )}
-                  </Box>
+                  </GlassCard>
                 </motion.div>
               </Stack>
             </Box>

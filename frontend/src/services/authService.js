@@ -19,9 +19,19 @@ export async function login({ email, password }) {
     });
 
     const data = await response.json();
-    if (data.status === 'error') {
+    
+    // Log the full response for debugging
+    console.log('Login response:', data);
+    
+    if (!response.ok || data.status === 'error') {
       console.error('Login error response:', data);
       throw new Error(data.message || 'Login gagal');
+    }
+
+    // Validate response structure
+    if (!data.data || !data.data.access_token || !data.data.user) {
+      console.error('Invalid response structure:', data);
+      throw new Error('Invalid response from server');
     }
 
     // Save auth data
@@ -48,9 +58,19 @@ export async function register({ name, email, password, password_confirmation })
     });
 
     const data = await response.json();
-    if (data.status === 'error') {
+    
+    // Log the full response for debugging
+    console.log('Register response:', data);
+    
+    if (!response.ok || data.status === 'error') {
       console.error('Register error response:', data);
       throw new Error(data.message || 'Registrasi gagal');
+    }
+
+    // Validate response structure
+    if (!data.data || !data.data.access_token || !data.data.user) {
+      console.error('Invalid response structure:', data);
+      throw new Error('Invalid response from server');
     }
 
     // Save auth data
