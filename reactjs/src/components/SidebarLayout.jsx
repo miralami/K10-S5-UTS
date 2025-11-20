@@ -1,14 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom';
-import {
-  Box,
-  Button,
-  Flex,
-  Heading,
-  Icon,
-  Stack,
-  Text,
-  useColorModeValue,
-} from '@chakra-ui/react';
+import { Box, Button, Flex, Heading, Icon, Stack, Text, useColorModeValue } from '@chakra-ui/react';
 import { AtSignIcon, CalendarIcon, ChatIcon } from '@chakra-ui/icons';
 import { logout } from '../services/authService';
 
@@ -35,7 +26,7 @@ const navItems = [
 
 function LogoutButton() {
   const navigate = useNavigate();
-  
+
   const handleLogout = async () => {
     try {
       await logout();
@@ -70,7 +61,6 @@ export default function SidebarLayout({ children }) {
 
   return (
     <Flex minH="100vh" bgGradient="linear(to-br, gray.900, gray.800)">
-
       <Box
         as="nav"
         w={{ base: 'full', md: 72 }}

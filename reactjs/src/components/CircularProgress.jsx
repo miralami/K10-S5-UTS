@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 
 const MotionCircle = motion.circle;
 
-const CircularProgress = ({ value, size = 120, strokeWidth = 8, color = "cyan.400" }) => {
+const CircularProgress = ({ value, size = 120, strokeWidth = 8, color = 'cyan.400' }) => {
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   // Assume value is already 0-100
@@ -30,7 +30,7 @@ const CircularProgress = ({ value, size = 120, strokeWidth = 8, color = "cyan.40
         <MotionCircle
           initial={{ strokeDashoffset: circumference }}
           animate={{ strokeDashoffset }}
-          transition={{ duration: 1, ease: "easeOut" }}
+          transition={{ duration: 1, ease: 'easeOut' }}
           cx={size / 2}
           cy={size / 2}
           r={radius}

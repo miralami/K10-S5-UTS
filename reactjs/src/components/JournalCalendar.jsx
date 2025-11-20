@@ -1,17 +1,17 @@
 import { useState } from 'react';
 import { Box, Grid, Text, Flex, IconButton } from '@chakra-ui/react';
 import { ChevronLeftIcon, ChevronRightIcon } from '@chakra-ui/icons';
-import { 
-  format, 
-  startOfMonth, 
-  endOfMonth, 
-  startOfWeek, 
-  endOfWeek, 
-  addDays, 
-  isSameMonth, 
+import {
+  format,
+  startOfMonth,
+  endOfMonth,
+  startOfWeek,
+  endOfWeek,
+  addDays,
+  isSameMonth,
   isSameDay,
   addMonths,
-  subMonths
+  subMonths,
 } from 'date-fns';
 import { id } from 'date-fns/locale';
 
@@ -34,7 +34,7 @@ export default function JournalCalendar({ selectedDate, onSelectDate, notes = []
 
   // Cek apakah tanggal punya catatan
   const hasNotes = (date) => {
-    return notes.some(note => {
+    return notes.some((note) => {
       const noteDate = new Date(note.note_date || note.createdAt);
       return isSameDay(noteDate, date);
     });

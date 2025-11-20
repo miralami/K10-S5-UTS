@@ -1,4 +1,7 @@
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000/api').replace(/\/$/, '');
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000/api').replace(
+  /\/$/,
+  ''
+);
 
 const FALLBACK_RECOMMENDATIONS = [
   {
@@ -84,7 +87,6 @@ export async function getRecommendations(moodDescription) {
     return data.recommendations;
   } catch (error) {
     if (process.env.NODE_ENV === 'development' || SHOULD_USE_FALLBACK) {
-      // eslint-disable-next-line no-console
       console.warn('[recommendationService] Using fallback recommendations.', error);
       return FALLBACK_RECOMMENDATIONS;
     }

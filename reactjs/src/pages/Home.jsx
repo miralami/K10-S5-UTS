@@ -16,7 +16,7 @@ import {
   Text,
   Textarea,
   useToast,
-  Wrap, 
+  Wrap,
   WrapItem,
   Input,
 } from '@chakra-ui/react';
@@ -69,16 +69,28 @@ const MOOD_OPTIONS = [
 ];
 
 const QUICK_PROMPTS = [
-  { id: 'highlight', label: '✨ Highlight Hari Ini', text: 'Momen terbaik hari ini terjadi ketika ...' },
-  { id: 'lesson', label: '💡 Pelajaran Penting', text: 'Hal paling berharga yang kupelajari hari ini adalah ...' },
+  {
+    id: 'highlight',
+    label: '✨ Highlight Hari Ini',
+    text: 'Momen terbaik hari ini terjadi ketika ...',
+  },
+  {
+    id: 'lesson',
+    label: '💡 Pelajaran Penting',
+    text: 'Hal paling berharga yang kupelajari hari ini adalah ...',
+  },
   { id: 'selfcare', label: '🌸 Self-care', text: 'Untuk menjaga diri, aku ingin ...' },
-  { id: 'shoutout', label: '💛 Ucapan Terima Kasih', text: 'Seseorang yang ingin aku ucapkan terima kasih hari ini adalah ...' },
+  {
+    id: 'shoutout',
+    label: '💛 Ucapan Terima Kasih',
+    text: 'Seseorang yang ingin aku ucapkan terima kasih hari ini adalah ...',
+  },
 ];
 
 // Fungsi untuk mendapatkan sapaan berdasarkan waktu
 const getTimeBasedGreeting = () => {
   const hour = new Date().getHours();
-  
+
   if (hour >= 5 && hour < 10) {
     return {
       greeting: 'Selamat pagi! ☀️',
@@ -177,7 +189,9 @@ export default function DailyEntry() {
       });
 
       // Feedback yang lebih personal berdasarkan mood
-      const moodFeedback = activeMood ? getMoodFeedback(activeMood.id) : 'Terima kasih sudah berbagi ceritamu! 💫';
+      const moodFeedback = activeMood
+        ? getMoodFeedback(activeMood.id)
+        : 'Terima kasih sudah berbagi ceritamu! 💫';
 
       toast({
         title: '🔒 Catatan tersimpan dengan aman',
@@ -198,9 +212,9 @@ export default function DailyEntry() {
   };
 
   return (
-    <Box 
-      minH="100vh" 
-      bgGradient={activeMood?.gradient || "linear(to-br, #1a1a2e, #16213e, #0f3460, #533483)"} 
+    <Box
+      minH="100vh"
+      bgGradient={activeMood?.gradient || 'linear(to-br, #1a1a2e, #16213e, #0f3460, #533483)'}
       py={{ base: 10, md: 16 }}
       transition="background 0.6s ease-in-out"
       position="relative"
@@ -211,7 +225,8 @@ export default function DailyEntry() {
         left: 0,
         right: 0,
         bottom: 0,
-        bgImage: 'radial-gradient(circle at 20% 50%, rgba(56, 189, 248, 0.05) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(167, 139, 250, 0.05) 0%, transparent 50%)',
+        bgImage:
+          'radial-gradient(circle at 20% 50%, rgba(56, 189, 248, 0.05) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(167, 139, 250, 0.05) 0%, transparent 50%)',
         pointerEvents: 'none',
       }}
     >
@@ -231,13 +246,15 @@ export default function DailyEntry() {
                   Mood Journal
                 </Badge>
               </HStack>
-              <Heading size="2xl" mt={2}>{greeting.greeting}</Heading>
+              <Heading size="2xl" mt={2}>
+                {greeting.greeting}
+              </Heading>
               <Text color="orange.200" fontSize="xl" fontWeight="medium">
                 {greeting.message}
               </Text>
               <Text color="whiteAlpha.700" fontSize="md" maxW="3xl" mt={2}>
-                Curhatlah seolah kamu sedang ngobrol dengan sahabat. Tulisanmu hanya untukmu—
-                tidak ada yang bisa membacanya tanpa izinmu.
+                Curhatlah seolah kamu sedang ngobrol dengan sahabat. Tulisanmu hanya untukmu— tidak
+                ada yang bisa membacanya tanpa izinmu.
               </Text>
               <Button
                 as={RouterLink}
@@ -300,8 +317,16 @@ export default function DailyEntry() {
                     exit={{ opacity: 0, y: 10 }}
                     transition={{ duration: 0.3 }}
                   >
-                    <Text color="orange.200" fontSize="sm" textAlign="center" maxW="2xl" fontWeight="medium">
-                      {activeMood ? activeMood.helper : 'Kalau bingung mulai dari mana, klik salah satu mood di atas untuk inspirasi kalimat pertama.'}
+                    <Text
+                      color="orange.200"
+                      fontSize="sm"
+                      textAlign="center"
+                      maxW="2xl"
+                      fontWeight="medium"
+                    >
+                      {activeMood
+                        ? activeMood.helper
+                        : 'Kalau bingung mulai dari mana, klik salah satu mood di atas untuk inspirasi kalimat pertama.'}
                     </Text>
                   </MotionBox>
                 </AnimatePresence>
@@ -318,7 +343,10 @@ export default function DailyEntry() {
                       bg="whiteAlpha.100"
                       borderColor="whiteAlpha.200"
                       borderRadius="xl"
-                      _focus={{ borderColor: 'cyan.300', boxShadow: '0 0 0 1px rgba(56, 189, 248, 0.6)' }}
+                      _focus={{
+                        borderColor: 'cyan.300',
+                        boxShadow: '0 0 0 1px rgba(56, 189, 248, 0.6)',
+                      }}
                       isDisabled={isSubmitting}
                     />
                   </FormControl>
@@ -328,7 +356,10 @@ export default function DailyEntry() {
                     <Textarea
                       value={body}
                       onChange={(event) => setBody(event.target.value)}
-                      placeholder={activeMood?.placeholder || 'Tulis bebas: apa yang membuatmu tersenyum atau mengernyit hari ini?'}
+                      placeholder={
+                        activeMood?.placeholder ||
+                        'Tulis bebas: apa yang membuatmu tersenyum atau mengernyit hari ini?'
+                      }
                       rows={8}
                       fontSize="lg"
                       bg="rgba(8, 47, 73, 0.35)"
@@ -336,11 +367,11 @@ export default function DailyEntry() {
                       borderRadius="3xl"
                       px={6}
                       py={5}
-                      _focus={{ 
-                        borderColor: activeMood ? 'purple.300' : 'cyan.300', 
-                        boxShadow: activeMood 
-                          ? `0 0 0 1px ${activeMood.glowColor}, 0 0 20px ${activeMood.glowColor}` 
-                          : '0 0 0 1px rgba(56, 189, 248, 0.6)' 
+                      _focus={{
+                        borderColor: activeMood ? 'purple.300' : 'cyan.300',
+                        boxShadow: activeMood
+                          ? `0 0 0 1px ${activeMood.glowColor}, 0 0 20px ${activeMood.glowColor}`
+                          : '0 0 0 1px rgba(56, 189, 248, 0.6)',
                       }}
                       transition="all 0.3s ease-in-out"
                       isDisabled={isSubmitting}

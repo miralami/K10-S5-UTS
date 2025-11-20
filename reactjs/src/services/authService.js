@@ -5,7 +5,7 @@ const requestDefaults = {
   credentials: 'include',
   headers: {
     'Content-Type': 'application/json',
-    'Accept': 'application/json',
+    Accept: 'application/json',
     'X-Requested-With': 'XMLHttpRequest',
   },
 };
@@ -76,12 +76,12 @@ export async function logout() {
       method: 'POST',
       headers: {
         ...requestDefaults.headers,
-        'Authorization': `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
       },
     });
 
     const data = await response.json();
-    
+
     // Always clean up local storage regardless of success
     localStorage.removeItem('token');
     localStorage.removeItem('user');

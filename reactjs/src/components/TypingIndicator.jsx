@@ -97,7 +97,9 @@ const TypingIndicator = ({ channelId, currentUserId }) => {
       </HStack>
 
       <Box>
-        <Text fontSize="sm" color="gray.300">{namesText}</Text>
+        <Text fontSize="sm" color="gray.300">
+          {namesText}
+        </Text>
       </Box>
     </Flex>
   );

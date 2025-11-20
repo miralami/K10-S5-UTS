@@ -11,7 +11,7 @@ const requestDefaults = {
   credentials: 'include', // This is required for cookies, authorization headers with CORS
   headers: {
     'Content-Type': 'application/json',
-    'Accept': 'application/json',
+    Accept: 'application/json',
     'X-Requested-With': 'XMLHttpRequest',
     // Note: don't set Authorization here at module load — read token dynamically per-request
   },
@@ -45,54 +45,68 @@ function safeToISOString(date) {
 
 function processDates(obj) {
   if (!obj || typeof obj !== 'object') return obj;
-  
+
   // Create a deep copy to avoid modifying the original
   const result = Array.isArray(obj) ? [...obj] : { ...obj };
-  
+
   for (const key in result) {
     if (result.hasOwnProperty(key)) {
       // Handle date fields
-      if (key.endsWith('_at') || key.endsWith('At') || key.endsWith('_date') || key === 'date' || key === 'created' || key === 'updated') {
+      if (
+        key.endsWith('_at') ||
+        key.endsWith('At') ||
+        key.endsWith('_date') ||
+        key === 'date' ||
+        key === 'created' ||
+        key === 'updated'
+      ) {
         result[key] = safeToISOString(result[key]);
       } else if (typeof result[key] === 'object') {
         result[key] = processDates(result[key]);
       }
     }
   }
-  
+
   return result;
 }
 
 async function handleResponse(response) {
   // First, get the response text to check if it's a PHP error
   const responseText = await response.text();
-  
+
   // Check if the response looks like a PHP error
-  if (responseText.includes('Fatal error') || 
-      responseText.includes('toIso8601String() on null') || 
-      responseText.includes('Call to a member function')) {
+  if (
+    responseText.includes('Fatal error') ||
+    responseText.includes('toIso8601String() on null') ||
+    responseText.includes('Call to a member function')
+  ) {
     console.warn('Server-side error detected:', responseText.substring(0, 200)); // Log first 200 chars
-    return { 
-      status: 'error', 
+    return {
+      status: 'error',
       message: 'Terjadi kesalahan pada server. Silakan coba lagi nanti.',
-      _isError: true
+      _isError: true,
     };
   }
-  
+
   // Handle 401 Unauthorized
   if (response.status === 401) {
     // You might want to redirect to login or refresh token here
     console.warn('Unauthorized access - redirecting to login');
     window.location.href = '/login';
-    return { _isError: true, status: 'error', message: 'Sesi telah berakhir. Silakan login kembali.' };
+    return {
+      _isError: true,
+      status: 'error',
+      message: 'Sesi telah berakhir. Silakan login kembali.',
+    };
   }
-  
+
   if (!response.ok) {
     let message;
     try {
       // Try to parse as JSON for structured error messages
       const errorData = JSON.parse(responseText);
-      message = errorData.message || errorData.error || `Permintaan gagal dengan status ${response.status}`;
+      message =
+        errorData.message || errorData.error || `Permintaan gagal dengan status ${response.status}`;
     } catch {
       // If not JSON, use the raw text or default message
       message = responseText || `Permintaan gagal dengan status ${response.status}`;
@@ -110,10 +124,10 @@ async function handleResponse(response) {
     return processDates(data);
   } catch (error) {
     console.warn('Error parsing JSON response:', error);
-    return { 
-      status: 'error', 
+    return {
+      status: 'error',
       message: 'Gagal memproses respons dari server',
-      _isError: true
+      _isError: true,
     };
   }
 }
@@ -137,11 +151,11 @@ export async function getWeeklySummary({ weekEnding, startDate, endDate, userId 
       // Ensure dates are valid Date objects
       const start = new Date(startDate);
       const end = new Date(endDate);
-      
+
       if (isNaN(start.getTime()) || isNaN(end.getTime())) {
         throw new Error('Tanggal tidak valid');
       }
-      
+
       params.append('start_date', format(start, 'yyyy-MM-dd'));
       params.append('end_date', format(end, 'yyyy-MM-dd'));
     }
@@ -152,40 +166,40 @@ export async function getWeeklySummary({ weekEnding, startDate, endDate, userId 
 
     const queryString = params.toString();
     const url = `${API_BASE_URL}/journal/weekly-summary${queryString ? `?${queryString}` : ''}`;
-    
+
     const response = await fetch(url, buildRequestOptions());
-    
+
     try {
       const payload = await handleResponse(response);
-      
+
       // If handleResponse detected an error, return it
       if (payload?._isError) {
         return payload;
       }
-      
+
       if (payload?.status === 'pending') {
         payload.message = payload.message || 'Ringkasan mingguan belum tersedia.';
       }
-      
+
       // Ensure we have valid data structure
       if (!payload) {
         console.warn('Empty response from weekly-summary endpoint');
         return { status: 'error', message: 'Tidak ada data yang diterima dari server' };
       }
-      
+
       return payload;
     } catch (error) {
       console.error('Error in getWeeklySummary response handling:', error);
-      return { 
+      return {
         status: 'error',
-        message: error.message || 'Gagal memuat ringkasan mingguan'
+        message: error.message || 'Gagal memuat ringkasan mingguan',
       };
     }
   } catch (error) {
     console.error('Error in getWeeklySummary:', error);
-    return { 
-      status: 'error', 
-      message: error.message || 'Gagal memuat ringkasan mingguan' 
+    return {
+      status: 'error',
+      message: error.message || 'Gagal memuat ringkasan mingguan',
     };
   }
 }
@@ -209,40 +223,40 @@ export async function getDailySummary({ date, userId } = {}) {
 
     const queryString = params.toString();
     const url = `${API_BASE_URL}/journal/daily-summary${queryString ? `?${queryString}` : ''}`;
-    
+
     const response = await fetch(url, buildRequestOptions());
-    
+
     try {
       const payload = await handleResponse(response);
-      
+
       // If handleResponse detected an error, return it
       if (payload?._isError) {
         return payload;
       }
-      
+
       if (payload?.status === 'pending') {
         payload.message = payload.message || 'Ringkasan harian belum tersedia.';
       }
-      
+
       // Ensure we have valid data structure
       if (!payload) {
         console.warn('Empty response from daily-summary endpoint');
         return { status: 'error', message: 'Tidak ada data yang diterima dari server' };
       }
-      
+
       return payload;
     } catch (error) {
       console.error('Error in getDailySummary response handling:', error);
-      return { 
+      return {
         status: 'error',
-        message: error.message || 'Gagal memuat ringkasan harian'
+        message: error.message || 'Gagal memuat ringkasan harian',
       };
     }
   } catch (error) {
     console.error('Error in getDailySummary:', error);
-    return { 
-      status: 'error', 
-      message: error.message || 'Gagal memuat ringkasan harian' 
+    return {
+      status: 'error',
+      message: error.message || 'Gagal memuat ringkasan harian',
     };
   }
 }
@@ -253,14 +267,14 @@ export async function listNotes({ userId, startDate, endDate } = {}) {
   if (userId) {
     params.append('user_id', userId);
   }
-  
+
   if (startDate) {
     const start = new Date(startDate);
     if (!isNaN(start.getTime())) {
       params.append('start_date', format(start, 'yyyy-MM-dd'));
     }
   }
-  
+
   if (endDate) {
     const end = new Date(endDate);
     if (!isNaN(end.getTime())) {
@@ -302,7 +316,7 @@ export async function createNote({ userId, title, body }) {
     );
 
     const payload = await handleResponse(response);
-    
+
     // The response is already processed by handleResponse
     return payload?.data || payload;
   } catch (error) {
@@ -328,7 +342,7 @@ export async function updateNote(id, { userId, title, body }) {
     );
 
     const payload = await handleResponse(response);
-    
+
     // The response is already processed by handleResponse
     return payload?.data || payload;
   } catch (error) {

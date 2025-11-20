@@ -29,38 +29,38 @@ export default function Register() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
     // Clear error when user starts typing
     if (errors[name]) {
-      setErrors(prev => ({
+      setErrors((prev) => ({
         ...prev,
-        [name]: ''
+        [name]: '',
       }));
     }
   };
 
   const validateForm = () => {
     const newErrors = {};
-    
+
     if (!formData.name.trim()) {
       newErrors.name = 'Nama harus diisi';
     }
-    
+
     if (!formData.email.trim()) {
       newErrors.email = 'Email harus diisi';
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = 'Format email tidak valid';
     }
-    
+
     if (!formData.password) {
       newErrors.password = 'Password harus diisi';
     } else if (formData.password.length < 8) {
       newErrors.password = 'Password minimal 8 karakter';
     }
-    
+
     if (!formData.password_confirmation) {
       newErrors.password_confirmation = 'Konfirmasi password harus diisi';
     } else if (formData.password !== formData.password_confirmation) {
@@ -73,7 +73,7 @@ export default function Register() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
@@ -93,14 +93,14 @@ export default function Register() {
       }
     } catch (error) {
       let errorMessage = 'Terjadi kesalahan saat registrasi';
-      
+
       // Handle validation errors from backend
       if (error.response?.errors) {
         const backendErrors = error.response.errors;
         setErrors(backendErrors);
         errorMessage = 'Mohon periksa kembali data yang dimasukkan';
       }
-      
+
       toast({
         title: 'Registrasi gagal',
         description: error.message || errorMessage,
@@ -121,11 +121,7 @@ export default function Register() {
     >
       <Container maxW="lg">
         <VStack spacing={8} mx="auto" maxW="md" px={6}>
-          <Heading
-            fontSize="4xl"
-            bgGradient="linear(to-r, cyan.200, blue.200)"
-            bgClip="text"
-          >
+          <Heading fontSize="4xl" bgGradient="linear(to-r, cyan.200, blue.200)" bgClip="text">
             Daftar Akun
           </Heading>
 
@@ -150,11 +146,11 @@ export default function Register() {
                     border="1px solid"
                     borderColor="whiteAlpha.200"
                     _hover={{
-                      borderColor: "whiteAlpha.300"
+                      borderColor: 'whiteAlpha.300',
                     }}
                     _focus={{
-                      borderColor: "cyan.200",
-                      boxShadow: "0 0 0 1px cyan.200"
+                      borderColor: 'cyan.200',
+                      boxShadow: '0 0 0 1px cyan.200',
                     }}
                     color="white"
                   />
@@ -172,11 +168,11 @@ export default function Register() {
                     border="1px solid"
                     borderColor="whiteAlpha.200"
                     _hover={{
-                      borderColor: "whiteAlpha.300"
+                      borderColor: 'whiteAlpha.300',
                     }}
                     _focus={{
-                      borderColor: "cyan.200",
-                      boxShadow: "0 0 0 1px cyan.200"
+                      borderColor: 'cyan.200',
+                      boxShadow: '0 0 0 1px cyan.200',
                     }}
                     color="white"
                   />
@@ -194,11 +190,11 @@ export default function Register() {
                     border="1px solid"
                     borderColor="whiteAlpha.200"
                     _hover={{
-                      borderColor: "whiteAlpha.300"
+                      borderColor: 'whiteAlpha.300',
                     }}
                     _focus={{
-                      borderColor: "cyan.200",
-                      boxShadow: "0 0 0 1px cyan.200"
+                      borderColor: 'cyan.200',
+                      boxShadow: '0 0 0 1px cyan.200',
                     }}
                     color="white"
                   />
@@ -216,11 +212,11 @@ export default function Register() {
                     border="1px solid"
                     borderColor="whiteAlpha.200"
                     _hover={{
-                      borderColor: "whiteAlpha.300"
+                      borderColor: 'whiteAlpha.300',
                     }}
                     _focus={{
-                      borderColor: "cyan.200",
-                      boxShadow: "0 0 0 1px cyan.200"
+                      borderColor: 'cyan.200',
+                      boxShadow: '0 0 0 1px cyan.200',
                     }}
                     color="white"
                   />
@@ -243,11 +239,7 @@ export default function Register() {
 
           <Text color="whiteAlpha.700">
             Sudah punya akun?{' '}
-            <Button
-              variant="link"
-              color="cyan.200"
-              onClick={() => navigate('/login')}
-            >
+            <Button variant="link" color="cyan.200" onClick={() => navigate('/login')}>
               Login di sini
             </Button>
           </Text>

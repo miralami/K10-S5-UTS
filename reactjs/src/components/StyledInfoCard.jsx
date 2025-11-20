@@ -15,9 +15,9 @@ export default function StyledInfoCard({ label, value, icon, color = 'whiteAlpha
       borderColor="whiteAlpha.200"
       transition="all 0.2s"
       _hover={{
-        bg: "rgba(255,255,255,0.15)",
-        borderColor: "whiteAlpha.300",
-        boxShadow: "xl"
+        bg: 'rgba(255,255,255,0.15)',
+        borderColor: 'whiteAlpha.300',
+        boxShadow: 'xl',
       }}
     >
       <VStack spacing={3} align="start">

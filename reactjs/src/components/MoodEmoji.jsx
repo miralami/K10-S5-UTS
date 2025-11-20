@@ -5,19 +5,19 @@ const MotionBox = motion(Box);
 
 const moodEmojis = {
   'Sangat Senang': '😊',
-  'Senang': '🙂',
-  'Netral': '😐',
-  'Sedih': '😔',
+  Senang: '🙂',
+  Netral: '😐',
+  Sedih: '😔',
   'Sangat Sedih': '😢',
-  'Marah': '😠',
-  'Bersemangat': '💪',
-  'Lelah': '😫',
-  'Stress': '😰',
-  'Tenang': '😌',
-  'default': '😶'
+  Marah: '😠',
+  Bersemangat: '💪',
+  Lelah: '😫',
+  Stress: '😰',
+  Tenang: '😌',
+  default: '😶',
 };
 
-export default function MoodEmoji({ mood, size = "64px" }) {
+export default function MoodEmoji({ mood, size = '64px' }) {
   const emoji = moodEmojis[mood] || moodEmojis.default;
 
   return (
@@ -25,12 +25,12 @@ export default function MoodEmoji({ mood, size = "64px" }) {
       fontSize={size}
       animate={{
         scale: [1, 1.1, 1],
-        rotate: [0, 5, -5, 0]
+        rotate: [0, 5, -5, 0],
       }}
       transition={{
         duration: 2,
         repeat: Infinity,
-        repeatType: "reverse"
+        repeatType: 'reverse',
       }}
       display="inline-block"
       transformOrigin="center"

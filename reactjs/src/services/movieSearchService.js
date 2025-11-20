@@ -4,5 +4,7 @@
 // Keep a clear failure function so any accidental calls fail fast with a helpful message.
 
 export async function searchMovies() {
-  throw new Error('Movie search has been removed from this application. Use the recommendations endpoint once integrated.');
+  throw new Error(
+    'Movie search has been removed from this application. Use the recommendations endpoint once integrated.'
+  );
 }

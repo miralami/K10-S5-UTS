@@ -57,11 +57,7 @@ export default function Login() {
     >
       <Container maxW="lg">
         <VStack spacing={8} mx="auto" maxW="md" px={6}>
-          <Heading
-            fontSize="4xl"
-            bgGradient="linear(to-r, cyan.200, blue.200)"
-            bgClip="text"
-          >
+          <Heading fontSize="4xl" bgGradient="linear(to-r, cyan.200, blue.200)" bgClip="text">
             Login
           </Heading>
 
@@ -86,11 +82,11 @@ export default function Login() {
                     border="1px solid"
                     borderColor="whiteAlpha.200"
                     _hover={{
-                      borderColor: "whiteAlpha.300"
+                      borderColor: 'whiteAlpha.300',
                     }}
                     _focus={{
-                      borderColor: "cyan.200",
-                      boxShadow: "0 0 0 1px cyan.200"
+                      borderColor: 'cyan.200',
+                      boxShadow: '0 0 0 1px cyan.200',
                     }}
                     color="white"
                   />
@@ -106,11 +102,11 @@ export default function Login() {
                     border="1px solid"
                     borderColor="whiteAlpha.200"
                     _hover={{
-                      borderColor: "whiteAlpha.300"
+                      borderColor: 'whiteAlpha.300',
                     }}
                     _focus={{
-                      borderColor: "cyan.200",
-                      boxShadow: "0 0 0 1px cyan.200"
+                      borderColor: 'cyan.200',
+                      boxShadow: '0 0 0 1px cyan.200',
                     }}
                     color="white"
                   />
@@ -132,11 +128,7 @@ export default function Login() {
 
           <Text color="whiteAlpha.700">
             Belum punya akun?{' '}
-            <Button
-              variant="link"
-              color="cyan.200"
-              onClick={() => navigate('/register')}
-            >
+            <Button variant="link" color="cyan.200" onClick={() => navigate('/register')}>
               Daftar di sini
             </Button>
           </Text>

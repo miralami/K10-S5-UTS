@@ -25,7 +25,9 @@ if (ENABLE_GRPC && TypingServiceClient) {
 export const typingService = {
   startStream: (channelId, userId, onData, onError) => {
     if (!ENABLE_GRPC || !client || !grpcAvailable) {
-      console.warn('gRPC disabled or not available. Falling back to WebSocket for typing indicator.');
+      console.warn(
+        'gRPC disabled or not available. Falling back to WebSocket for typing indicator.'
+      );
       // Fallback: listen to window 'typingEvent' dispatched by WebSocket handler
       const handler = (e) => {
         const d = e.detail;
@@ -52,8 +54,8 @@ export const typingService = {
     request.setIsTyping(false); // Initial state
 
     const metadata = {
-      'user_id': userId,
-      'channel_id': channelId,
+      user_id: userId,
+      channel_id: channelId,
       // 'authorization': `Bearer ${token}` // Add token here
     };
 
@@ -75,7 +77,9 @@ export const typingService = {
       console.error('gRPC Stream Error:', err);
       // If Envoy/gRPC not available, disable and notify
       if (err.code === 2 || err.message?.includes('CORS') || err.message?.includes('400 or 500')) {
-        console.warn('gRPC/Envoy not available. Typing indicator via gRPC disabled. Use WebSocket instead.');
+        console.warn(
+          'gRPC/Envoy not available. Typing indicator via gRPC disabled. Use WebSocket instead.'
+        );
         grpcAvailable = false;
         client = null;
       }
@@ -98,7 +102,11 @@ export const typingService = {
     // Note: grpc-web doesn't support bidirectional streaming
     // For now, we just log. You could implement a separate unary RPC
     // or use WebSocket for sending typing updates
-    console.log('sendTyping called (not supported in grpc-web server streaming):', channelId, isTyping);
+    console.log(
+      'sendTyping called (not supported in grpc-web server streaming):',
+      channelId,
+      isTyping
+    );
     // TODO: Implement via WebSocket or separate unary gRPC call
   },
 
@@ -113,5 +121,5 @@ export const typingService = {
       }
       stream = null;
     }
-  }
+  },
 };

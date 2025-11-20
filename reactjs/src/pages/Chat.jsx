@@ -61,7 +61,10 @@ export default function Chat() {
       ws.send(JSON.stringify({ type: 'username', name: userName }));
       setMessages((prev) => [
         ...prev,
-        buildMessageEntry({ text: `Terhubung ke server chat sebagai ${userName}.`, type: 'system' }),
+        buildMessageEntry({
+          text: `Terhubung ke server chat sebagai ${userName}.`,
+          type: 'system',
+        }),
       ]);
     };
 
@@ -90,15 +93,14 @@ export default function Chat() {
       }
 
       // Only add plain text messages to chat
-      setMessages((prev) => [
-        ...prev,
-        buildMessageEntry({ text: payload, type: 'received' }),
-      ]);
+      setMessages((prev) => [...prev, buildMessageEntry({ text: payload, type: 'received' })]);
     };
 
     ws.onerror = (error) => {
       console.error('WebSocket error:', error);
-      setConnectionError('Terjadi gangguan koneksi. Coba muat ulang halaman untuk menyambung ulang.');
+      setConnectionError(
+        'Terjadi gangguan koneksi. Coba muat ulang halaman untuk menyambung ulang.'
+      );
     };
 
     ws.onclose = () => {
@@ -142,7 +144,9 @@ export default function Chat() {
       typingTimeoutRef.current = setTimeout(() => {
         try {
           if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-            wsRef.current.send(JSON.stringify({ type: 'typing', channel: 'global', isTyping: false }));
+            wsRef.current.send(
+              JSON.stringify({ type: 'typing', channel: 'global', isTyping: false })
+            );
           }
         } catch (e) {
           console.warn('Failed to send typing=false via WebSocket', e);
@@ -237,11 +241,7 @@ export default function Chat() {
   }
 
   return (
-    <Box
-      minH="100vh"
-      bgGradient="linear(to-br, #0f172a, #1e293b, #334155)"
-      py={12}
-    >
+    <Box minH="100vh" bgGradient="linear(to-br, #0f172a, #1e293b, #334155)" py={12}>
       <Container maxW="5xl">
         <Stack spacing={6}>
           <Box
@@ -251,12 +251,7 @@ export default function Chat() {
             bg={headerBg}
             backdropFilter="blur(12px)"
           >
-            <Flex
-              align="center"
-              justify="space-between"
-              px={{ base: 4, md: 6 }}
-              py={4}
-            >
+            <Flex align="center" justify="space-between" px={{ base: 4, md: 6 }} py={4}>
               <Box>
                 <Heading size="md" color="whiteAlpha.900">
                   Ruang Chat Real-time
@@ -283,7 +278,14 @@ export default function Chat() {
               </HStack>
             </Flex>
 
-            <Flex direction="column" px={{ base: 3, md: 6 }} py={6} bg={messagesBg} h="calc(100vh - 220px)" overflow="hidden">
+            <Flex
+              direction="column"
+              px={{ base: 3, md: 6 }}
+              py={6}
+              bg={messagesBg}
+              h="calc(100vh - 220px)"
+              overflow="hidden"
+            >
               <Stack flex="1" spacing={3} overflowY="auto" pr={2}>
                 {messages.length === 0 ? (
                   <Box
@@ -295,9 +297,7 @@ export default function Chat() {
                     textAlign="center"
                     py={12}
                   >
-                    <Text>
-                      Belum ada pesan. Kirim sesuatu untuk memulai percakapan!
-                    </Text>
+                    <Text>Belum ada pesan. Kirim sesuatu untuk memulai percakapan!</Text>
                   </Box>
                 ) : (
                   messages.map((message) => {
@@ -334,10 +334,20 @@ export default function Chat() {
                           ) : null}
 
                           <MotionBox
-                            initial={{ opacity: 0, y: isSystem ? 6 : 8, scale: isSystem ? 1 : 0.98 }}
+                            initial={{
+                              opacity: 0,
+                              y: isSystem ? 6 : 8,
+                              scale: isSystem ? 1 : 0.98,
+                            }}
                             animate={{ opacity: 1, y: 0, scale: 1 }}
                             transition={{ duration: 0.18 }}
-                            bg={isSystem ? 'whiteAlpha.200' : isSent ? 'cyan.500' : 'rgba(148, 163, 184, 0.18)'}
+                            bg={
+                              isSystem
+                                ? 'whiteAlpha.200'
+                                : isSent
+                                  ? 'cyan.500'
+                                  : 'rgba(148, 163, 184, 0.18)'
+                            }
                             color={isSent ? 'white' : 'whiteAlpha.900'}
                             px={4}
                             py={2.5}
@@ -356,7 +366,11 @@ export default function Chat() {
               </Stack>
 
               <Box minH="28px" px={2} py={1}>
-                <MotionBox initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
+                <MotionBox
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.2 }}
+                >
                   <TypingIndicator channelId="global" currentUserId={userName} />
                 </MotionBox>
               </Box>
@@ -372,7 +386,10 @@ export default function Chat() {
                     borderColor="rgba(148, 163, 184, 0.35)"
                     color="whiteAlpha.900"
                     _placeholder={{ color: 'whiteAlpha.500' }}
-                    _focus={{ borderColor: 'cyan.300', boxShadow: '0 0 0 1px rgba(8, 145, 178, 0.5)' }}
+                    _focus={{
+                      borderColor: 'cyan.300',
+                      boxShadow: '0 0 0 1px rgba(8, 145, 178, 0.5)',
+                    }}
                     isDisabled={!isConnected}
                   />
                 </Box>

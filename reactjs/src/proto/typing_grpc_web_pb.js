@@ -10,7 +10,6 @@
 // 	protoc              v3.19.1
 // source: typing.proto
 
-
 /* eslint-disable */
 // @ts-nocheck
 

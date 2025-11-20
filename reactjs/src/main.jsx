@@ -18,24 +18,24 @@ const theme = extendTheme({
     Button: {
       baseStyle: {
         fontFamily: "'Fredoka', sans-serif",
-        fontWeight: "500"
-      }
+        fontWeight: '500',
+      },
     },
     Input: {
       baseStyle: {
         field: {
           fontFamily: "'Quicksand', sans-serif",
-        }
-      }
+        },
+      },
     },
     Select: {
       baseStyle: {
         field: {
           fontFamily: "'Quicksand', sans-serif",
-        }
-      }
-    }
-  }
+        },
+      },
+    },
+  },
 });
 
 ReactDOM.createRoot(document.getElementById('root')).render(

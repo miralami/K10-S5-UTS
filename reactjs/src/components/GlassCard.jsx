@@ -14,11 +14,11 @@ export const GlassCard = ({ children, hover = true, ...props }) => (
     transition="all 0.2s"
     {...(hover && {
       _hover: {
-        bg: "rgba(15, 23, 42, 0.85)",
-        borderColor: "whiteAlpha.300",
-        transform: "translateY(-2px)",
-        boxShadow: "lg",
-      }
+        bg: 'rgba(15, 23, 42, 0.85)',
+        borderColor: 'whiteAlpha.300',
+        transform: 'translateY(-2px)',
+        boxShadow: 'lg',
+      },
     })}
     {...props}
   >

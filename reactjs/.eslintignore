@@ -1,0 +1,13 @@
+node_modules/
+dist/
+build/
+public/
+*.min.js
+*.bundle.js
+*.d.ts
+.vite/
+.env
+.env.*
+coverage/
+**/*.config.js
+**/vendor/

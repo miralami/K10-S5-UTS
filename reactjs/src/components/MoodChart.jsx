@@ -13,8 +13,8 @@ import { id } from 'date-fns/locale';
 
 export default function MoodChart({ data }) {
   const [cyan200, cyan500] = useToken('colors', ['cyan.200', 'cyan.500']);
-  
-  const chartData = data.map(item => ({
+
+  const chartData = data.map((item) => ({
     date: format(new Date(item.date), 'EEE', { locale: id }),
     score: item.moodScore || 0,
   }));
@@ -22,10 +22,7 @@ export default function MoodChart({ data }) {
   return (
     <Box h="200px" w="100%">
       <ResponsiveContainer width="100%" height="100%">
-        <AreaChart
-          data={chartData}
-          margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
-        >
+        <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
           <defs>
             <linearGradient id="moodGradient" x1="0" y1="0" x2="0" y2="1">
               <stop offset="5%" stopColor={cyan500} stopOpacity={0.2} />
