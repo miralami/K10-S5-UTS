@@ -38,7 +38,6 @@ class Kernel extends HttpKernel
         'auth' => \App\Http\Middleware\Authenticate::class,  // Middleware untuk autentikasi berbasis session
         'guest' => \App\Http\Middleware\RedirectIfAuthenticated::class,
         'verified' => \App\Http\Middleware\EnsureEmailIsVerified::class,
-        'mental_health' => \App\Http\Middleware\MentalHealthMiddleware::class,
         'jwt.auth' => AuthenticateJWT::class,  // Middleware JWT untuk autentikasi (API)
         'role' => \App\Http\Middleware\RoleMiddleware::class,  // Middleware untuk kontrol akses berbasis peran (optional)
     ];

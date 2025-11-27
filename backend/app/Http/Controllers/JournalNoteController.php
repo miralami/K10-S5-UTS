@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreJournalRequest;
+use App\Http\Requests\UpdateJournalRequest;
 use App\Models\JournalNote;
 use App\Services\DailyJournalAnalysisService;
 use Carbon\Carbon;
@@ -31,19 +33,10 @@ class JournalNoteController extends Controller
         ]);
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(StoreJournalRequest $request): JsonResponse
     {
-        $user = auth()->user();
-        if (! $user) {
-            return response()->json(['message' => 'Unauthorized'], 401);
-        }
-
-        $validated = $request->validate([
-            'title' => ['nullable', 'string', 'max:255'],
-            'body' => ['required', 'string'],
-        ]);
-
-        $validated['user_id'] = $user->id;
+        $validated = $request->validated();
+        $validated['user_id'] = auth()->id();
 
         $note = JournalNote::create($validated);
 
@@ -59,21 +52,9 @@ class JournalNoteController extends Controller
         ]);
     }
 
-    public function update(Request $request, JournalNote $note, DailyJournalAnalysisService $dailyService): JsonResponse
+    public function update(UpdateJournalRequest $request, JournalNote $note, DailyJournalAnalysisService $dailyService): JsonResponse
     {
-        $user = auth()->user();
-        if (! $user) {
-            return response()->json(['message' => 'Unauthorized'], 401);
-        }
-        if ((int) $note->user_id !== (int) $user->id) {
-            return response()->json(['message' => 'Forbidden'], 403);
-        }
-
-        $validated = $request->validate([
-            'user_id' => ['sometimes', 'nullable', 'integer', 'exists:users,id'],
-            'title' => ['sometimes', 'nullable', 'string', 'max:255'],
-            'body' => ['sometimes', 'string'],
-        ]);
+        $validated = $request->validated();
 
         if (empty($validated)) {
             return response()->json([
@@ -86,32 +67,11 @@ class JournalNoteController extends Controller
         $tz = new \DateTimeZone('Asia/Jakarta');
         $todayStart = Carbon::now($tz)->startOfDay();
 
-        $ref = null;
-        if (! empty($note->note_date)) {
-            try {
-                $ref = Carbon::parse($note->note_date, $tz)->startOfDay();
-            } catch (\Throwable $e) {
-            }
-        }
-        if (! $ref && ! empty($note->created_at)) {
-            try {
-                $ref = ($note->created_at instanceof \DateTimeInterface)
-                    ? Carbon::instance($note->created_at)->setTimezone($tz)->startOfDay()
-                    : Carbon::parse($note->created_at, $tz)->startOfDay();
-            } catch (\Throwable $e) {
-            }
-        }
-        if (! $ref && ! empty($note->updated_at)) {
-            try {
-                $ref = ($note->updated_at instanceof \DateTimeInterface)
-                    ? Carbon::instance($note->updated_at)->setTimezone($tz)->startOfDay()
-                    : Carbon::parse($note->updated_at, $tz)->startOfDay();
-            } catch (\Throwable $e) {
-            }
-        }
-        if (! $ref) {
-            $ref = $todayStart;
-        }
+        // Determine reference date for editing restriction (3 days rule)
+        $ref = $this->getDateAsCarbon($note->note_date, $tz)
+            ?? $this->getDateAsCarbon($note->created_at, $tz)
+            ?? $this->getDateAsCarbon($note->updated_at, $tz)
+            ?? $todayStart;
 
         $diff = $ref->diffInDays($todayStart, false);
         if ($diff < 0) {
@@ -124,29 +84,19 @@ class JournalNoteController extends Controller
         $note->update($validated);
 
         try {
-            $tz = new \DateTimeZone('Asia/Jakarta');
-            $day = null;
-            if (! empty($note->note_date)) {
-                try {
-                    $day = CarbonImmutable::parse($note->note_date, $tz)->startOfDay();
-                } catch (\Throwable $e) {
-                }
-            }
-            if (! $day && ! empty($note->created_at)) {
-                try {
-                    $day = ($note->created_at instanceof \DateTimeInterface)
-                        ? CarbonImmutable::instance($note->created_at)->setTimezone($tz)->startOfDay()
-                        : CarbonImmutable::parse($note->created_at, $tz)->startOfDay();
-                } catch (\Throwable $e) {
-                }
-            }
-            if (! $day) {
-                $day = CarbonImmutable::now($tz)->startOfDay();
-            }
+            // Recompute analysis for the target day
+            $day = $this->getDateAsCarbon($note->note_date, $tz)
+                ?? $this->getDateAsCarbon($note->created_at, $tz)
+                ?? Carbon::now($tz)->startOfDay();
+
+            // Convert to Immutable for the service if needed, or just pass Carbon
+            // The service likely expects Carbon or CarbonImmutable.
+            // Let's assume CarbonImmutable to be safe as per original code.
+            $dayImmutable = CarbonImmutable::instance($day);
 
             $user = auth()->user();
             if ($user) {
-                $dailyService->generateForUser($user, $day, true);
+                $dailyService->generateForUser($user, $dayImmutable, true);
             }
         } catch (\Throwable $e) {
             \Log::error('Failed to recompute daily analysis after note update', ['error' => $e->getMessage()]);
@@ -166,49 +116,51 @@ class JournalNoteController extends Controller
 
     private function transformNote(JournalNote $note): array
     {
-        // Build the response defensively to avoid undefined property warnings
-        $data = [
+        return [
             'id' => $note->id,
             'userId' => $note->user_id ?? null,
             'title' => $note->title ?? null,
             'body' => $note->body ?? null,
+            'noteDate' => $this->formatIsoDate($note->note_date),
+            'createdAt' => $this->formatIsoDate($note->created_at),
+            'updatedAt' => $this->formatIsoDate($note->updated_at),
         ];
+    }
 
-        // note_date may be a date-only string in DB; normalize to ISO if present
-        if (! empty($note->note_date)) {
-            try {
-                $data['noteDate'] = Carbon::parse($note->note_date)->setTimezone('Asia/Jakarta')->toAtomString();
-            } catch (\Throwable $e) {
-                // ignore parse errors and omit the field
-            }
+    /**
+     * Helper to parse a date value to a Carbon instance at start of day.
+     */
+    private function getDateAsCarbon($value, \DateTimeZone $tz): ?Carbon
+    {
+        if (empty($value)) {
+            return null;
         }
-
-        if (! empty($note->created_at)) {
-            // Eloquent commonly provides Carbon instances for created_at/updated_at,
-            // but guard to avoid warnings if they are strings.
-            if ($note->created_at instanceof \DateTimeInterface) {
-                $data['createdAt'] = $note->created_at->setTimezone(new \DateTimeZone('Asia/Jakarta'))->format(DATE_ATOM);
-            } else {
-                try {
-                    $data['createdAt'] = Carbon::parse($note->created_at)->setTimezone('Asia/Jakarta')->toAtomString();
-                } catch (\Throwable $e) {
-                    // omit on parse error
-                }
+        try {
+            if ($value instanceof \DateTimeInterface) {
+                return Carbon::instance($value)->setTimezone($tz)->startOfDay();
             }
+            return Carbon::parse($value, $tz)->startOfDay();
+        } catch (\Throwable $e) {
+            return null;
         }
+    }
 
-        if (! empty($note->updated_at)) {
-            if ($note->updated_at instanceof \DateTimeInterface) {
-                $data['updatedAt'] = $note->updated_at->setTimezone(new \DateTimeZone('Asia/Jakarta'))->format(DATE_ATOM);
-            } else {
-                try {
-                    $data['updatedAt'] = Carbon::parse($note->updated_at)->setTimezone('Asia/Jakarta')->toAtomString();
-                } catch (\Throwable $e) {
-                    // omit on parse error
-                }
+    /**
+     * Helper to format a date value to ISO 8601 string.
+     */
+    private function formatIsoDate($value): ?string
+    {
+        if (empty($value)) {
+            return null;
+        }
+        try {
+            $tz = new \DateTimeZone('Asia/Jakarta');
+            if ($value instanceof \DateTimeInterface) {
+                return Carbon::instance($value)->setTimezone($tz)->toAtomString();
             }
+            return Carbon::parse($value)->setTimezone($tz)->toAtomString();
+        } catch (\Throwable $e) {
+            return null;
         }
-
-        return $data;
     }
 }

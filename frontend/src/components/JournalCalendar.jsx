@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { Box, Grid, Text, Flex, IconButton } from '@chakra-ui/react';
 import { ChevronLeftIcon, ChevronRightIcon } from '@chakra-ui/icons';
@@ -19,26 +19,38 @@ import { id } from 'date-fns/locale';
 export default function JournalCalendar({ selectedDate, onSelectDate, notes = [] }) {
   const [currentMonth, setCurrentMonth] = useState(selectedDate || new Date());
 
-  // Hitung tanggal awal dan akhir kalender
-  const monthStart = startOfMonth(currentMonth);
-  const monthEnd = endOfMonth(currentMonth);
-  const calendarStart = startOfWeek(monthStart, { locale: id, weekStartsOn: 1 });
-  const calendarEnd = endOfWeek(monthEnd, { locale: id, weekStartsOn: 1 });
+  // Generate semua tanggal untuk ditampilkan (Memoized)
+  const dates = useMemo(() => {
+    const monthStart = startOfMonth(currentMonth);
+    const monthEnd = endOfMonth(currentMonth);
+    const calendarStart = startOfWeek(monthStart, { locale: id, weekStartsOn: 1 });
+    const calendarEnd = endOfWeek(monthEnd, { locale: id, weekStartsOn: 1 });
 
-  // Generate semua tanggal untuk ditampilkan
-  const dates = [];
-  let day = calendarStart;
-  while (day <= calendarEnd) {
-    dates.push(day);
-    day = addDays(day, 1);
-  }
+    const d = [];
+    let day = calendarStart;
+    while (day <= calendarEnd) {
+      d.push(day);
+      day = addDays(day, 1);
+    }
+    return d;
+  }, [currentMonth]);
 
-  // Cek apakah tanggal punya catatan
-  const hasNotes = (date) => {
-    return notes.some((note) => {
-      const noteDate = new Date(note.note_date || note.createdAt);
-      return isSameDay(noteDate, date);
+  // Optimize note lookup using a Set (Memoized)
+  const notesSet = useMemo(() => {
+    const set = new Set();
+    notes.forEach((note) => {
+      const dateStr = note.note_date || note.createdAt;
+      if (dateStr) {
+        const d = new Date(dateStr);
+        set.add(format(d, 'yyyy-MM-dd'));
+      }
     });
+    return set;
+  }, [notes]);
+
+  // Cek apakah tanggal punya catatan (O(1) lookup)
+  const hasNotes = (date) => {
+    return notesSet.has(format(date, 'yyyy-MM-dd'));
   };
 
   const weekDays = ['M', 'S', 'S', 'R', 'K', 'J', 'S'];

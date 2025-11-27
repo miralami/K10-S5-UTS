@@ -1,10 +1,13 @@
-const { spawnSync } = require('child_process');
+const { execSync } = require('child_process');
 
-const containerName = 'uts_envoy';
-console.log('[envoy] Stopping container', containerName);
-const res = spawnSync('docker', ['rm', '-f', containerName], { stdio: 'inherit', shell: false });
-if (res.error) {
-  console.error('[envoy] Error stopping container:', res.error.message);
-  process.exit(1);
+console.log('[envoy] Stopping Envoy...');
+
+try {
+  // Try to kill envoy process on Windows
+  execSync('taskkill /F /IM envoy.exe', { stdio: 'ignore' });
+  console.log('[envoy] Envoy stopped.');
+} catch (e) {
+  // Ignore if not found
+  console.log('[envoy] No running Envoy process found or failed to stop.');
 }
-process.exit(res.status || 0);
+

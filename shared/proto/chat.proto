@@ -1,0 +1,94 @@
+syntax = "proto3";
+
+package chat;
+
+// Empty message for requests that don't need parameters
+message Empty {}
+
+// User representation
+message User {
+  string id = 1;
+  string name = 2;
+  bool is_online = 3;
+}
+
+// List of users
+message UserList {
+  repeated User users = 1;
+}
+
+// Authentication request to start a chat stream
+message AuthRequest {
+  // Token is passed via metadata, this can hold additional info if needed
+  string client_id = 1;
+}
+
+// Message sent from client to server
+message ClientMessage {
+  string text = 1;
+  string recipient_id = 2; // Empty for global chat, user_id for private message
+}
+
+// A message in the global chat
+message GlobalMessage {
+  string id = 1;
+  User sender = 2;
+  string text = 3;
+  int64 timestamp = 4;
+}
+
+// A private message between two users
+message PrivateMessage {
+  string id = 1;
+  User sender = 2;
+  User recipient = 3;
+  string text = 4;
+  int64 timestamp = 5;
+}
+
+// User presence update (online/offline)
+message UserPresenceUpdate {
+  User user = 1;
+  bool is_online = 2;
+  int64 timestamp = 3;
+}
+
+// Typing indicator event
+message TypingEvent {
+  User user = 1;
+  string context_id = 2; // "global" or recipient user_id for private chat
+  bool is_typing = 3;
+  int64 timestamp = 4;
+}
+
+// Server message - a wrapper for all server-to-client events
+message ServerMessage {
+  oneof payload {
+    GlobalMessage global_message = 1;
+    PrivateMessage private_message = 2;
+    UserPresenceUpdate presence_update = 3;
+    TypingEvent typing_event = 4;
+    UserList user_list = 5; // Initial user list on connect
+  }
+}
+
+// Send message response
+message SendMessageResponse {
+  bool success = 1;
+  string message_id = 2;
+}
+
+// Chat service definition
+service ChatService {
+  // Start a persistent chat stream to receive all messages and events
+  rpc ChatStream (AuthRequest) returns (stream ServerMessage);
+  
+  // Send a message (global or private)
+  rpc SendMessage (ClientMessage) returns (SendMessageResponse);
+  
+  // Get list of all users
+  rpc GetUsers (Empty) returns (UserList);
+  
+  // Send typing indicator
+  rpc SendTyping (TypingEvent) returns (Empty);
+}

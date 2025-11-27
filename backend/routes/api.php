@@ -4,7 +4,6 @@ use App\Http\Controllers\Auth\JwtAuthController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\JournalAnalysisController;
 use App\Http\Controllers\JournalNoteController;
-use App\Http\Controllers\MentalHealthController;
 use App\Http\Controllers\RecommendationController;
 use Illuminate\Support\Facades\Route;
 
@@ -29,11 +28,6 @@ Route::middleware('auth:api')->group(function () {
     Route::apiResource('journal/notes', JournalNoteController::class)->parameters([
         'notes' => 'note',
     ]);
-
-    // Rute API untuk halaman utama kesehatan mental (terlindungi oleh middleware)
-    Route::get('/mental-health', [MentalHealthController::class, 'index']);
-    // Rute API untuk konsultasi dengan AI (terlindungi oleh middleware)
-    Route::post('/consultation', [MentalHealthController::class, 'consult']);
 });
 
 

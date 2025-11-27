@@ -23,7 +23,7 @@ static_resources:
               routes:
               - match: { prefix: "/" }
                 route:
-                  cluster: typing_service
+                  cluster: chat_service
                   timeout: 0s
                   max_stream_duration:
                     grpc_timeout_header_max: 0s
@@ -31,7 +31,7 @@ static_resources:
                 allow_origin_string_match:
                 - prefix: "*"
                 allow_methods: GET, PUT, DELETE, POST, OPTIONS
-                allow_headers: keep-alive,user-agent,cache-control,content-type,content-transfer-encoding,custom-header-1,x-accept-content-transfer-encoding,x-accept-response-streaming,x-user-agent,x-grpc-web,grpc-timeout
+                allow_headers: keep-alive,user-agent,cache-control,content-type,content-transfer-encoding,custom-header-1,x-accept-content-transfer-encoding,x-accept-response-streaming,x-user-agent,x-grpc-web,grpc-timeout,authorization,user_id,user_name
                 max_age: "1728000"
                 expose_headers: custom-header-1,grpc-status,grpc-message
           http_filters:
@@ -45,17 +45,17 @@ static_resources:
             typed_config:
               "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
   clusters:
-  - name: typing_service
+  - name: chat_service
     connect_timeout: 0.25s
     type: LOGICAL_DNS
     http2_protocol_options: {}
     lb_policy: ROUND_ROBIN
     load_assignment:
-      cluster_name: typing_service
+      cluster_name: chat_service
       endpoints:
       - lb_endpoints:
         - endpoint:
             address:
               socket_address:
-                address: host.docker.internal
+                address: 127.0.0.1
                 port_value: 50051

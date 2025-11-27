@@ -1,45 +1,38 @@
 import PropTypes from 'prop-types';
 import { Box, Text, VStack } from '@chakra-ui/react';
-import { motion } from 'framer-motion';
 
-const MotionBox = motion(Box);
-
-export const ChatBubble = ({ message, isOwn, currentUserName }) => {
+export const ChatBubble = ({ message, isOwn, currentUserName, isPrivateChat = false }) => {
   const isSystem = message.type === 'system';
   const sender = message.sender;
+  const senderName = typeof sender === 'object' ? sender?.name : sender;
   const body = message.text;
+  const showSenderName = !isOwn && senderName && !isPrivateChat;
 
   if (isSystem) {
     return (
-      <MotionBox
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.2 }}
+      <Box
         textAlign="center"
         w="full"
       >
         <Box
           display="inline-block"
-          bg="whiteAlpha.100"
-          color="whiteAlpha.700"
+          bg="gray.200"
+          color="gray.600"
           px={4}
           py={2}
           borderRadius="full"
           fontSize="xs"
           border="1px solid"
-          borderColor="whiteAlpha.100"
+          borderColor="gray.300"
         >
           {body}
         </Box>
-      </MotionBox>
+      </Box>
     );
   }
 
   return (
-    <MotionBox
-      initial={{ opacity: 0, y: 10, scale: 0.95 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ duration: 0.2 }}
+    <Box
       w="full"
       display="flex"
       justifyContent={isOwn ? 'flex-end' : 'flex-start'}
@@ -51,53 +44,36 @@ export const ChatBubble = ({ message, isOwn, currentUserName }) => {
       >
         <Box position="relative">
           <Box
-            bg={
-              isOwn
-                ? 'linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%)'
-                : 'whiteAlpha.200'
-            }
-            color="white"
+            bg={isOwn ? 'teal.500' : 'gray.100'}
+            color={isOwn ? 'white' : 'gray.800'}
             px={4}
             py={3}
             borderRadius={isOwn ? '18px 18px 4px 18px' : '18px 18px 18px 4px'}
             fontSize="sm"
-            boxShadow={isOwn ? '0 4px 15px rgba(6, 182, 212, 0.3)' : 'md'}
+            boxShadow="sm"
+            style={{ opacity: 1, visibility: 'visible' }}
           >
-            {!isOwn && sender && (
-              <Text fontSize="xs" fontWeight="bold" color="cyan.300" mb={1}>
-                {sender}
+            {showSenderName && (
+              <Text 
+                fontSize="xs" 
+                fontWeight="bold" 
+                color="teal.600" 
+                mb={1}
+                style={{ opacity: 1, visibility: 'visible' }}
+              >
+                {senderName}
               </Text>
             )}
-            <Text>{body}</Text>
+            <Text 
+              style={{ color: isOwn ? '#ffffff' : '#1a202c' }}
+            >
+              {body}
+            </Text>
           </Box>
-          {/* Tail/Arrow */}
-          <Box
-            position="absolute"
-            bottom="0"
-            {...(isOwn
-              ? {
-                  right: '-6px',
-                  width: 0,
-                  height: 0,
-                  borderLeft: '8px solid transparent',
-                  borderRight: '8px solid transparent',
-                  borderTop: '10px solid #3b82f6',
-                  transform: 'rotate(45deg)',
-                }
-              : {
-                  left: '-6px',
-                  width: 0,
-                  height: 0,
-                  borderLeft: '8px solid transparent',
-                  borderRight: '8px solid transparent',
-                  borderTop: '10px solid rgba(255, 255, 255, 0.2)',
-                  transform: 'rotate(-45deg)',
-                })}
-          />
         </Box>
         <Text
-          fontSize="2xs"
-          color="whiteAlpha.400"
+          fontSize="xs"
+          color="gray.500"
           px={1}
         >
           {message.timestamp
@@ -108,7 +84,7 @@ export const ChatBubble = ({ message, isOwn, currentUserName }) => {
             : ''}
         </Text>
       </VStack>
-    </MotionBox>
+    </Box>
   );
 };
 
@@ -117,9 +93,16 @@ ChatBubble.propTypes = {
     id: PropTypes.string.isRequired,
     text: PropTypes.string.isRequired,
     type: PropTypes.oneOf(['sent', 'received', 'system']).isRequired,
-    sender: PropTypes.string,
+    sender: PropTypes.oneOfType([
+      PropTypes.string,
+      PropTypes.shape({
+        id: PropTypes.string,
+        name: PropTypes.string,
+      }),
+    ]),
     timestamp: PropTypes.instanceOf(Date),
   }).isRequired,
   isOwn: PropTypes.bool.isRequired,
   currentUserName: PropTypes.string.isRequired,
+  isPrivateChat: PropTypes.bool,
 };

@@ -3,12 +3,9 @@ import { Link as RouterLink } from 'react-router-dom';
 import {
   Alert,
   AlertIcon,
-  Badge,
   Box,
   Button,
   Container,
-  FormControl,
-  FormLabel,
   Heading,
   HStack,
   Icon,
@@ -19,194 +16,115 @@ import {
   Wrap,
   WrapItem,
   Input,
+  Tag,
+  TagLabel,
+  TagCloseButton,
+  Tooltip,
 } from '@chakra-ui/react';
-import { ArrowForwardIcon, LockIcon } from '@chakra-ui/icons';
-import { motion, AnimatePresence } from 'framer-motion';
+import { LockIcon } from '@chakra-ui/icons';
+import { motion } from 'framer-motion';
 import { createNote } from '../services/journalService';
-import { GlassCard } from '../components/GlassCard';
 
-// Framer Motion wrapper untuk komponen Chakra UI
+// Framer Motion wrapper
 const MotionBox = motion(Box);
-const MotionButton = motion(Button);
 
-// Mood dengan warna dan emoji yang lebih empatik
+// --- THEME CONFIGURATION (Warm Organic & Minimal Sans) ---
+const THEME = {
+  colors: {
+    bg: '#FDFCF8', // Warm off-white
+    textPrimary: '#2D3748',
+    textSecondary: '#718096',
+    accent: '#D6BCFA', // Soft Purple
+    accentHover: '#B794F4',
+    warmHighlight: '#F6E05E', // Soft Yellow
+  },
+  fonts: {
+    sans: '"Inter", sans-serif',
+    serif: '"Merriweather", serif', // Or any warm serif available
+  },
+};
+
+// Moods - Soft & Empathic
 const MOOD_OPTIONS = [
-  {
-    id: 'lega',
-    label: '😌 Lega',
-    helper: 'Napaskan rasa lega itu—ceritakan momen yang membuatmu tersenyum lebih tenang.',
-    template: 'Hari ini aku merasa lega karena ...',
-    placeholder: 'Apa yang membuatmu merasa lega belakangan ini?',
-    gradient: 'linear(to-br, cyan.400, teal.300, green.200)',
-    glowColor: 'rgba(56, 189, 248, 0.3)',
-  },
-  {
-    id: 'lelah',
-    label: '😔 Lelah',
-    helper: 'Tidak apa-apa merasa lelah. Tuliskan apa yang paling menguras energimu.',
-    template: 'Aku merasa lelah karena ...',
-    placeholder: 'Apa yang menguras energimu hari ini?',
-    gradient: 'linear(to-br, purple.400, gray.500, purple.300)',
-    glowColor: 'rgba(159, 122, 234, 0.3)',
-  },
-  {
-    id: 'bersyukur',
-    label: '🙏 Bersyukur',
-    helper: 'Rayakan hal kecil yang membuatmu bersyukur hari ini.',
-    template: 'Aku bersyukur karena ...',
-    placeholder: 'Momen kecil apa yang ingin kamu syukuri?',
-    gradient: 'linear(to-br, orange.300, pink.300, rose.200)',
-    glowColor: 'rgba(251, 191, 36, 0.3)',
-  },
-  {
-    id: 'penasaran',
-    label: '🤔 Penasaran',
-    helper: 'Tuliskan hal baru yang ingin kamu eksplor atau pelajari.',
-    template: 'Hal yang membuatku penasaran akhir-akhir ini ...',
-    placeholder: 'Apa yang ingin kamu gali lebih jauh saat ini?',
-    gradient: 'linear(to-br, blue.300, cyan.300, purple.200)',
-    glowColor: 'rgba(96, 165, 250, 0.3)',
-  },
+  { id: 'calm', label: 'Calm', emoji: '🌿', color: 'green.100', textColor: 'green.800' },
+  { id: 'happy', label: 'Happy', emoji: '☀️', color: 'yellow.100', textColor: 'yellow.800' },
+  { id: 'anxious', label: 'Anxious', emoji: '☁️', color: 'gray.100', textColor: 'gray.800' },
+  { id: 'tired', label: 'Tired', emoji: '🌙', color: 'purple.100', textColor: 'purple.800' },
+  { id: 'inspired', label: 'Inspired', emoji: '✨', color: 'orange.100', textColor: 'orange.800' },
 ];
 
+// Quick Prompts - Contextual
 const QUICK_PROMPTS = [
-  {
-    id: 'highlight',
-    label: '✨ Highlight Hari Ini',
-    text: 'Momen terbaik hari ini terjadi ketika ...',
-  },
-  {
-    id: 'lesson',
-    label: '💡 Pelajaran Penting',
-    text: 'Hal paling berharga yang kupelajari hari ini adalah ...',
-  },
-  { id: 'selfcare', label: '🌸 Self-care', text: 'Untuk menjaga diri, aku ingin ...' },
-  {
-    id: 'shoutout',
-    label: '💛 Ucapan Terima Kasih',
-    text: 'Seseorang yang ingin aku ucapkan terima kasih hari ini adalah ...',
-  },
+  { id: 'gratitude', label: 'Gratitude', text: 'I am grateful for...' },
+  { id: 'intention', label: 'Intention', text: 'Today, I intend to...' },
+  { id: 'reflection', label: 'Reflection', text: 'One thing I learned...' },
 ];
-
-// Fungsi untuk mendapatkan sapaan berdasarkan waktu
-const getTimeBasedGreeting = () => {
-  const hour = new Date().getHours();
-
-  if (hour >= 5 && hour < 10) {
-    return {
-      greeting: 'Selamat pagi! ☀️',
-      message: 'Bagaimana perasaanmu memulai hari ini?',
-    };
-  } else if (hour >= 10 && hour < 15) {
-    return {
-      greeting: 'Halo! 👋',
-      message: 'Sudah sempat istirahat sebentar hari ini?',
-    };
-  } else if (hour >= 15 && hour < 18) {
-    return {
-      greeting: 'Selamat sore! 🌤️',
-      message: 'Bagaimana harimu sejauh ini?',
-    };
-  } else if (hour >= 18 && hour < 22) {
-    return {
-      greeting: 'Selamat malam! 🌙',
-      message: 'Mau berbagi cerita sebelum istirahat?',
-    };
-  } else {
-    return {
-      greeting: 'Halo, night owl! 🦉',
-      message: 'Masih ada yang mengganjal di pikiran?',
-    };
-  }
-};
-
-// Fungsi untuk mendapatkan feedback berdasarkan mood
-const getMoodFeedback = (moodId) => {
-  const feedbacks = {
-    lega: 'Senang mendengar kamu merasa lega. Kamu hebat sudah melewati itu! ✨',
-    lelah: 'Kelihatannya kamu butuh istirahat. Kamu hebat sudah menuliskannya! 💙',
-    bersyukur: 'Indah sekali momen yang kamu syukuri. Terus rayakan hal-hal kecil! 🌟',
-    penasaran: 'Rasa penasaranmu membawa pertumbuhan. Terus eksplor! 🚀',
-  };
-  return feedbacks[moodId] || 'Terima kasih sudah berbagi ceritamu hari ini! 💫';
-};
 
 export default function DailyEntry() {
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [activeMood, setActiveMood] = useState(null);
-  const [submitError, setSubmitError] = useState('');
+  const [tags, setTags] = useState([]);
+  const [newTag, setNewTag] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [greeting, setGreeting] = useState({ greeting: '', message: '' });
+  const [submitError, setSubmitError] = useState('');
 
   const toast = useToast();
 
-  // Set sapaan dinamis saat komponen mount
-  useEffect(() => {
-    setGreeting(getTimeBasedGreeting());
-  }, []);
+  // Dynamic Greeting
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good Morning';
+    if (hour < 18) return 'Good Afternoon';
+    return 'Good Evening';
+  };
 
-  const handleSelectMood = (option) => {
-    setSubmitError('');
-    const isSameMood = activeMood?.id === option.id;
-
-    if (isSameMood) {
-      setActiveMood(null);
-      return;
+  const handleAddTag = (e) => {
+    if (e.key === 'Enter' && newTag.trim()) {
+      e.preventDefault();
+      if (!tags.includes(newTag.trim())) {
+        setTags([...tags, newTag.trim()]);
+      }
+      setNewTag('');
     }
-
-    setActiveMood(option);
-
-    // Saat mood baru dipilih, langsung ganti isi textarea dengan template mood.
-    // Ini memastikan klik mood lain langsung memperbarui prompt walau textarea tidak kosong.
-    setBody(option.template);
   };
 
-  // Catatan: Prompt ini membantu pengguna keluar dari writer's block dengan menambahkan paragraf awal.
-  const handleApplyPrompt = (prompt) => {
-    setSubmitError('');
-    setBody((current) => {
-      const trimmed = current.trim();
-      const spacer = trimmed ? '\n\n' : '';
-      return `${trimmed}${spacer}${prompt.text}`.trim();
-    });
+  const removeTag = (tagToRemove) => {
+    setTags(tags.filter((tag) => tag !== tagToRemove));
   };
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-
+  const handleSubmit = async () => {
     if (!body.trim()) {
-      setSubmitError('Isi jurnal tidak boleh kosong.');
+      setSubmitError('Journal content cannot be empty.');
       return;
     }
-
-    setSubmitError('');
     setIsSubmitting(true);
-
     try {
+      // Combine tags into body or handle separately if backend supports it
+      // For now, appending tags to body as hashtags for simplicity
+      const finalBody = tags.length > 0 ? `${body}\n\n${tags.map(t => `#${t}`).join(' ')}` : body;
+
       await createNote({
-        title: title.trim() || null,
-        body: body.trim(),
+        title: title.trim() || getGreeting(),
+        body: finalBody,
+        // mood: activeMood?.id // If backend supports mood field
       });
 
-      // Feedback yang lebih personal berdasarkan mood
-      const moodFeedback = activeMood
-        ? getMoodFeedback(activeMood.id)
-        : 'Terima kasih sudah berbagi ceritamu! 💫';
-
       toast({
-        title: '🔒 Catatan tersimpan dengan aman',
-        description: moodFeedback,
+        title: 'Saved',
+        description: 'Your thought has been captured safely.',
         status: 'success',
-        duration: 5000,
+        duration: 3000,
         isClosable: true,
+        position: 'bottom-right',
       });
 
       setTitle('');
       setBody('');
       setActiveMood(null);
+      setTags([]);
     } catch (error) {
-      setSubmitError(error.message || 'Gagal menyimpan catatan.');
+      setSubmitError(error.message || 'Failed to save.');
     } finally {
       setIsSubmitting(false);
     }
@@ -215,240 +133,237 @@ export default function DailyEntry() {
   return (
     <Box
       minH="100vh"
-      bgGradient="linear(to-br, #1a1a2e, #16213e, #0f3460, #533483)"
-      py={{ base: 10, md: 16 }}
+      bg={THEME.colors.bg}
+      color={THEME.colors.textPrimary}
+      fontFamily={THEME.fonts.sans}
       position="relative"
-      overflow="hidden"
-      _before={{
-        content: '""',
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        bgImage:
-          'radial-gradient(circle at 20% 50%, rgba(56, 189, 248, 0.1) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(167, 139, 250, 0.1) 0%, transparent 50%)',
-        pointerEvents: 'none',
-      }}
+      overflowX="hidden"
     >
-      <Container maxW="4xl" position="relative" zIndex={1}>
-        <Stack spacing={10} color="whiteAlpha.900">
+      {/* Floating Background Elements - Subtle & Organic */}
+      <Box
+        position="absolute"
+        top="-10%"
+        right="-5%"
+        w="500px"
+        h="500px"
+        bg="radial-gradient(circle, rgba(214, 188, 250, 0.2) 0%, rgba(255,255,255,0) 70%)"
+        borderRadius="full"
+        filter="blur(60px)"
+        zIndex={0}
+      />
+      <Box
+        position="absolute"
+        bottom="10%"
+        left="-10%"
+        w="400px"
+        h="400px"
+        bg="radial-gradient(circle, rgba(246, 224, 94, 0.15) 0%, rgba(255,255,255,0) 70%)"
+        borderRadius="full"
+        filter="blur(50px)"
+        zIndex={0}
+      />
+
+      <Container maxW="4xl" pt={{ base: 12, md: 20 }} pb={20} position="relative" zIndex={1}>
+        <Stack spacing={12}>
+          {/* Header Section - Minimal & Welcoming */}
           <MotionBox
-            initial={{ opacity: 0, y: -20 }}
+            initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, ease: 'easeOut' }}
+            transition={{ duration: 0.8, ease: [0.2, 0.65, 0.3, 0.9] }}
           >
-            <Stack spacing={3} textAlign="center" align="center">
-              <HStack spacing={2}>
-                <Badge colorScheme="purple" px={3} py={1} borderRadius="full" textTransform="none">
-                  🔒 Private by default
-                </Badge>
-                <Badge colorScheme="pink" px={3} py={1} borderRadius="full" textTransform="none">
-                  Mood Journal
-                </Badge>
-              </HStack>
-              <Heading size="2xl" mt={2} bgGradient="linear(to-r, cyan.200, purple.200)" bgClip="text">
-                {greeting.greeting}
-              </Heading>
-              <Text color="orange.200" fontSize="xl" fontWeight="medium">
-                {greeting.message}
+            <Stack spacing={1}>
+              <Text fontSize="sm" color={THEME.colors.textSecondary} letterSpacing="wide" textTransform="uppercase">
+                {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
               </Text>
-              <Text color="whiteAlpha.700" fontSize="md" maxW="2xl" mt={2}>
-                Curhatlah seolah kamu sedang ngobrol dengan sahabat. Tulisanmu hanya untukmu— tidak
-                ada yang bisa membacanya tanpa izinmu.
-              </Text>
-              <Button
-                as={RouterLink}
-                to="/dashboard"
-                variant="outline"
-                colorScheme="cyan"
-                rightIcon={<ArrowForwardIcon />}
-                mt={2}
-                borderRadius="full"
-                _hover={{ bg: 'whiteAlpha.200' }}
+              <Heading
+                fontSize={{ base: '4xl', md: '5xl' }}
+                fontWeight="300" // Light font weight for elegance
+                fontFamily={THEME.fonts.serif}
+                letterSpacing="-0.02em"
               >
-                Lihat refleksi harianmu
-              </Button>
+                {getGreeting()}, Afif.
+              </Heading>
+              <Text fontSize="lg" color={THEME.colors.textSecondary} maxW="2xl" mt={2} lineHeight="tall">
+                How is your heart feeling today? Take a moment to breathe and reflect.
+              </Text>
             </Stack>
           </MotionBox>
 
+          {/* Main Editor Canvas - Edge-free & Breathable */}
           <MotionBox
-            initial={{ opacity: 0, scale: 0.95 }}
+            initial={{ opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
           >
-            <GlassCard p={{ base: 6, md: 10 }}>
-              <Stack spacing={8} align="center">
-              <Stack spacing={4} align="center" w="full">
-                <Text color="whiteAlpha.700" fontSize="md">
-                  Pilih vibe harianmu sebagai pemantik cerita:
-                </Text>
-                <Wrap spacing={3} justify="center">
-                  {MOOD_OPTIONS.map((option) => {
-                    const isActive = activeMood?.id === option.id;
-                    return (
-                      <WrapItem key={option.id}>
-                        <MotionButton
-                          as={Button}
-                          variant={isActive ? 'solid' : 'outline'}
-                          colorScheme={isActive ? 'purple' : 'cyan'}
-                          size="sm"
-                          onClick={() => handleSelectMood(option)}
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                          transition={{ type: 'spring', stiffness: 400, damping: 17 }}
-                        >
-                          {option.label}
-                        </MotionButton>
+            <Stack spacing={6}>
+              {/* Mood Selector - Chips */}
+              <Wrap spacing={3} justify="center">
+                {MOOD_OPTIONS.map((mood) => {
+                  const isActive = activeMood?.id === mood.id;
+                  return (
+                    <WrapItem key={mood.id}>
+                      <Button
+                        size="md"
+                        borderRadius="full"
+                        variant="unstyled"
+                        bg={isActive ? mood.color : 'white'}
+                        color={isActive ? mood.textColor : 'gray.500'}
+                        border="1px solid"
+                        borderColor={isActive ? 'transparent' : 'gray.200'}
+                        px={5}
+                        h="40px"
+                        display="flex"
+                        alignItems="center"
+                        gap={2}
+                        onClick={() => setActiveMood(isActive ? null : mood)}
+                        boxShadow={isActive ? 'md' : 'sm'}
+                        _hover={{ boxShadow: 'md', transform: 'translateY(-1px)' }}
+                        _active={{ transform: 'scale(0.98)' }}
+                        transition="all 0.2s"
+                      >
+                        <Text as="span" fontSize="lg">{mood.emoji}</Text>
+                        <Text as="span" fontSize="sm" fontWeight="500">{mood.label}</Text>
+                      </Button>
+                    </WrapItem>
+                  );
+                })}
+              </Wrap>
+
+              {/* The Editor - Card Container */}
+              <Box
+                bg="white"
+                borderRadius="2xl"
+                p={{ base: 6, md: 8 }}
+                boxShadow="0 4px 20px rgba(0, 0, 0, 0.04)"
+                border="1px solid"
+                borderColor="gray.100"
+              >
+                <Input
+                  variant="unstyled"
+                  placeholder="Title your day..."
+                  fontSize="xl"
+                  fontWeight="600"
+                  color={THEME.colors.textPrimary}
+                  mb={6}
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  _placeholder={{ color: 'gray.300' }}
+                  autoComplete="off"
+                  spellCheck="false"
+                />
+                
+                <Textarea
+                  variant="unstyled"
+                  placeholder="Start writing here..."
+                  fontSize="md"
+                  lineHeight="1.9"
+                  minH="200px"
+                  resize="none"
+                  color={THEME.colors.textPrimary}
+                  value={body}
+                  onChange={(e) => setBody(e.target.value)}
+                  _placeholder={{ color: 'gray.300' }}
+                  autoComplete="off"
+                  spellCheck="false"
+                />
+
+                {/* Tagging System - Inside the card */}
+                {(tags.length > 0 || true) && (
+                  <>
+                    <Box borderTop="1px solid" borderColor="gray.100" mt={6} mb={4} />
+                    <Wrap spacing={2} align="center">
+                      {tags.map((tag) => (
+                        <WrapItem key={tag}>
+                          <Tag
+                            size="md"
+                            borderRadius="full"
+                            variant="subtle"
+                            colorScheme="purple"
+                            bg="purple.50"
+                          >
+                            <TagLabel color="purple.600">#{tag}</TagLabel>
+                            <TagCloseButton onClick={() => removeTag(tag)} />
+                          </Tag>
+                        </WrapItem>
+                      ))}
+                      <WrapItem>
+                        <Input
+                          placeholder="+ Add tag"
+                          value={newTag}
+                          onChange={(e) => setNewTag(e.target.value)}
+                          onKeyDown={handleAddTag}
+                          variant="unstyled"
+                          w="80px"
+                          fontSize="sm"
+                          color="gray.500"
+                          _placeholder={{ color: 'gray.400' }}
+                          autoComplete="off"
+                        />
                       </WrapItem>
-                    );
-                  })}
-                </Wrap>
-                <AnimatePresence mode="wait">
-                  <MotionBox
-                    key={activeMood?.id || 'default'}
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 10 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <Text
-                      color="orange.200"
-                      fontSize="sm"
-                      textAlign="center"
-                      maxW="2xl"
-                      fontWeight="medium"
-                    >
-                      {activeMood
-                        ? activeMood.helper
-                        : 'Kalau bingung mulai dari mana, klik salah satu mood di atas untuk inspirasi kalimat pertama.'}
-                    </Text>
-                  </MotionBox>
-                </AnimatePresence>
-              </Stack>
-
-              <Box as="form" onSubmit={handleSubmit} w="full" maxW="3xl">
-                <Stack spacing={6}>
-                  <FormControl>
-                    <FormLabel color="whiteAlpha.700">Judul (opsional)</FormLabel>
-                    <Input
-                      value={title}
-                      onChange={(event) => setTitle(event.target.value)}
-                      placeholder="Contoh: Hari produktif di kantor"
-                      bg="whiteAlpha.50"
-                      borderColor="whiteAlpha.200"
-                      borderRadius="xl"
-                      _focus={{
-                        borderColor: 'cyan.300',
-                        boxShadow: '0 0 0 1px rgba(56, 189, 248, 0.6)',
-                        bg: 'whiteAlpha.100'
-                      }}
-                      isDisabled={isSubmitting}
-                    />
-                  </FormControl>
-
-                  <FormControl>
-                    <FormLabel color="whiteAlpha.700">Ceritakan apa yang kamu rasakan</FormLabel>
-                    <Textarea
-                      value={body}
-                      onChange={(event) => setBody(event.target.value)}
-                      placeholder={
-                        activeMood?.placeholder ||
-                        'Tulis bebas: apa yang membuatmu tersenyum atau mengernyit hari ini?'
-                      }
-                      rows={8}
-                      fontSize="lg"
-                      bg="whiteAlpha.50"
-                      borderColor="whiteAlpha.200"
-                      borderRadius="3xl"
-                      px={6}
-                      py={5}
-                      _focus={{
-                        borderColor: activeMood ? 'purple.300' : 'cyan.300',
-                        boxShadow: activeMood
-                          ? `0 0 0 1px ${activeMood.glowColor}, 0 0 20px ${activeMood.glowColor}`
-                          : '0 0 0 1px rgba(56, 189, 248, 0.6)',
-                        bg: 'whiteAlpha.100'
-                      }}
-                      transition="all 0.3s ease-in-out"
-                      isDisabled={isSubmitting}
-                    />
-                  </FormControl>
-
-                  {submitError ? (
-                    <Alert status="error" variant="left-accent" borderRadius="lg">
-                      <AlertIcon />
-                      {submitError}
-                    </Alert>
-                  ) : null}
-
-                  <Button
-                    type="submit"
-                    bgGradient="linear(to-r, cyan.500, blue.500)"
-                    color="white"
-                    size="lg"
-                    height="56px"
-                    borderRadius="full"
-                    isLoading={isSubmitting}
-                    loadingText="Menyimpan catatan..."
-                    _hover={{
-                      bgGradient: "linear(to-r, cyan.600, blue.600)",
-                      transform: "translateY(-2px)",
-                      boxShadow: "0 8px 20px rgba(6, 182, 212, 0.4)"
-                    }}
-                    _active={{
-                      transform: "translateY(0)"
-                    }}
-                    transition="all 0.2s"
-                  >
-                    Simpan cerita hari ini
-                  </Button>
-                </Stack>
+                    </Wrap>
+                  </>
+                )}
               </Box>
 
-              <Stack spacing={4} w="full" maxW="3xl" textAlign="center">
-                <Text color="whiteAlpha.600">Butuh ide? Coba salah satu pemantik ini:</Text>
-                <Wrap spacing={3} justify="center">
-                  {QUICK_PROMPTS.map((prompt) => (
-                    <WrapItem key={prompt.id}>
-                      <MotionButton
-                        as={Button}
-                        variant="ghost"
-                        colorScheme="pink"
-                        size="sm"
-                        onClick={() => handleApplyPrompt(prompt)}
-                        whileHover={{ scale: 1.05, y: -2 }}
-                        whileTap={{ scale: 0.95 }}
-                      >
-                        {prompt.label}
-                      </MotionButton>
-                    </WrapItem>
-                  ))}
-                </Wrap>
-                <Text color="whiteAlpha.500" fontSize="sm">
-                  Klik sekali untuk menambahkan kalimat pembuka ke catatanmu.
-                </Text>
-              </Stack>
-            </Stack>
-            </GlassCard>
-          </MotionBox>
-
-          {/* Footer dengan reassurance privasi */}
-          <MotionBox
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.4 }}
-          >
-            <Stack spacing={2} textAlign="center">
-              <HStack justify="center" spacing={2} color="whiteAlpha.600">
-                <Icon as={LockIcon} />
-                <Text fontSize="sm">
-                  Tulisanmu tersimpan dengan enkripsi. Hanya kamu yang bisa mengaksesnya.
-                </Text>
+              {/* Quick Prompts - Inline below card */}
+              <HStack
+                spacing={3}
+                justify="center"
+                flexWrap="wrap"
+              >
+                <Text fontSize="xs" color="gray.500">Quick add:</Text>
+                {QUICK_PROMPTS.map((prompt) => (
+                  <Button
+                    key={prompt.id}
+                    size="sm"
+                    variant="solid"
+                    bg="gray.100"
+                    color="gray.600"
+                    borderRadius="full"
+                    fontWeight="medium"
+                    onClick={() => setBody(prev => prev + (prev ? '\n\n' : '') + prompt.text)}
+                    _hover={{ bg: 'purple.100', color: 'purple.700' }}
+                  >
+                    + {prompt.label}
+                  </Button>
+                ))}
               </HStack>
-              <Text fontSize="xs" color="whiteAlpha.500">
-                Night of Reflection • Mood Journal yang ramah hati
-              </Text>
+
+              {/* Action Area */}
+              <HStack justify="space-between" pt={2}>
+                <HStack spacing={4} color="gray.400">
+                  <Tooltip label="Private & Encrypted" hasArrow placement="top">
+                    <Box as="span" display="flex" alignItems="center">
+                      <Icon as={LockIcon} boxSize={4} />
+                    </Box>
+                  </Tooltip>
+                  <Text fontSize="xs">Auto-saved</Text>
+                </HStack>
+
+                <Button
+                  onClick={handleSubmit}
+                  isLoading={isSubmitting}
+                  size="lg"
+                  bg="gray.900"
+                  color="white"
+                  borderRadius="full"
+                  px={8}
+                  fontWeight="500"
+                  _hover={{ bg: 'gray.700', transform: 'translateY(-2px)' }}
+                  _active={{ transform: 'scale(0.98)' }}
+                  transition="all 0.2s"
+                  boxShadow="lg"
+                >
+                  Save Entry
+                </Button>
+              </HStack>
+
+              {submitError && (
+                <Alert status="error" variant="subtle" borderRadius="md">
+                  <AlertIcon />
+                  {submitError}
+                </Alert>
+              )}
             </Stack>
           </MotionBox>
         </Stack>

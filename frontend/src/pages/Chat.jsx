@@ -1,440 +1,635 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import {
   Box,
   Button,
-  Container,
   Flex,
   HStack,
   Heading,
   Icon,
   Input,
-  Stack,
   Text,
   VStack,
   useToast,
   Avatar,
-  Tooltip,
+  Divider,
+  Badge,
+  Spinner,
 } from '@chakra-ui/react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowUpIcon, ChatIcon, InfoIcon } from '@chakra-ui/icons';
-import TypingIndicator from '../components/TypingIndicator';
-import { typingService } from '../services/typingService';
-import { GlassCard } from '../components/GlassCard';
+import { motion } from 'framer-motion';
+import { ArrowUpIcon, ChatIcon } from '@chakra-ui/icons';
+import { chatService } from '../services/chatService';
+import { getAuthUser, isAuthenticated } from '../services/authService';
+import { useNavigate } from 'react-router-dom';
 import { ChatBubble } from '../components/ChatBubble';
 
 const MotionBox = motion(Box);
 
-
-const DEFAULT_WS_URL = import.meta.env.VITE_WEBSOCKET_URL ?? 'ws://localhost:8080';
-
-function buildMessageEntry({ text, type, sender }) {
-  return {
-    id: `${Date.now()}-${Math.random()}`,
-    text,
-    type,
-    sender,
-    timestamp: new Date(),
-  };
-}
+/**
+ * Chat context types
+ */
+const CHAT_CONTEXT = {
+  GLOBAL: 'global',
+  PRIVATE: 'private',
+};
 
 export default function Chat() {
-  const [tempUserName, setTempUserName] = useState('');
-  const [userName, setUserName] = useState('');
-  const [inputValue, setInputValue] = useState('');
-  const [messages, setMessages] = useState([]);
-  const [isConnected, setIsConnected] = useState(false);
+  const navigate = useNavigate();
+  const toast = useToast();
+  const currentUser = getAuthUser();
 
-  const wsRef = useRef(null);
+  // Connection state
+  const [isConnected, setIsConnected] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(true);
+
+  // Users list
+  const [users, setUsers] = useState([]);
+
+  // Active chat context
+  const [activeChat, setActiveChat] = useState({ type: CHAT_CONTEXT.GLOBAL });
+
+  // Messages storage - keyed by conversation ID
+  const [conversations, setConversations] = useState({
+    global: [],
+  });
+
+  // Typing indicators - keyed by context ID
+  const [typingUsers, setTypingUsers] = useState({});
+
+  // Input
+  const [inputValue, setInputValue] = useState('');
+
+  // Refs
   const messagesEndRef = useRef(null);
   const typingTimeoutRef = useRef(null);
-  const toast = useToast();
+  const connectionRef = useRef(null); // Untuk mencegah koneksi ganda
 
-  const wsUrl = useMemo(() => DEFAULT_WS_URL, []);
-
-  // Efek ini membuka koneksi WebSocket hanya setelah pengguna memilih nama
+  // Redirect if not authenticated
   useEffect(() => {
-    if (!userName) {
-      return undefined;
+    if (!isAuthenticated()) {
+      navigate('/login');
     }
+  }, [navigate]);
 
-    const ws = new WebSocket(wsUrl);
-    wsRef.current = ws;
+  // Get conversation ID for current chat
+  const getConversationId = useCallback(() => {
+    if (activeChat.type === CHAT_CONTEXT.GLOBAL) {
+      return 'global';
+    }
+    return activeChat.user?.id || '';
+  }, [activeChat]);
 
-    ws.onopen = () => {
-      setIsConnected(true);
-      ws.send(JSON.stringify({ type: 'username', name: userName }));
-      setMessages((prev) => [
-        ...prev,
-        buildMessageEntry({
-          text: `Selamat datang, ${userName}! Kamu sudah terhubung.`,
-          type: 'system',
-        }),
-      ]);
-    };
+  // Get messages for current chat
+  const currentMessages = conversations[getConversationId()] || [];
 
-    ws.onmessage = (event) => {
-      const payload = event.data;
-      try {
-        const parsed = JSON.parse(payload);
-        if (parsed && parsed.type === 'typing') {
-          const detail = {
-            userId: parsed.user_id || parsed.userId,
-            userName: parsed.user_name || parsed.userName,
-            channelId: parsed.channel_id || parsed.channelId,
-            isTyping: parsed.is_typing !== undefined ? parsed.is_typing : parsed.isTyping,
-            timestamp: parsed.timestamp || Date.now(),
-          };
-          window.dispatchEvent(new CustomEvent('typingEvent', { detail }));
-          return;
-        }
-        return;
-      } catch (e) {
-        // Not JSON, treat as plain text chat message
-      }
+  // Get typing users for current context
+  const currentTypingUsers = typingUsers[getConversationId()] || [];
 
-      // Parse sender and message from "sender: message" format
-      let sender = null;
-      let messageText = payload;
-      const colonIndex = payload.indexOf(': ');
-      if (colonIndex > -1) {
-        sender = payload.slice(0, colonIndex);
-        messageText = payload.slice(colonIndex + 2);
-      }
+  // Connect to chat stream
+  useEffect(() => {
+    if (!currentUser) return;
+    
+    // Cegah koneksi ganda (React StrictMode double-mount)
+    if (connectionRef.current) {
+      console.log('Connection already in progress, skipping');
+      return;
+    }
+    connectionRef.current = true;
 
-      setMessages((prev) => [
-        ...prev,
-        buildMessageEntry({ text: messageText, type: 'received', sender }),
-      ]);
-    };
+    setIsConnecting(true);
+    let mounted = true;
 
-    ws.onerror = (error) => {
-      console.error('WebSocket error:', error);
-      toast({
-        title: 'Koneksi Bermasalah',
-        description: 'Coba muat ulang halaman jika pesan tidak masuk.',
-        status: 'warning',
-        duration: 5000,
-        isClosable: true,
-        position: 'top',
+    const connectToChat = async () => {
+      const stream = await chatService.startChatStream({
+        onGlobalMessage: (msg) => {
+          if (!mounted) return;
+          setConversations((prev) => ({
+            ...prev,
+            global: [
+              ...(prev.global || []),
+              {
+                id: msg.id,
+                text: msg.text,
+                sender: msg.sender,
+                timestamp: msg.timestamp,
+                type: msg.sender.id === String(currentUser.id) ? 'sent' : 'received',
+              },
+            ],
+          }));
+        },
+
+        onPrivateMessage: (msg) => {
+          if (!mounted) return;
+          // Determine conversation ID (the other user)
+          const otherUserId =
+            msg.sender.id === String(currentUser.id)
+              ? msg.recipient.id
+              : msg.sender.id;
+
+          setConversations((prev) => ({
+            ...prev,
+            [otherUserId]: [
+              ...(prev[otherUserId] || []),
+              {
+                id: msg.id,
+                text: msg.text,
+                sender: msg.sender,
+                recipient: msg.recipient,
+                timestamp: msg.timestamp,
+                type: msg.sender.id === String(currentUser.id) ? 'sent' : 'received',
+              },
+            ],
+          }));
+        },
+
+        onPresenceUpdate: (update) => {
+          if (!mounted) return;
+          setUsers((prev) => {
+            const existing = prev.find((u) => u.id === update.user.id);
+            if (existing) {
+              return prev.map((u) =>
+                u.id === update.user.id
+                  ? { ...u, isOnline: update.isOnline }
+                  : u
+              );
+            } else if (update.isOnline) {
+              return [...prev, update.user];
+            }
+            return prev;
+          });
+        },
+
+        onTypingEvent: (event) => {
+          if (!mounted) return;
+          if (event.user.id === String(currentUser.id)) return;
+
+          setTypingUsers((prev) => {
+            const contextUsers = prev[event.contextId] || [];
+            if (event.isTyping) {
+              if (!contextUsers.find((u) => u.id === event.user.id)) {
+                return {
+                  ...prev,
+                  [event.contextId]: [...contextUsers, event.user],
+                };
+              }
+            } else {
+              return {
+                ...prev,
+                [event.contextId]: contextUsers.filter(
+                  (u) => u.id !== event.user.id
+                ),
+              };
+            }
+            return prev;
+          });
+
+          // Auto-clear typing after 3 seconds
+          setTimeout(() => {
+            if (!mounted) return;
+            setTypingUsers((prev) => ({
+              ...prev,
+              [event.contextId]: (prev[event.contextId] || []).filter(
+                (u) => u.id !== event.user.id
+              ),
+            }));
+          }, 3000);
+        },
+
+        onUserList: (userList) => {
+          if (!mounted) return;
+          setUsers(userList.filter((u) => u.id !== String(currentUser.id)));
+          setIsConnected(true);
+          setIsConnecting(false);
+        },
+
+        onError: (err) => {
+          if (!mounted) return;
+          console.error('Chat error:', err);
+          setIsConnected(false);
+          setIsConnecting(false);
+          toast({
+            title: 'Koneksi Bermasalah',
+            description: 'Tidak dapat terhubung ke server chat. Pastikan WebSocket server berjalan di port 8080.',
+            status: 'error',
+            duration: 5000,
+            isClosable: true,
+          });
+        },
+
+        onEnd: () => {
+          if (!mounted) return;
+          setIsConnected(false);
+        },
       });
     };
 
-    ws.onclose = () => {
-      setIsConnected(false);
-      setMessages((prev) => [
-        ...prev,
-        buildMessageEntry({ text: 'Koneksi chat terputus.', type: 'system' }),
-      ]);
-    };
+    connectToChat();
 
     return () => {
-      ws.close();
-      wsRef.current = null;
+      mounted = false;
+      connectionRef.current = false;
+      chatService.endChatStream();
     };
-  }, [userName, wsUrl, toast]);
+  }, [currentUser?.id, toast]);
 
-  // Auto-scroll ke pesan terbaru
+  // Auto-scroll to latest message
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [currentMessages]);
 
+  // Handle input change with typing indicator
   const handleInputChange = (event) => {
     setInputValue(event.target.value);
 
-    if (userName) {
-      try {
-        if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-          wsRef.current.send(JSON.stringify({ type: 'typing', channel: 'global', isTyping: true }));
-        }
-      } catch (e) {
-        console.warn('Failed to send typing via WebSocket', e);
-      }
-      typingService.sendTyping('global', true);
+    const contextId =
+      activeChat.type === CHAT_CONTEXT.GLOBAL
+        ? 'global'
+        : activeChat.user?.id;
 
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
-      }
+    chatService.sendTyping(contextId, true);
 
-      typingTimeoutRef.current = setTimeout(() => {
-        try {
-          if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-            wsRef.current.send(
-              JSON.stringify({ type: 'typing', channel: 'global', isTyping: false })
-            );
-          }
-        } catch (e) {
-          console.warn('Failed to send typing=false via WebSocket', e);
-        }
-        typingService.sendTyping('global', false);
-      }, 2000);
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    typingTimeoutRef.current = setTimeout(() => {
+      chatService.sendTyping(contextId, false);
+    }, 2000);
+  };
+
+  // Send message
+  const handleSendMessage = async () => {
+    const text = inputValue.trim();
+    if (!text || !isConnected) return;
+
+    const recipientId =
+      activeChat.type === CHAT_CONTEXT.PRIVATE
+        ? activeChat.user?.id
+        : null;
+
+    try {
+      await chatService.sendMessage(text, recipientId);
+      setInputValue('');
+
+      // Clear typing indicator
+      const contextId = recipientId || 'global';
+      chatService.sendTyping(contextId, false);
+    } catch (err) {
+      toast({
+        title: 'Gagal mengirim pesan',
+        description: err.message,
+        status: 'error',
+        duration: 3000,
+      });
     }
   };
 
-  const handleStartChat = () => {
-    if (!tempUserName.trim()) return;
-    setMessages([]);
-    setTempUserName(tempUserName.trim());
-    setUserName(tempUserName.trim());
-  };
-
-  const handleSendMessage = () => {
-    const message = inputValue.trim();
-    if (!message || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
-      return;
-    }
-
-    wsRef.current.send(message);
-    setMessages((prev) => [
-      ...prev,
-      buildMessageEntry({ text: message, type: 'sent', sender: userName }),
-    ]);
-    setInputValue('');
-  };
-
-  const handleEnterPress = (event) => {
+  // Handle enter key
+  const handleKeyDown = (event) => {
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
       handleSendMessage();
     }
   };
 
-  // Login Screen
-  if (!userName) {
+  // Select a chat (global or private)
+  const selectChat = (type, user = null) => {
+    if (type === CHAT_CONTEXT.GLOBAL) {
+      setActiveChat({ type: CHAT_CONTEXT.GLOBAL });
+    } else {
+      setActiveChat({ type: CHAT_CONTEXT.PRIVATE, user });
+      // Initialize conversation if not exists
+      if (!conversations[user.id]) {
+        setConversations((prev) => ({ ...prev, [user.id]: [] }));
+      }
+    }
+  };
+
+  // Loading state
+  if (isConnecting) {
     return (
       <Box
-        minH="100vh"
-        bgGradient="linear(to-br, #1a1a2e, #16213e, #0f3460, #533483)"
+        h="100vh"
+        bg="#faf9f7"
         display="flex"
         alignItems="center"
         justifyContent="center"
-        px={4}
-        position="relative"
-        overflow="hidden"
-        _before={{
-          content: '""',
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          bgImage:
-            'radial-gradient(circle at 50% 50%, rgba(56, 189, 248, 0.1) 0%, transparent 50%)',
-          pointerEvents: 'none',
-        }}
       >
-        <Container maxW="md" position="relative" zIndex={1}>
-          <MotionBox
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-          >
-            <GlassCard p={8} textAlign="center">
-              <VStack spacing={6}>
-                <Box
-                  p={4}
-                  bg="whiteAlpha.100"
-                  borderRadius="full"
-                  boxShadow="0 0 20px rgba(56, 189, 248, 0.2)"
-                >
-                  <Icon as={ChatIcon} w={8} h={8} color="cyan.300" />
-                </Box>
-                <Box>
-                  <Heading
-                    size="lg"
-                    mb={2}
-                    bgGradient="linear(to-r, cyan.200, purple.200)"
-                    bgClip="text"
-                  >
-                    Mulai Mengobrol
-                  </Heading>
-                  <Text color="whiteAlpha.600">
-                    Bergabunglah dengan komunitas dan bagikan ceritamu.
-                  </Text>
-                </Box>
-                <VStack spacing={4} w="full">
-                  <Input
-                    placeholder="Nama panggilanmu..."
-                    value={tempUserName}
-                    onChange={(event) => setTempUserName(event.target.value)}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter') handleStartChat();
-                    }}
-                    bg="whiteAlpha.50"
-                    borderColor="whiteAlpha.200"
-                    borderRadius="xl"
-                    height="50px"
-                    _focus={{
-                      borderColor: 'cyan.300',
-                      bg: 'whiteAlpha.100',
-                      boxShadow: '0 0 0 1px rgba(56, 189, 248, 0.5)',
-                    }}
-                    _placeholder={{ color: 'whiteAlpha.400' }}
-                    textAlign="center"
-                    fontSize="lg"
-                  />
-                  <Button
-                    colorScheme="cyan"
-                    size="lg"
-                    w="full"
-                    borderRadius="xl"
-                    onClick={handleStartChat}
-                    isDisabled={!tempUserName.trim()}
-                    bgGradient="linear(to-r, cyan.500, blue.500)"
-                    _hover={{
-                      bgGradient: 'linear(to-r, cyan.400, blue.400)',
-                      transform: 'translateY(-2px)',
-                      boxShadow: 'lg',
-                    }}
-                  >
-                    Gabung Chat
-                  </Button>
-                </VStack>
-              </VStack>
-            </GlassCard>
-          </MotionBox>
-        </Container>
+        <VStack spacing={4}>
+          <Spinner size="xl" color="teal.500" thickness="3px" />
+          <Text color="gray.600">Menghubungkan ke chat...</Text>
+        </VStack>
       </Box>
     );
   }
 
-  // Chat Interface
   return (
-    <Box
-      h="100vh"
-      bgGradient="linear(to-br, #1a1a2e, #16213e, #0f3460, #533483)"
-      position="relative"
-      overflow="hidden"
-    >
-      <Container maxW="5xl" h="full" py={{ base: 4, md: 6 }}>
-        <Stack spacing={4} h="full">
-          {/* Header */}
-          <GlassCard p={4}>
-            <Flex align="center" justify="space-between">
-              <HStack spacing={4}>
-                <Avatar size="sm" name={userName} bgGradient="linear(to-br, cyan.400, blue.500)" />
-                <Box>
-                  <Heading size="sm" color="whiteAlpha.900">
-                    Community Chat
-                  </Heading>
-                  <HStack spacing={2}>
-                    <Box
-                      w={2}
-                      h={2}
-                      borderRadius="full"
-                      bg={isConnected ? 'green.400' : 'red.400'}
-                      boxShadow={isConnected ? '0 0 8px #4ade80' : 'none'}
-                    />
-                    <Text fontSize="xs" color="whiteAlpha.600">
-                      {isConnected ? 'Online' : 'Terputus'}
-                    </Text>
-                  </HStack>
+    <Box h="100vh" bg="#faf9f7">
+      <Flex h="full">
+        {/* Sidebar - User List */}
+        <Box
+          w="300px"
+          bg="white"
+          borderRight="1px solid"
+          borderColor="gray.200"
+          display="flex"
+          flexDirection="column"
+        >
+          {/* Sidebar Header */}
+          <Box p={4} borderBottom="1px solid" borderColor="gray.100">
+            <HStack spacing={3}>
+              <Avatar
+                size="sm"
+                name={currentUser?.name}
+                bg="teal.500"
+                color="white"
+              />
+              <Box flex="1">
+                <Text fontWeight="600" fontSize="sm" color="gray.800">
+                  {currentUser?.name}
+                </Text>
+                <HStack spacing={1}>
+                  <Box
+                    w={2}
+                    h={2}
+                    borderRadius="full"
+                    bg={isConnected ? 'green.400' : 'gray.400'}
+                  />
+                  <Text fontSize="xs" color="gray.500">
+                    {isConnected ? 'Online' : 'Offline'}
+                  </Text>
+                </HStack>
+              </Box>
+            </HStack>
+          </Box>
+
+          {/* Chat List */}
+          <Box flex="1" overflowY="auto">
+            {/* Global Chat */}
+            <Box
+              px={3}
+              py={3}
+              cursor="pointer"
+              bg={activeChat.type === CHAT_CONTEXT.GLOBAL ? 'teal.50' : 'transparent'}
+              borderLeft={activeChat.type === CHAT_CONTEXT.GLOBAL ? '3px solid' : '3px solid transparent'}
+              borderColor="teal.500"
+              _hover={{ bg: 'gray.50' }}
+              onClick={() => selectChat(CHAT_CONTEXT.GLOBAL)}
+            >
+              <HStack spacing={3}>
+                <Box
+                  w={10}
+                  h={10}
+                  borderRadius="full"
+                  bg="teal.500"
+                  display="flex"
+                  alignItems="center"
+                  justifyContent="center"
+                >
+                  <Icon as={ChatIcon} color="white" w={5} h={5} />
+                </Box>
+                <Box flex="1">
+                  <Text fontWeight="600" fontSize="sm" color="gray.800">
+                    Global Chat
+                  </Text>
+                  <Text fontSize="xs" color="gray.500">
+                    Chat dengan semua orang
+                  </Text>
                 </Box>
               </HStack>
-              <Tooltip label="Pesan di sini bersifat publik untuk semua pengguna yang sedang online.">
-                <Icon as={InfoIcon} color="whiteAlpha.400" />
-              </Tooltip>
-            </Flex>
-          </GlassCard>
+            </Box>
 
-          {/* Messages Area */}
-          <GlassCard
-            flex="1"
-            overflow="hidden"
-            display="flex"
-            flexDirection="column"
-            p={0}
-            bg="rgba(15, 23, 42, 0.6)"
-          >
-            <Box
-              flex="1"
-              overflowY="auto"
-              p={6}
-              css={{
-                '&::-webkit-scrollbar': { width: '6px' },
-                '&::-webkit-scrollbar-track': { background: 'transparent' },
-                '&::-webkit-scrollbar-thumb': {
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  borderRadius: '20px',
-                },
-              }}
-            >
-              <Stack spacing={4}>
-                <AnimatePresence initial={false}>
-                  {messages.length === 0 ? (
-                    <MotionBox
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      display="flex"
-                      flexDirection="column"
-                      alignItems="center"
-                      justifyContent="center"
-                      h="full"
-                      color="whiteAlpha.500"
-                      py={10}
-                    >
-                      <Icon as={ChatIcon} w={12} h={12} mb={4} opacity={0.5} />
-                      <Text>Belum ada pesan. Jadilah yang pertama menyapa!</Text>
-                    </MotionBox>
-                  ) : (
-                    messages.map((message) => (
-                      <ChatBubble
-                        key={message.id}
-                        message={message}
-                        isOwn={message.type === 'sent'}
-                        currentUserName={userName}
-                      />
-                    ))
+            <Divider />
+
+            {/* Online Users Header */}
+            <Box px={4} py={2}>
+              <Text fontSize="xs" fontWeight="600" color="gray.400" textTransform="uppercase">
+                Pengguna Online ({users.filter((u) => u.isOnline).length})
+              </Text>
+            </Box>
+
+            {/* Users */}
+            {users.map((user) => (
+              <Box
+                key={user.id}
+                px={3}
+                py={2}
+                cursor="pointer"
+                bg={
+                  activeChat.type === CHAT_CONTEXT.PRIVATE &&
+                  activeChat.user?.id === user.id
+                    ? 'teal.50'
+                    : 'transparent'
+                }
+                borderLeft={
+                  activeChat.type === CHAT_CONTEXT.PRIVATE &&
+                  activeChat.user?.id === user.id
+                    ? '3px solid'
+                    : '3px solid transparent'
+                }
+                borderColor="teal.500"
+                _hover={{ bg: 'gray.50' }}
+                onClick={() => selectChat(CHAT_CONTEXT.PRIVATE, user)}
+              >
+                <HStack spacing={3}>
+                  <Box position="relative">
+                    <Avatar size="sm" name={user.name} bg="gray.400" />
+                    <Box
+                      position="absolute"
+                      bottom={0}
+                      right={0}
+                      w={3}
+                      h={3}
+                      borderRadius="full"
+                      bg={user.isOnline ? 'green.400' : 'gray.400'}
+                      border="2px solid white"
+                    />
+                  </Box>
+                  <Box flex="1">
+                    <Text fontWeight="500" fontSize="sm" color="gray.700">
+                      {user.name}
+                    </Text>
+                    <Text fontSize="xs" color="gray.400">
+                      {user.isOnline ? 'Online' : 'Offline'}
+                    </Text>
+                  </Box>
+                  {conversations[user.id]?.length > 0 && (
+                    <Badge colorScheme="teal" borderRadius="full" fontSize="xs">
+                      {conversations[user.id].length}
+                    </Badge>
                   )}
-                </AnimatePresence>
-                <div ref={messagesEndRef} />
-              </Stack>
-            </Box>
+                </HStack>
+              </Box>
+            ))}
 
-            {/* Typing Indicator Area */}
-            <Box px={6} py={2} minH="24px">
-              <TypingIndicator channelId="global" currentUserId={userName} />
-            </Box>
+            {users.length === 0 && (
+              <Box px={4} py={6} textAlign="center">
+                <Text fontSize="sm" color="gray.400">
+                  Belum ada pengguna lain online
+                </Text>
+              </Box>
+            )}
+          </Box>
+        </Box>
 
-            {/* Input Area */}
-            <Box p={4} bg="whiteAlpha.50" borderTop="1px solid" borderColor="whiteAlpha.100">
-              <HStack spacing={3}>
-                <Input
-                  value={inputValue}
-                  placeholder="Ketik pesan..."
-                  onChange={handleInputChange}
-                  onKeyDown={handleEnterPress}
-                  bg="whiteAlpha.100"
-                  borderColor="transparent"
-                  borderRadius="full"
-                  _focus={{
-                    bg: 'whiteAlpha.200',
-                    borderColor: 'cyan.300',
-                    boxShadow: '0 0 0 1px rgba(56, 189, 248, 0.5)',
-                  }}
-                  _placeholder={{ color: 'whiteAlpha.400' }}
-                  isDisabled={!isConnected}
-                />
-                <Button
-                  colorScheme="cyan"
-                  borderRadius="full"
-                  w="12"
-                  h="12"
-                  onClick={handleSendMessage}
-                  isDisabled={!isConnected || !inputValue.trim()}
-                  bgGradient="linear(to-r, cyan.500, blue.500)"
-                  _hover={{
-                    bgGradient: 'linear(to-r, cyan.400, blue.400)',
-                    transform: 'scale(1.05)',
-                  }}
-                  boxShadow="0 0 15px rgba(6, 182, 212, 0.4)"
+        {/* Main Chat Area */}
+        <Flex flex="1" direction="column" bg="white">
+          {/* Chat Header */}
+          <Box
+            px={6}
+            py={4}
+            borderBottom="1px solid"
+            borderColor="gray.100"
+            bg="white"
+          >
+            <HStack spacing={3}>
+              {activeChat.type === CHAT_CONTEXT.GLOBAL ? (
+                <>
+                  <Box
+                    w={10}
+                    h={10}
+                    borderRadius="full"
+                    bg="teal.500"
+                    display="flex"
+                    alignItems="center"
+                    justifyContent="center"
+                  >
+                    <Icon as={ChatIcon} color="white" w={5} h={5} />
+                  </Box>
+                  <Box>
+                    <Heading size="sm" color="gray.800">
+                      Global Chat
+                    </Heading>
+                    <Text fontSize="xs" color="gray.500">
+                      {users.filter((u) => u.isOnline).length + 1} pengguna online
+                    </Text>
+                  </Box>
+                </>
+              ) : (
+                <>
+                  <Box position="relative">
+                    <Avatar size="md" name={activeChat.user?.name} bg="gray.400" />
+                    <Box
+                      position="absolute"
+                      bottom={0}
+                      right={0}
+                      w={3}
+                      h={3}
+                      borderRadius="full"
+                      bg={activeChat.user?.isOnline ? 'green.400' : 'gray.400'}
+                      border="2px solid white"
+                    />
+                  </Box>
+                  <Box>
+                    <Heading size="sm" color="gray.800">
+                      {activeChat.user?.name}
+                    </Heading>
+                    <Text fontSize="xs" color="gray.500">
+                      {activeChat.user?.isOnline ? 'Online' : 'Offline'}
+                    </Text>
+                  </Box>
+                </>
+              )}
+            </HStack>
+          </Box>
+
+          {/* Messages */}
+          <Box
+            flex="1"
+            overflowY="auto"
+            p={6}
+            bg="#faf9f7"
+            css={{
+              '&::-webkit-scrollbar': { width: '6px' },
+              '&::-webkit-scrollbar-track': { background: 'transparent' },
+              '&::-webkit-scrollbar-thumb': {
+                background: 'rgba(0, 0, 0, 0.1)',
+                borderRadius: '20px',
+              },
+            }}
+          >
+            <VStack spacing={4} align="stretch">
+              {currentMessages.length === 0 ? (
+                <MotionBox
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  display="flex"
+                  flexDirection="column"
+                  alignItems="center"
+                  justifyContent="center"
+                  py={20}
                 >
-                  <ArrowUpIcon w={5} h={5} />
-                </Button>
-              </HStack>
+                  <Icon as={ChatIcon} w={12} h={12} color="gray.300" mb={4} />
+                  <Text color="gray.400">
+                    {activeChat.type === CHAT_CONTEXT.GLOBAL
+                      ? 'Belum ada pesan. Jadilah yang pertama menyapa!'
+                      : `Mulai percakapan dengan ${activeChat.user?.name}`}
+                  </Text>
+                </MotionBox>
+              ) : (
+                currentMessages.map((msg) => (
+                  <ChatBubble
+                    key={msg.id}
+                    message={msg}
+                    isOwn={msg.type === 'sent'}
+                    currentUserName={currentUser?.name}
+                    isPrivateChat={activeChat.type === CHAT_CONTEXT.PRIVATE}
+                  />
+                ))
+              )}
+              <div ref={messagesEndRef} />
+            </VStack>
+          </Box>
+
+          {/* Typing Indicator */}
+          {currentTypingUsers.length > 0 && (
+            <Box px={6} py={2} bg="white">
+              <Text fontSize="xs" color="gray.500" fontStyle="italic">
+                {currentTypingUsers.map((u) => u.name).join(', ')} sedang mengetik...
+              </Text>
             </Box>
-          </GlassCard>
-        </Stack>
-      </Container>
+          )}
+
+          {/* Input Area */}
+          <Box
+            p={4}
+            bg="white"
+            borderTop="1px solid"
+            borderColor="gray.100"
+          >
+            <HStack spacing={3}>
+              <Input
+                value={inputValue}
+                placeholder="Ketik pesan..."
+                onChange={handleInputChange}
+                onKeyDown={handleKeyDown}
+                bg="gray.50"
+                color="gray.800"
+                border="1px solid"
+                borderColor="gray.200"
+                borderRadius="full"
+                _focus={{
+                  bg: 'white',
+                  borderColor: 'teal.400',
+                  boxShadow: '0 0 0 1px var(--chakra-colors-teal-400)',
+                }}
+                _placeholder={{ color: 'gray.400' }}
+                isDisabled={!isConnected}
+                sx={{ color: '#1a202c !important' }}
+              />
+              <Button
+                colorScheme="teal"
+                borderRadius="full"
+                w="12"
+                h="12"
+                onClick={handleSendMessage}
+                isDisabled={!isConnected || !inputValue.trim()}
+              >
+                <ArrowUpIcon w={5} h={5} />
+              </Button>
+            </HStack>
+          </Box>
+        </Flex>
+      </Flex>
     </Box>
   );
 }

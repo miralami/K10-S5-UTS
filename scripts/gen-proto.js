@@ -67,7 +67,7 @@ if (pluginPath) {
   args.push(`--plugin=protoc-gen-grpc-web=${pluginPath}`);
 }
 args.push('-I=shared/proto');
-args.push('shared/proto/typing.proto');
+args.push('shared/proto/chat.proto');
 args.push(`--js_out=import_style=commonjs:frontend/src/proto`);
 args.push(`--grpc-web_out=import_style=commonjs,mode=grpcwebtext:frontend/src/proto`);
 

@@ -1,7 +1,7 @@
 {
-  "name": "websocket-service",
+  "name": "grpc-service",
   "version": "1.0.0",
-  "description": "Workspace scripts for running the WebSocket server for Mood Journal",
+  "description": "Workspace scripts for running the gRPC server for Mood Journal",
   "type": "module",
   "main": "server/websocket-server.js",
   "scripts": {
@@ -15,7 +15,9 @@
   "dependencies": {
     "@grpc/grpc-js": "^1.9.0",
     "@grpc/proto-loader": "^0.7.8",
+    "dotenv": "^17.2.3",
     "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.2",
     "uts_sem5-workspace": "file:..",
     "ws": "^8.18.3"
   },

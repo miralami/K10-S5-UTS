@@ -1,7 +1,4 @@
 # CI Implementation & What Changed
-
-Generated: 2025-11-20
-
 This document explains the CI workflow I added to this repository and what improvements it brings compared to a regular commit workflow.
 
 ## Where the file lives
@@ -76,7 +73,3 @@ npm run lint:fix
 - Add an ExpressJS job to the CI file so Node linting runs in GitHub Actions too.
 - Add test jobs for frontend (unit tests) and more matrix builds (Node versions / PHP versions) if desired.
 - Add enforcement via branch protection rules to require the CI job(s) to pass before merging to `main`/`master`.
-
----
-File created: `docs/ci-explanation/CI-IMPLEMENTATION.md`.
-If you want, I can add the Express job into the CI workflow now and push a patch.

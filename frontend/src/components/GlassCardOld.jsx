@@ -6,20 +6,19 @@ const MotionBox = motion(Box);
 
 export const GlassCard = ({ children, hover = true, ...props }) => (
   <MotionBox
-    bg="rgba(255, 255, 255, 0.03)"
-    borderRadius="3xl"
-    p={8}
+    bg="rgba(15, 23, 42, 0.75)"
+    borderRadius="2xl"
+    p={6}
     border="1px solid"
-    borderColor="rgba(255, 255, 255, 0.08)"
-    backdropFilter="blur(20px)"
-    boxShadow="0 4px 30px rgba(0, 0, 0, 0.05)"
-    transition="all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)"
+    borderColor="whiteAlpha.200"
+    backdropFilter="blur(12px)"
+    transition="all 0.2s"
     {...(hover && {
       _hover: {
-        bg: 'rgba(255, 255, 255, 0.06)',
-        borderColor: 'rgba(255, 255, 255, 0.15)',
-        transform: 'translateY(-4px)',
-        boxShadow: '0 20px 40px rgba(0, 0, 0, 0.1)',
+        bg: 'rgba(15, 23, 42, 0.85)',
+        borderColor: 'whiteAlpha.300',
+        transform: 'translateY(-2px)',
+        boxShadow: 'lg',
       },
     })}
     {...props}
