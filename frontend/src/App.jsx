@@ -6,10 +6,14 @@ import Login from './pages/Login.jsx';
 import Register from './pages/Register.jsx';
 import ProtectedRoute from './components/ProtectedRoute';
 import Chat from './pages/Chat.jsx';
+import { ChatProvider } from './context/ChatContext.jsx';
 
 function App() {
   return (
     <BrowserRouter>
+      {/* ChatProvider membungkus seluruh aplikasi agar koneksi chat global */}
+      {/* ChatProvider wraps the entire app for global chat connection */}
+      <ChatProvider>
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
@@ -37,14 +41,13 @@ function App() {
           path="/chat"
           element={
             <ProtectedRoute>
-              <Layout>
-                <Chat />
-              </Layout>
+              <Chat />
             </ProtectedRoute>
           }
         />
         
       </Routes>
+      </ChatProvider>
     </BrowserRouter>
   );
 }

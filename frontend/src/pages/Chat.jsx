@@ -16,52 +16,42 @@ import {
   Spinner,
 } from '@chakra-ui/react';
 import { motion } from 'framer-motion';
-import { ArrowUpIcon, ChatIcon } from '@chakra-ui/icons';
-import { chatService } from '../services/chatService';
+import { ArrowUpIcon, ChatIcon, ArrowBackIcon } from '@chakra-ui/icons';
 import { getAuthUser, isAuthenticated } from '../services/authService';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { ChatBubble } from '../components/ChatBubble';
+import { useChat, CHAT_CONTEXT } from '../context/ChatContext';
 
 const MotionBox = motion(Box);
 
-/**
- * Chat context types
- */
-const CHAT_CONTEXT = {
-  GLOBAL: 'global',
-  PRIVATE: 'private',
-};
-
 export default function Chat() {
   const navigate = useNavigate();
+  const location = useLocation();
   const toast = useToast();
   const currentUser = getAuthUser();
 
-  // Connection state
-  const [isConnected, setIsConnected] = useState(false);
-  const [isConnecting, setIsConnecting] = useState(true);
+  // Menggunakan ChatContext untuk state dan actions
+  // Using ChatContext for state and actions
+  const {
+    isConnected,
+    isConnecting,
+    users,
+    conversations,
+    activeChat,
+    selectChat,
+    getConversationId,
+    typingUsers,
+    sendMessage,
+    sendTyping,
+  } = useChat();
 
-  // Users list
-  const [users, setUsers] = useState([]);
-
-  // Active chat context
-  const [activeChat, setActiveChat] = useState({ type: CHAT_CONTEXT.GLOBAL });
-
-  // Messages storage - keyed by conversation ID
-  const [conversations, setConversations] = useState({
-    global: [],
-  });
-
-  // Typing indicators - keyed by context ID
-  const [typingUsers, setTypingUsers] = useState({});
-
-  // Input
+  // Input state (local untuk komponen ini)
+  // Input state (local to this component)
   const [inputValue, setInputValue] = useState('');
 
   // Refs
   const messagesEndRef = useRef(null);
   const typingTimeoutRef = useRef(null);
-  const connectionRef = useRef(null); // Untuk mencegah koneksi ganda
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -70,166 +60,26 @@ export default function Chat() {
     }
   }, [navigate]);
 
-  // Get conversation ID for current chat
-  const getConversationId = useCallback(() => {
-    if (activeChat.type === CHAT_CONTEXT.GLOBAL) {
-      return 'global';
+  // Handle navigation state untuk membuka private chat dari notifikasi
+  // Handle navigation state to open private chat from notification
+  useEffect(() => {
+    if (location.state?.openPrivateChat && location.state?.userId) {
+      const targetUser = users.find((u) => u.id === location.state.userId);
+      if (targetUser) {
+        selectChat(CHAT_CONTEXT.PRIVATE, targetUser);
+      }
+      // Clear navigation state
+      navigate(location.pathname, { replace: true, state: {} });
     }
-    return activeChat.user?.id || '';
-  }, [activeChat]);
+  }, [location.state, users, selectChat, navigate, location.pathname]);
 
-  // Get messages for current chat
+  // Get messages for current chat (dari context)
+  // Get messages for current chat (from context)
   const currentMessages = conversations[getConversationId()] || [];
 
-  // Get typing users for current context
+  // Get typing users for current context (dari context)
+  // Get typing users for current context (from context)
   const currentTypingUsers = typingUsers[getConversationId()] || [];
-
-  // Connect to chat stream
-  useEffect(() => {
-    if (!currentUser) return;
-    
-    // Cegah koneksi ganda (React StrictMode double-mount)
-    if (connectionRef.current) {
-      console.log('Connection already in progress, skipping');
-      return;
-    }
-    connectionRef.current = true;
-
-    setIsConnecting(true);
-    let mounted = true;
-
-    const connectToChat = async () => {
-      const stream = await chatService.startChatStream({
-        onGlobalMessage: (msg) => {
-          if (!mounted) return;
-          setConversations((prev) => ({
-            ...prev,
-            global: [
-              ...(prev.global || []),
-              {
-                id: msg.id,
-                text: msg.text,
-                sender: msg.sender,
-                timestamp: msg.timestamp,
-                type: msg.sender.id === String(currentUser.id) ? 'sent' : 'received',
-              },
-            ],
-          }));
-        },
-
-        onPrivateMessage: (msg) => {
-          if (!mounted) return;
-          // Determine conversation ID (the other user)
-          const otherUserId =
-            msg.sender.id === String(currentUser.id)
-              ? msg.recipient.id
-              : msg.sender.id;
-
-          setConversations((prev) => ({
-            ...prev,
-            [otherUserId]: [
-              ...(prev[otherUserId] || []),
-              {
-                id: msg.id,
-                text: msg.text,
-                sender: msg.sender,
-                recipient: msg.recipient,
-                timestamp: msg.timestamp,
-                type: msg.sender.id === String(currentUser.id) ? 'sent' : 'received',
-              },
-            ],
-          }));
-        },
-
-        onPresenceUpdate: (update) => {
-          if (!mounted) return;
-          setUsers((prev) => {
-            const existing = prev.find((u) => u.id === update.user.id);
-            if (existing) {
-              return prev.map((u) =>
-                u.id === update.user.id
-                  ? { ...u, isOnline: update.isOnline }
-                  : u
-              );
-            } else if (update.isOnline) {
-              return [...prev, update.user];
-            }
-            return prev;
-          });
-        },
-
-        onTypingEvent: (event) => {
-          if (!mounted) return;
-          if (event.user.id === String(currentUser.id)) return;
-
-          setTypingUsers((prev) => {
-            const contextUsers = prev[event.contextId] || [];
-            if (event.isTyping) {
-              if (!contextUsers.find((u) => u.id === event.user.id)) {
-                return {
-                  ...prev,
-                  [event.contextId]: [...contextUsers, event.user],
-                };
-              }
-            } else {
-              return {
-                ...prev,
-                [event.contextId]: contextUsers.filter(
-                  (u) => u.id !== event.user.id
-                ),
-              };
-            }
-            return prev;
-          });
-
-          // Auto-clear typing after 3 seconds
-          setTimeout(() => {
-            if (!mounted) return;
-            setTypingUsers((prev) => ({
-              ...prev,
-              [event.contextId]: (prev[event.contextId] || []).filter(
-                (u) => u.id !== event.user.id
-              ),
-            }));
-          }, 3000);
-        },
-
-        onUserList: (userList) => {
-          if (!mounted) return;
-          setUsers(userList.filter((u) => u.id !== String(currentUser.id)));
-          setIsConnected(true);
-          setIsConnecting(false);
-        },
-
-        onError: (err) => {
-          if (!mounted) return;
-          console.error('Chat error:', err);
-          setIsConnected(false);
-          setIsConnecting(false);
-          toast({
-            title: 'Koneksi Bermasalah',
-            description: 'Tidak dapat terhubung ke server chat. Pastikan WebSocket server berjalan di port 8080.',
-            status: 'error',
-            duration: 5000,
-            isClosable: true,
-          });
-        },
-
-        onEnd: () => {
-          if (!mounted) return;
-          setIsConnected(false);
-        },
-      });
-    };
-
-    connectToChat();
-
-    return () => {
-      mounted = false;
-      connectionRef.current = false;
-      chatService.endChatStream();
-    };
-  }, [currentUser?.id, toast]);
 
   // Auto-scroll to latest message
   useEffect(() => {
@@ -237,6 +87,7 @@ export default function Chat() {
   }, [currentMessages]);
 
   // Handle input change with typing indicator
+  // Menggunakan sendTyping dari context
   const handleInputChange = (event) => {
     setInputValue(event.target.value);
 
@@ -245,18 +96,19 @@ export default function Chat() {
         ? 'global'
         : activeChat.user?.id;
 
-    chatService.sendTyping(contextId, true);
+    sendTyping(contextId, true);
 
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
     }
 
     typingTimeoutRef.current = setTimeout(() => {
-      chatService.sendTyping(contextId, false);
+      sendTyping(contextId, false);
     }, 2000);
   };
 
-  // Send message
+  // Send message - menggunakan sendMessage dari context
+  // Send message - using sendMessage from context
   const handleSendMessage = async () => {
     const text = inputValue.trim();
     if (!text || !isConnected) return;
@@ -267,12 +119,12 @@ export default function Chat() {
         : null;
 
     try {
-      await chatService.sendMessage(text, recipientId);
+      await sendMessage(text, recipientId);
       setInputValue('');
 
       // Clear typing indicator
       const contextId = recipientId || 'global';
-      chatService.sendTyping(contextId, false);
+      sendTyping(contextId, false);
     } catch (err) {
       toast({
         title: 'Gagal mengirim pesan',
@@ -291,20 +143,8 @@ export default function Chat() {
     }
   };
 
-  // Select a chat (global or private)
-  const selectChat = (type, user = null) => {
-    if (type === CHAT_CONTEXT.GLOBAL) {
-      setActiveChat({ type: CHAT_CONTEXT.GLOBAL });
-    } else {
-      setActiveChat({ type: CHAT_CONTEXT.PRIVATE, user });
-      // Initialize conversation if not exists
-      if (!conversations[user.id]) {
-        setConversations((prev) => ({ ...prev, [user.id]: [] }));
-      }
-    }
-  };
-
-  // Loading state
+  // Loading state (menggunakan isConnecting dari context)
+  // Loading state (using isConnecting from context)
   if (isConnecting) {
     return (
       <Box
@@ -334,9 +174,23 @@ export default function Chat() {
           display="flex"
           flexDirection="column"
         >
-          {/* Sidebar Header */}
+          {/* Sidebar Header dengan tombol kembali */}
+          {/* Sidebar Header with back button */}
           <Box p={4} borderBottom="1px solid" borderColor="gray.100">
             <HStack spacing={3}>
+              {/* Tombol kembali ke halaman utama */}
+              {/* Back button to main page */}
+              <Button
+                variant="ghost"
+                size="sm"
+                p={0}
+                minW="auto"
+                onClick={() => navigate('/')}
+                _hover={{ bg: 'gray.100' }}
+                title="Kembali ke beranda"
+              >
+                <Icon as={ArrowBackIcon} w={5} h={5} color="gray.600" />
+              </Button>
               <Avatar
                 size="sm"
                 name={currentUser?.name}
