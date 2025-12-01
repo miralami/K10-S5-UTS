@@ -1,6 +1,14 @@
 import PropTypes from 'prop-types';
 import { Box, Text, VStack } from '@chakra-ui/react';
 
+// Theme configuration
+const THEME = {
+  accent: '#805AD5',
+  accentDark: '#6B46C1',
+  textPrimary: '#2D3748',
+  textSecondary: '#718096',
+};
+
 export const ChatBubble = ({ message, isOwn, currentUserName, isPrivateChat = false }) => {
   const isSystem = message.type === 'system';
   const sender = message.sender;
@@ -44,8 +52,8 @@ export const ChatBubble = ({ message, isOwn, currentUserName, isPrivateChat = fa
       >
         <Box position="relative">
           <Box
-            bg={isOwn ? 'teal.500' : 'gray.100'}
-            color={isOwn ? 'white' : 'gray.800'}
+            bg={isOwn ? THEME.accent : 'gray.100'}
+            color={isOwn ? 'white' : THEME.textPrimary}
             px={4}
             py={3}
             borderRadius={isOwn ? '18px 18px 4px 18px' : '18px 18px 18px 4px'}
@@ -57,7 +65,7 @@ export const ChatBubble = ({ message, isOwn, currentUserName, isPrivateChat = fa
               <Text 
                 fontSize="xs" 
                 fontWeight="bold" 
-                color="teal.600" 
+                color={THEME.accentDark}
                 mb={1}
                 style={{ opacity: 1, visibility: 'visible' }}
               >
@@ -65,7 +73,7 @@ export const ChatBubble = ({ message, isOwn, currentUserName, isPrivateChat = fa
               </Text>
             )}
             <Text 
-              style={{ color: isOwn ? '#ffffff' : '#1a202c' }}
+              style={{ color: isOwn ? '#ffffff' : THEME.textPrimary }}
             >
               {body}
             </Text>
@@ -73,7 +81,7 @@ export const ChatBubble = ({ message, isOwn, currentUserName, isPrivateChat = fa
         </Box>
         <Text
           fontSize="xs"
-          color="gray.500"
+          color={THEME.textSecondary}
           px={1}
         >
           {message.timestamp

@@ -24,6 +24,18 @@ import { useChat, CHAT_CONTEXT } from '../context/ChatContext';
 
 const MotionBox = motion(Box);
 
+// Theme configuration
+const THEME = {
+  bg: '#FDFCF8',
+  textPrimary: '#2D3748',
+  textSecondary: '#718096',
+  accent: '#805AD5',
+  accentLight: '#E9D8FD',
+  accentDark: '#6B46C1',
+  card: '#FFFFFF',
+  shadow: 'rgba(0, 0, 0, 0.06)',
+};
+
 export default function Chat() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -149,26 +161,26 @@ export default function Chat() {
     return (
       <Box
         h="100vh"
-        bg="#faf9f7"
+        bg={THEME.bg}
         display="flex"
         alignItems="center"
         justifyContent="center"
       >
         <VStack spacing={4}>
-          <Spinner size="xl" color="teal.500" thickness="3px" />
-          <Text color="gray.600">Menghubungkan ke chat...</Text>
+          <Spinner size="xl" color={THEME.accent} thickness="3px" />
+          <Text color={THEME.textSecondary}>Menghubungkan ke chat...</Text>
         </VStack>
       </Box>
     );
   }
 
   return (
-    <Box h="100vh" bg="#faf9f7">
+    <Box h="100vh" bg={THEME.bg}>
       <Flex h="full">
         {/* Sidebar - User List */}
         <Box
           w="300px"
-          bg="white"
+          bg={THEME.card}
           borderRight="1px solid"
           borderColor="gray.200"
           display="flex"
@@ -194,7 +206,7 @@ export default function Chat() {
               <Avatar
                 size="sm"
                 name={currentUser?.name}
-                bg="teal.500"
+                bg={THEME.accent}
                 color="white"
               />
               <Box flex="1">
@@ -223,9 +235,9 @@ export default function Chat() {
               px={3}
               py={3}
               cursor="pointer"
-              bg={activeChat.type === CHAT_CONTEXT.GLOBAL ? 'teal.50' : 'transparent'}
+              bg={activeChat.type === CHAT_CONTEXT.GLOBAL ? 'purple.50' : 'transparent'}
               borderLeft={activeChat.type === CHAT_CONTEXT.GLOBAL ? '3px solid' : '3px solid transparent'}
-              borderColor="teal.500"
+              borderColor={THEME.accent}
               _hover={{ bg: 'gray.50' }}
               onClick={() => selectChat(CHAT_CONTEXT.GLOBAL)}
             >
@@ -234,7 +246,7 @@ export default function Chat() {
                   w={10}
                   h={10}
                   borderRadius="full"
-                  bg="teal.500"
+                  bg={THEME.accent}
                   display="flex"
                   alignItems="center"
                   justifyContent="center"
@@ -271,7 +283,7 @@ export default function Chat() {
                 bg={
                   activeChat.type === CHAT_CONTEXT.PRIVATE &&
                   activeChat.user?.id === user.id
-                    ? 'teal.50'
+                    ? 'purple.50'
                     : 'transparent'
                 }
                 borderLeft={
@@ -280,7 +292,7 @@ export default function Chat() {
                     ? '3px solid'
                     : '3px solid transparent'
                 }
-                borderColor="teal.500"
+                borderColor={THEME.accent}
                 _hover={{ bg: 'gray.50' }}
                 onClick={() => selectChat(CHAT_CONTEXT.PRIVATE, user)}
               >
@@ -307,7 +319,7 @@ export default function Chat() {
                     </Text>
                   </Box>
                   {conversations[user.id]?.length > 0 && (
-                    <Badge colorScheme="teal" borderRadius="full" fontSize="xs">
+                    <Badge colorScheme="purple" borderRadius="full" fontSize="xs">
                       {conversations[user.id].length}
                     </Badge>
                   )}
@@ -326,14 +338,14 @@ export default function Chat() {
         </Box>
 
         {/* Main Chat Area */}
-        <Flex flex="1" direction="column" bg="white">
+        <Flex flex="1" direction="column" bg={THEME.card}>
           {/* Chat Header */}
           <Box
             px={6}
             py={4}
             borderBottom="1px solid"
             borderColor="gray.100"
-            bg="white"
+            bg={THEME.card}
           >
             <HStack spacing={3}>
               {activeChat.type === CHAT_CONTEXT.GLOBAL ? (
@@ -342,7 +354,7 @@ export default function Chat() {
                     w={10}
                     h={10}
                     borderRadius="full"
-                    bg="teal.500"
+                    bg={THEME.accent}
                     display="flex"
                     alignItems="center"
                     justifyContent="center"
@@ -350,10 +362,10 @@ export default function Chat() {
                     <Icon as={ChatIcon} color="white" w={5} h={5} />
                   </Box>
                   <Box>
-                    <Heading size="sm" color="gray.800">
+                    <Heading size="sm" color={THEME.textPrimary}>
                       Global Chat
                     </Heading>
-                    <Text fontSize="xs" color="gray.500">
+                    <Text fontSize="xs" color={THEME.textSecondary}>
                       {users.filter((u) => u.isOnline).length + 1} pengguna online
                     </Text>
                   </Box>
@@ -374,10 +386,10 @@ export default function Chat() {
                     />
                   </Box>
                   <Box>
-                    <Heading size="sm" color="gray.800">
+                    <Heading size="sm" color={THEME.textPrimary}>
                       {activeChat.user?.name}
                     </Heading>
-                    <Text fontSize="xs" color="gray.500">
+                    <Text fontSize="xs" color={THEME.textSecondary}>
                       {activeChat.user?.isOnline ? 'Online' : 'Offline'}
                     </Text>
                   </Box>
@@ -391,7 +403,7 @@ export default function Chat() {
             flex="1"
             overflowY="auto"
             p={6}
-            bg="#faf9f7"
+            bg={THEME.bg}
             css={{
               '&::-webkit-scrollbar': { width: '6px' },
               '&::-webkit-scrollbar-track': { background: 'transparent' },
@@ -436,8 +448,8 @@ export default function Chat() {
 
           {/* Typing Indicator */}
           {currentTypingUsers.length > 0 && (
-            <Box px={6} py={2} bg="white">
-              <Text fontSize="xs" color="gray.500" fontStyle="italic">
+            <Box px={6} py={2} bg={THEME.card}>
+              <Text fontSize="xs" color={THEME.textSecondary} fontStyle="italic">
                 {currentTypingUsers.map((u) => u.name).join(', ')} sedang mengetik...
               </Text>
             </Box>
@@ -446,7 +458,7 @@ export default function Chat() {
           {/* Input Area */}
           <Box
             p={4}
-            bg="white"
+            bg={THEME.card}
             borderTop="1px solid"
             borderColor="gray.100"
           >
@@ -457,26 +469,27 @@ export default function Chat() {
                 onChange={handleInputChange}
                 onKeyDown={handleKeyDown}
                 bg="gray.50"
-                color="gray.800"
+                color={THEME.textPrimary}
                 border="1px solid"
                 borderColor="gray.200"
                 borderRadius="full"
                 _focus={{
-                  bg: 'white',
-                  borderColor: 'teal.400',
-                  boxShadow: '0 0 0 1px var(--chakra-colors-teal-400)',
+                  bg: THEME.card,
+                  borderColor: THEME.accent,
+                  boxShadow: `0 0 0 3px ${THEME.accentLight}`,
                 }}
                 _placeholder={{ color: 'gray.400' }}
                 isDisabled={!isConnected}
-                sx={{ color: '#1a202c !important' }}
               />
               <Button
-                colorScheme="teal"
+                bg={THEME.accent}
+                color="white"
                 borderRadius="full"
                 w="12"
                 h="12"
                 onClick={handleSendMessage}
                 isDisabled={!isConnected || !inputValue.trim()}
+                _hover={{ bg: THEME.accentDark }}
               >
                 <ArrowUpIcon w={5} h={5} />
               </Button>

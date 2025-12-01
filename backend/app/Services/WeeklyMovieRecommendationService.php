@@ -3,227 +3,80 @@
 namespace App\Services;
 
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class WeeklyMovieRecommendationService
 {
-    private const DEFAULT_CATEGORY = 'balanced';
+    private const MAX_RETRIES = 3;
+    private const RETRY_DELAY = 2; // seconds
+    private const MAX_JITTER = 1000; // milliseconds
+
+    private string $apiKey;
+    private string $model;
+
+    public function __construct()
+    {
+        $this->apiKey = (string) config('services.google_genai.api_key', '');
+        $this->model = (string) config('services.google_genai.model', 'gemini-2.5-flash');
+    }
 
     /**
-     * Dataset rekomendasi berdasarkan kategori mood mingguan.
-     * Menyimpan kata kunci referensi, headline, deskripsi, dan daftar film.
-     *
-     * @var array<string, array<string, mixed>>
+     * Execute HTTP request with retry mechanism and exponential backoff.
      */
-    private array $catalog = [
-        'joyful' => [
-            'keywords' => ['bahagia', 'senang', 'gembira', 'ceria', 'optimis', 'positif', 'bersemangat', 'lega'],
-            'headline' => 'Pertahankan vibe positifmu, %s!',
-            'description' => 'Mood %s terlihat cerah. Tiga film ini siap menjaga semangatmu tetap tinggi sepanjang minggu.',
-            'movies' => [
-                [
-                    'title' => 'La La Land',
-                    'year' => 2016,
-                    'tagline' => 'Musikal modern tentang mengejar mimpi dan cinta yang getir.',
-                    'posterUrl' => 'https://image.tmdb.org/t/p/w500/uDO8zWDhfWwoFdKS4fzkUJt0Rf0.jpg',
-                    'imdbId' => 'tt3783958',
-                    'genres' => ['Musikal', 'Romansa'],
-                    'reason' => 'Energi %s minggu ini cocok ditemani kisah penuh semangat yang mengingatkan bahwa kegembiraan layak dirayakan.',
-                ],
-                [
-                    'title' => 'Paddington 2',
-                    'year' => 2017,
-                    'tagline' => 'Petualangan beruang paling optimis di London.',
-                    'posterUrl' => 'https://image.tmdb.org/t/p/w500/qYtNbNSMdGvYZAXwv969A3Luu6z.jpg',
-                    'imdbId' => 'tt4468740',
-                    'genres' => ['Keluarga', 'Petualangan'],
-                    'reason' => 'Kehangatan %s akan terasa makin lengkap dengan film keluarga yang mengajarkan kebaikan sederhana.',
-                ],
-                [
-                    'title' => 'The Grand Budapest Hotel',
-                    'year' => 2014,
-                    'tagline' => 'Komedi visual penuh warna karya Wes Anderson.',
-                    'posterUrl' => 'https://image.tmdb.org/t/p/w500/nX5XotM9yprCKarRH4fzOq1VM1J.jpg',
-                    'imdbId' => 'tt2278388',
-                    'genres' => ['Komedi', 'Petualangan'],
-                    'reason' => 'Gaya %s yang ringan cocok disandingkan dengan humor unik dan visual cerah dari hotel paling eksentrik di Eropa.',
-                ],
-            ],
-        ],
-        'comfort' => [
-            'keywords' => ['sedih', 'murung', 'lelah', 'letih', 'kecewa', 'down', 'capek', 'patah', 'galau', 'sepi', 'sunyi', 'kesepian'],
-            'headline' => 'Pelukan hangat lewat layar untuk mood %s.',
-            'description' => 'Saat mood %s mendominasi, kisah-kisah lembut ini membantu hati terasa lebih ringan.',
-            'movies' => [
-                [
-                    'title' => 'About Time',
-                    'year' => 2013,
-                    'tagline' => 'Cinta, keluarga, dan kesempatan kedua.',
-                    'posterUrl' => 'https://image.tmdb.org/t/p/w500/i9GUSgddIqrroubiLsvvMRYyRy0.jpg',
-                    'imdbId' => 'tt2194499',
-                    'genres' => ['Drama', 'Romansa'],
-                    'reason' => 'Saat hati %s butuh kehangatan, perjalanan lintas waktu Tim mengingatkan pentingnya momen sederhana.',
-                ],
-                [
-                    'title' => 'Chef',
-                    'year' => 2014,
-                    'tagline' => 'Makanan hangat untuk hati yang lelah.',
-                    'posterUrl' => 'https://image.tmdb.org/t/p/w500/RIzH8FOF6MfX6Cox0Fh6JLFyzo.jpg',
-                    'imdbId' => 'tt2883512',
-                    'genres' => ['Drama', 'Komedi'],
-                    'reason' => 'Aroma kuliner dan perjalanan keluarga ini cocok untuk menenangkan perasaan %s yang sedang rapuh.',
-                ],
-                [
-                    'title' => 'Little Women',
-                    'year' => 2019,
-                    'tagline' => 'Saudari March dan kehangatan keluarga.',
-                    'posterUrl' => 'https://image.tmdb.org/t/p/w500/mSDeRlIC3GNcGrbTHY3fHC1NXpC.jpg',
-                    'imdbId' => 'tt3281548',
-                    'genres' => ['Drama', 'Keluarga'],
-                    'reason' => 'Ikatan keluarga March memberi ruang aman untuk %s yang butuh diyakinkan bahwa harapan masih ada.',
-                ],
-            ],
-        ],
-        'grounding' => [
-            'keywords' => ['cemas', 'gelisah', 'khawatir', 'resah', 'stres', 'stress', 'tegang', 'panik', 'overwhelmed', 'kacau', 'takut'],
-            'headline' => 'Teman penenang pikiran saat kamu merasa %s.',
-            'description' => 'Ketika suasana %s hadir, cerita menenangkan ini mengajakmu bernapas lebih pelan.',
-            'movies' => [
-                [
-                    'title' => 'The Secret Life of Walter Mitty',
-                    'year' => 2013,
-                    'tagline' => 'Melangkah keluar dari kecemasan menuju petualangan.',
-                    'posterUrl' => 'https://image.tmdb.org/t/p/w500/8gZsQ8OqiN54xHTmYG3L0uHwax2.jpg',
-                    'imdbId' => 'tt0359950',
-                    'genres' => ['Petualangan', 'Drama'],
-                    'reason' => 'Perjalanan Walter menunjukkan bahwa rasa %s bisa dialihkan dengan langkah kecil yang konsisten.',
-                ],
-                [
-                    'title' => 'A Beautiful Day in the Neighborhood',
-                    'year' => 2019,
-                    'tagline' => 'Ketenangan ala Mr. Rogers.',
-                    'posterUrl' => 'https://image.tmdb.org/t/p/w500/p9PSU0muIXKfkc3O9pAq3gFft60.jpg',
-                    'imdbId' => 'tt3224458',
-                    'genres' => ['Drama', 'Biografi'],
-                    'reason' => 'Pendekatan lembut Mr. Rogers memberi contoh cara memeluk rasa %s sambil tetap lembut pada diri sendiri.',
-                ],
-                [
-                    'title' => 'Finding Nemo',
-                    'year' => 2003,
-                    'tagline' => 'Petualangan laut yang menenangkan.',
-                    'posterUrl' => 'https://image.tmdb.org/t/p/w500/eHuGQ10FUzK1mdOY69wF5pGgEf5.jpg',
-                    'imdbId' => 'tt0266543',
-                    'genres' => ['Animasi', 'Petualangan'],
-                    'reason' => 'Dory dan Marlin mengajarkan cara menghadapi rasa %s dengan humor dan keberanian perlahan-lahan.',
-                ],
-            ],
-        ],
-        'reflective' => [
-            'keywords' => ['tenang', 'damai', 'reflektif', 'nostalgia', 'merenung', 'kontemplatif', 'campur', 'campuran', 'mixed'],
-            'headline' => 'Teman merenung penuh makna saat mood %s.',
-            'description' => 'Mood %s cocok ditemani film bertempo lembut yang membantu merangkai sudut pandang baru.',
-            'movies' => [
-                [
-                    'title' => 'Her',
-                    'year' => 2013,
-                    'tagline' => 'Cinta, kesepian, dan keheningan kota futuristik.',
-                    'posterUrl' => 'https://image.tmdb.org/t/p/w500/fsoTLnUXEutsvH9GjpOIl7a0wng.jpg',
-                    'imdbId' => 'tt1798709',
-                    'genres' => ['Drama', 'Romansa'],
-                    'reason' => 'Ketika perasaan %s membuatmu introspektif, kisah Theodore memberi ruang untuk memahami relasi dengan diri sendiri.',
-                ],
-                [
-                    'title' => 'Before Sunrise',
-                    'year' => 1995,
-                    'tagline' => 'Percakapan malam yang penuh makna.',
-                    'posterUrl' => 'https://image.tmdb.org/t/p/w500/6qhBF7eft0ZbhOeJ0fIPJ9i6C3I.jpg',
-                    'imdbId' => 'tt0112471',
-                    'genres' => ['Drama', 'Romansa'],
-                    'reason' => 'Dialog mendalam Jesse dan Celine membantu mengurai rasa %s dengan ritme yang pelan namun jujur.',
-                ],
-                [
-                    'title' => 'Lost in Translation',
-                    'year' => 2003,
-                    'tagline' => 'Kesunyian Tokyo yang penuh arti.',
-                    'posterUrl' => 'https://image.tmdb.org/t/p/w500/y7rDYFfbG3McWIIthE45pY2R5S2.jpg',
-                    'imdbId' => 'tt0335266',
-                    'genres' => ['Drama'],
-                    'reason' => 'Suasana %s bisa menemukan teman seperasaan lewat hubungan sunyi Charlotte dan Bob.',
-                ],
-            ],
-        ],
-        'motivational' => [
-            'keywords' => ['termotivasi', 'ambisius', 'ambitious', 'fokus', 'produktif', 'berdaya', 'tekad', 'berani', 'gigih', 'semangat'],
-            'headline' => 'Bahan bakar produktif untuk semangat %s.',
-            'description' => 'Energi %s pantas didampingi kisah perjuangan inspiratif yang memantik aksi berikutnya.',
-            'movies' => [
-                [
-                    'title' => 'The Pursuit of Happyness',
-                    'year' => 2006,
-                    'tagline' => 'Perjuangan Chris Gardner mengejar mimpi.',
-                    'posterUrl' => 'https://image.tmdb.org/t/p/w500/bQL7KD0WFv9g0czkYxoavAEPXsY.jpg',
-                    'imdbId' => 'tt0454921',
-                    'genres' => ['Drama', 'Biografi'],
-                    'reason' => 'Ketika %s membuatmu ingin tetap berjuang, kisah nyata ini menjaga harapan dan daya juang tetap menyala.',
-                ],
-                [
-                    'title' => 'Hidden Figures',
-                    'year' => 2016,
-                    'tagline' => 'Ilmuwan NASA yang mengguncang batasan.',
-                    'posterUrl' => 'https://image.tmdb.org/t/p/w500/9lf10N9Yj2TRmSHBXN2TOAzYm9Z.jpg',
-                    'imdbId' => 'tt4846340',
-                    'genres' => ['Drama', 'Biografi'],
-                    'reason' => 'Tekad %s akan terpacu oleh keberanian tiga matematikawan yang menolak menyerah pada hambatan sosial.',
-                ],
-                [
-                    'title' => 'Moneyball',
-                    'year' => 2011,
-                    'tagline' => 'Mengubah permainan lewat data dan keberanian.',
-                    'posterUrl' => 'https://image.tmdb.org/t/p/w500/3uCB1gKAJ0FAUi4U7GzK9WKHCV4.jpg',
-                    'imdbId' => 'tt1210166',
-                    'genres' => ['Drama', 'Olahraga'],
-                    'reason' => 'Saat dorongan %s ingin melakukan terobosan, strategi Moneyball memberi inspirasi untuk berpikir di luar kebiasaan.',
-                ],
-            ],
-        ],
-        'balanced' => [
-            'keywords' => ['unknown', 'netral', 'seimbang'],
-            'headline' => 'Pilihan hangat untuk mood yang belum pasti.',
-            'description' => 'Saat mood terasa campur aduk, tontonan ini menawarkan cerita seimbang penuh empati.',
-            'movies' => [
-                [
-                    'title' => 'Inside Out',
-                    'year' => 2015,
-                    'tagline' => 'Memahami emosi lewat petualangan animasi.',
-                    'posterUrl' => 'https://image.tmdb.org/t/p/w500/2H1TmgdfNtsKlU9jKdeNyYL5y8T.jpg',
-                    'imdbId' => 'tt2096673',
-                    'genres' => ['Animasi', 'Keluarga'],
-                    'reason' => 'Ketika sulit mendeskripsikan mood, film ini mengajarkan bahwa semua emosi punya tempatnya.',
-                ],
-                [
-                    'title' => 'Soul',
-                    'year' => 2020,
-                    'tagline' => 'Mencari makna hidup dari nada jazz.',
-                    'posterUrl' => 'https://image.tmdb.org/t/p/w500/kmcqlZGaSh20zpTbuoF0Cdn07dT.jpg',
-                    'imdbId' => 'tt2948372',
-                    'genres' => ['Animasi', 'Petualangan'],
-                    'reason' => 'Soul mengajakmu menilai ulang prioritas ketika mood belum jelas arahnya.',
-                ],
-                [
-                    'title' => 'The Peanut Butter Falcon',
-                    'year' => 2019,
-                    'tagline' => 'Sahabat anyar di perjalanan penuh kejutan.',
-                    'posterUrl' => 'https://image.tmdb.org/t/p/w500/8Sh5vX5MBqSsI1qSk7Q4dK1rRRe.jpg',
-                    'imdbId' => 'tt4364194',
-                    'genres' => ['Petualangan', 'Drama'],
-                    'reason' => 'Cerita hangat ini memberi dorongan lembut saat mood belum menemukan bentuknya.',
-                ],
-            ],
-        ],
-    ];
+    private function httpRequestWithRetry(string $url, array $data, array $headers = [])
+    {
+        $lastException = null;
+
+        for ($attempt = 1; $attempt <= self::MAX_RETRIES; $attempt++) {
+            try {
+                $jitter = rand(0, self::MAX_JITTER) / 1000;
+                $delay = (self::RETRY_DELAY * $attempt) + $jitter;
+
+                if ($attempt > 1) {
+                    usleep((int) ($delay * 1000000));
+                    Log::info("Movie recommendation API retry attempt {$attempt}", ['delay' => $delay]);
+                }
+
+                $response = Http::timeout(30 + ($attempt * 5))
+                    ->withHeaders($headers)
+                    ->post($url, $data);
+
+                if ($response->successful()) {
+                    return $response;
+                }
+
+                $errorMessage = strtolower($response->json('error.message') ?? $response->body());
+
+                $isRetryable = str_contains($errorMessage, 'overloaded') ||
+                              str_contains($errorMessage, 'try again') ||
+                              str_contains($errorMessage, 'quota') ||
+                              $response->status() === 429 ||
+                              $response->status() >= 500;
+
+                if (!$isRetryable || $attempt >= self::MAX_RETRIES) {
+                    throw new \RuntimeException('API request failed: ' . $errorMessage);
+                }
+
+                Log::warning("Movie recommendation API attempt {$attempt} failed, retrying", [
+                    'error' => $errorMessage,
+                    'status' => $response->status(),
+                ]);
+
+            } catch (\Exception $e) {
+                $lastException = $e;
+                if ($attempt >= self::MAX_RETRIES) {
+                    throw $e;
+                }
+            }
+        }
+
+        throw $lastException ?? new \RuntimeException('Failed to complete API request after ' . self::MAX_RETRIES . ' attempts');
+    }
 
     /**
-     * Bangun rekomendasi film berdasarkan analisis mingguan.
+     * Build movie recommendations based on weekly analysis using AI.
      *
      * @param  array<string, mixed>|null  $analysis
      * @return array<string, mixed>
@@ -233,76 +86,278 @@ class WeeklyMovieRecommendationService
         $rawMood = (string) Arr::get($analysis, 'dominantMood', '');
         $rawScore = Arr::get($analysis, 'moodScore');
         $moodScore = is_numeric($rawScore) ? (int) $rawScore : null;
+        $summary = (string) Arr::get($analysis, 'summary', '');
+        $highlights = Arr::get($analysis, 'highlights', []);
+        $affirmation = (string) Arr::get($analysis, 'affirmation', '');
+
         $normalizedMood = $this->normalizeMood($rawMood);
-
-        $category = $this->resolveCategory($normalizedMood, $moodScore);
-        $config = $this->catalog[$category] ?? $this->catalog[self::DEFAULT_CATEGORY];
-
         $moodLabel = $normalizedMood !== '' ? $normalizedMood : 'kondisi kamu';
-        $headline = $this->formatCopy($config['headline'], $moodLabel);
-        $description = $this->formatCopy($config['description'], $moodLabel);
 
-        $items = array_slice($config['movies'], 0, 3);
+        // Try AI-generated recommendations first
+        try {
+            if ($this->apiKey !== '') {
+                $aiRecommendations = $this->getAIRecommendations(
+                    $normalizedMood,
+                    $moodScore,
+                    $summary,
+                    $highlights,
+                    $affirmation
+                );
+
+                if (!empty($aiRecommendations['items'])) {
+                    return $aiRecommendations;
+                }
+            }
+        } catch (\Exception $e) {
+            Log::warning('AI movie recommendations failed, using fallback', [
+                'error' => $e->getMessage(),
+                'mood' => $normalizedMood,
+            ]);
+        }
+
+        // Fallback to basic recommendations if AI fails
+        return $this->getFallbackRecommendations($normalizedMood, $moodScore, $moodLabel);
+    }
+
+    /**
+     * Get AI-generated movie recommendations from Gemini.
+     */
+    private function getAIRecommendations(
+        string $mood,
+        ?int $moodScore,
+        string $summary,
+        array $highlights,
+        string $affirmation
+    ): array {
+        $prompt = $this->buildPrompt($mood, $moodScore, $summary, $highlights, $affirmation);
+
+        $url = 'https://generativelanguage.googleapis.com/v1beta/models/' . $this->model . ':generateContent?key=' . $this->apiKey;
+
+        $payload = [
+            'contents' => [
+                [
+                    'role' => 'user',
+                    'parts' => [
+                        ['text' => $prompt],
+                    ],
+                ],
+            ],
+            'generationConfig' => [
+                'response_mime_type' => 'application/json',
+                'temperature' => 0.7,
+                'top_p' => 0.95,
+                'top_k' => 40,
+                'max_output_tokens' => 2048,
+            ],
+            'safetySettings' => [
+                ['category' => 'HARM_CATEGORY_HARASSMENT', 'threshold' => 'BLOCK_NONE'],
+                ['category' => 'HARM_CATEGORY_HATE_SPEECH', 'threshold' => 'BLOCK_NONE'],
+                ['category' => 'HARM_CATEGORY_SEXUALLY_EXPLICIT', 'threshold' => 'BLOCK_NONE'],
+                ['category' => 'HARM_CATEGORY_DANGEROUS_CONTENT', 'threshold' => 'BLOCK_NONE'],
+            ],
+        ];
+
+        $response = $this->httpRequestWithRetry($url, $payload, [
+            'Content-Type' => 'application/json',
+        ]);
+
+        $responsePayload = $response->json();
+        $text = $responsePayload['candidates'][0]['content']['parts'][0]['text'] ?? null;
+
+        if (!is_string($text) || trim($text) === '') {
+            throw new \RuntimeException('Empty response from Gemini');
+        }
+
+        $decoded = json_decode($text, true);
+        if (!is_array($decoded)) {
+            throw new \RuntimeException('Invalid JSON response from Gemini');
+        }
 
         return [
-            'category' => $category,
-            'moodLabel' => $normalizedMood !== '' ? $normalizedMood : null,
-            'headline' => $headline,
-            'description' => $description,
-            'items' => array_map(function (array $movie) use ($moodLabel) {
+            'category' => $decoded['category'] ?? 'ai-generated',
+            'moodLabel' => $mood !== '' ? $mood : null,
+            'headline' => $decoded['headline'] ?? 'Rekomendasi Film untuk Minggu Ini',
+            'description' => $decoded['description'] ?? 'Film-film yang dipilih khusus berdasarkan mood mingguan kamu.',
+            'items' => array_map(function (array $movie) {
                 return [
-                    'title' => $movie['title'],
-                    'year' => $movie['year'],
-                    'tagline' => $movie['tagline'],
+                    'title' => $movie['title'] ?? 'Unknown',
+                    'year' => $movie['year'] ?? null,
+                    'tagline' => $movie['tagline'] ?? null,
                     'posterUrl' => $movie['posterUrl'] ?? null,
                     'imdbId' => $movie['imdbId'] ?? null,
                     'genres' => $movie['genres'] ?? [],
-                    'reason' => $this->formatCopy($movie['reason'], $moodLabel),
+                    'reason' => $movie['reason'] ?? 'Film yang cocok untuk mood kamu.',
                 ];
-            }, $items),
+            }, $decoded['movies'] ?? []),
         ];
     }
 
     /**
-     * Tentukan kategori rekomendasi berdasarkan mood dan skor mood.
-     * Catatan: logika sederhana berbasis keyword + skor agar mudah diatur ulang tanpa API eksternal.
+     * Build the prompt for Gemini AI.
      */
-    private function resolveCategory(string $normalizedMood, ?int $moodScore): string
-    {
-        $haystack = Str::lower($normalizedMood);
+    private function buildPrompt(
+        string $mood,
+        ?int $moodScore,
+        string $summary,
+        array $highlights,
+        string $affirmation
+    ): string {
+        $moodInfo = $mood !== '' ? "Mood dominan: {$mood}" : 'Mood tidak teridentifikasi';
+        $scoreInfo = $moodScore !== null ? "Skor mood: {$moodScore}/100" : '';
+        $summaryInfo = $summary !== '' ? "Ringkasan minggu: {$summary}" : '';
+        $highlightsInfo = !empty($highlights) ? "Highlights: " . implode(', ', array_slice($highlights, 0, 3)) : '';
+        $affirmationInfo = $affirmation !== '' ? "Afirmasi: {$affirmation}" : '';
 
-        foreach ($this->catalog as $category => $config) {
-            foreach ($config['keywords'] as $keyword) {
+        $context = array_filter([$moodInfo, $scoreInfo, $summaryInfo, $highlightsInfo, $affirmationInfo]);
+        $contextStr = implode("\n", $context);
+
+        return <<<PROMPT
+Kamu adalah asisten rekomendasi film yang ahli. Berdasarkan analisis mood mingguan pengguna berikut:
+
+{$contextStr}
+
+Berikan 3 rekomendasi film yang SANGAT SESUAI dengan kondisi emosional pengguna.
+
+KRITERIA PEMILIHAN FILM:
+- Jika mood positif (bahagia, senang, optimis): pilih film yang mempertahankan energi positif
+- Jika mood sedih/lelah: pilih film yang menghangatkan hati dan memberi kenyamanan
+- Jika mood cemas/stres: pilih film yang menenangkan dan grounding
+- Jika mood reflektif/nostalgia: pilih film yang bermakna dan kontemplatif
+- Jika mood termotivasi: pilih film yang inspiratif dan membangun semangat
+
+Kembalikan dalam format JSON EXACT berikut:
+{
+  "category": "string (joyful/comfort/grounding/reflective/motivational/balanced)",
+  "headline": "string (judul bagian dalam bahasa Indonesia, personal dan hangat)",
+  "description": "string (deskripsi singkat mengapa film-film ini cocok, dalam bahasa Indonesia)",
+  "movies": [
+    {
+      "title": "string (judul film dalam bahasa Inggris)",
+      "year": number (tahun rilis),
+      "tagline": "string (tagline singkat dalam bahasa Indonesia)",
+      "imdbId": "string atau null (format: tt1234567)",
+      "genres": ["string"] (maksimal 3 genre),
+      "reason": "string (alasan personal mengapa film ini cocok untuk mood pengguna, dalam bahasa Indonesia, gunakan 'kamu' bukan '%s')"
+    }
+  ]
+}
+
+PENTING:
+- Pilih film-film yang BERAGAM (berbeda genre, tahun, style)
+- Film harus NYATA dan TERKENAL (bukan fiksi)
+- Alasan harus PERSONAL dan terkait langsung dengan kondisi mood pengguna
+- Gunakan bahasa Indonesia yang hangat dan empatik
+- Jangan gunakan placeholder seperti %s dalam reason
+PROMPT;
+    }
+
+    /**
+     * Fallback recommendations when AI is unavailable.
+     */
+    private function getFallbackRecommendations(string $mood, ?int $moodScore, string $moodLabel): array
+    {
+        // Simple category resolution based on mood keywords
+        $category = $this->resolveCategory($mood, $moodScore);
+
+        $fallbackMovies = [
+            'joyful' => [
+                ['title' => 'La La Land', 'year' => 2016, 'imdbId' => 'tt3783958', 'genres' => ['Musikal', 'Romansa'], 'tagline' => 'Musikal modern tentang mimpi dan cinta.', 'reason' => 'Film penuh warna dan musik yang cocok untuk mempertahankan mood positifmu.'],
+                ['title' => 'The Grand Budapest Hotel', 'year' => 2014, 'imdbId' => 'tt2278388', 'genres' => ['Komedi', 'Petualangan'], 'tagline' => 'Komedi visual penuh warna.', 'reason' => 'Humor unik dan visual cerah yang sempurna untuk menjaga semangatmu.'],
+                ['title' => 'Paddington 2', 'year' => 2017, 'imdbId' => 'tt4468740', 'genres' => ['Keluarga', 'Komedi'], 'tagline' => 'Petualangan beruang paling optimis.', 'reason' => 'Kehangatan dan kebaikan yang akan membuat hatimu semakin ringan.'],
+            ],
+            'comfort' => [
+                ['title' => 'About Time', 'year' => 2013, 'imdbId' => 'tt2194499', 'genres' => ['Drama', 'Romansa'], 'tagline' => 'Cinta dan kesempatan kedua.', 'reason' => 'Kisah hangat yang mengingatkan pentingnya momen-momen kecil dalam hidup.'],
+                ['title' => 'Chef', 'year' => 2014, 'imdbId' => 'tt2883512', 'genres' => ['Drama', 'Komedi'], 'tagline' => 'Makanan hangat untuk hati lelah.', 'reason' => 'Perjalanan menyembuhkan diri lewat passion dan keluarga.'],
+                ['title' => 'Little Women', 'year' => 2019, 'imdbId' => 'tt3281548', 'genres' => ['Drama', 'Keluarga'], 'tagline' => 'Ikatan keluarga yang menghangatkan.', 'reason' => 'Kisah persaudaraan yang memberi ruang aman untuk perasaanmu.'],
+            ],
+            'grounding' => [
+                ['title' => 'The Secret Life of Walter Mitty', 'year' => 2013, 'imdbId' => 'tt0359950', 'genres' => ['Petualangan', 'Drama'], 'tagline' => 'Petualangan menemukan diri sendiri.', 'reason' => 'Inspirasi untuk melangkah keluar dari zona nyaman dengan tenang.'],
+                ['title' => 'Finding Nemo', 'year' => 2003, 'imdbId' => 'tt0266543', 'genres' => ['Animasi', 'Petualangan'], 'tagline' => 'Petualangan laut yang menenangkan.', 'reason' => 'Keindahan laut dan humor ringan yang membantu meredakan pikiran.'],
+                ['title' => 'A Beautiful Day in the Neighborhood', 'year' => 2019, 'imdbId' => 'tt3224458', 'genres' => ['Drama', 'Biografi'], 'tagline' => 'Ketenangan ala Mr. Rogers.', 'reason' => 'Pendekatan lembut untuk menghadapi emosi yang overwhelming.'],
+            ],
+            'reflective' => [
+                ['title' => 'Her', 'year' => 2013, 'imdbId' => 'tt1798709', 'genres' => ['Drama', 'Romansa'], 'tagline' => 'Cinta di era digital.', 'reason' => 'Film kontemplatif yang memberi ruang untuk introspeksi mendalam.'],
+                ['title' => 'Before Sunrise', 'year' => 1995, 'imdbId' => 'tt0112471', 'genres' => ['Drama', 'Romansa'], 'tagline' => 'Percakapan malam yang bermakna.', 'reason' => 'Dialog mendalam yang cocok untuk suasana hati reflektif.'],
+                ['title' => 'Lost in Translation', 'year' => 2003, 'imdbId' => 'tt0335266', 'genres' => ['Drama'], 'tagline' => 'Kesunyian Tokyo yang penuh arti.', 'reason' => 'Film tentang koneksi manusia yang cocok untuk momen merenung.'],
+            ],
+            'motivational' => [
+                ['title' => 'The Pursuit of Happyness', 'year' => 2006, 'imdbId' => 'tt0454921', 'genres' => ['Drama', 'Biografi'], 'tagline' => 'Perjuangan mengejar mimpi.', 'reason' => 'Kisah nyata yang membakar semangat untuk terus berjuang.'],
+                ['title' => 'Hidden Figures', 'year' => 2016, 'imdbId' => 'tt4846340', 'genres' => ['Drama', 'Biografi'], 'tagline' => 'Ilmuwan yang mengguncang batasan.', 'reason' => 'Inspirasi untuk berani melampaui ekspektasi orang lain.'],
+                ['title' => 'Moneyball', 'year' => 2011, 'imdbId' => 'tt1210166', 'genres' => ['Drama', 'Olahraga'], 'tagline' => 'Berpikir di luar kebiasaan.', 'reason' => 'Strategi dan keberanian untuk melakukan terobosan.'],
+            ],
+            'balanced' => [
+                ['title' => 'Inside Out', 'year' => 2015, 'imdbId' => 'tt2096673', 'genres' => ['Animasi', 'Keluarga'], 'tagline' => 'Memahami emosi lewat petualangan.', 'reason' => 'Film yang mengajarkan bahwa semua emosi punya tempatnya.'],
+                ['title' => 'Soul', 'year' => 2020, 'imdbId' => 'tt2948372', 'genres' => ['Animasi', 'Petualangan'], 'tagline' => 'Mencari makna hidup.', 'reason' => 'Refleksi indah tentang apa yang membuat hidup bermakna.'],
+                ['title' => 'The Peanut Butter Falcon', 'year' => 2019, 'imdbId' => 'tt4364194', 'genres' => ['Petualangan', 'Drama'], 'tagline' => 'Persahabatan di perjalanan.', 'reason' => 'Cerita hangat yang memberi dorongan lembut untuk hari-harimu.'],
+            ],
+        ];
+
+        $headlines = [
+            'joyful' => 'Pertahankan vibe positifmu!',
+            'comfort' => 'Pelukan hangat lewat layar.',
+            'grounding' => 'Teman penenang pikiran.',
+            'reflective' => 'Teman merenung penuh makna.',
+            'motivational' => 'Bahan bakar produktif.',
+            'balanced' => 'Pilihan hangat untuk mood yang campur aduk.',
+        ];
+
+        $descriptions = [
+            'joyful' => 'Film-film cerah ini siap menjaga semangatmu tetap tinggi sepanjang minggu.',
+            'comfort' => 'Saat hati butuh kehangatan, kisah-kisah lembut ini membantu terasa lebih ringan.',
+            'grounding' => 'Cerita menenangkan ini mengajakmu bernapas lebih pelan.',
+            'reflective' => 'Film bertempo lembut yang membantu merangkai sudut pandang baru.',
+            'motivational' => 'Kisah perjuangan inspiratif yang memantik aksi berikutnya.',
+            'balanced' => 'Tontonan seimbang penuh empati untuk mood yang belum pasti.',
+        ];
+
+        $movies = $fallbackMovies[$category] ?? $fallbackMovies['balanced'];
+        $headline = $headlines[$category] ?? $headlines['balanced'];
+        $description = $descriptions[$category] ?? $descriptions['balanced'];
+
+        return [
+            'category' => $category,
+            'moodLabel' => $mood !== '' ? $mood : null,
+            'headline' => $headline,
+            'description' => $description,
+            'items' => $movies,
+        ];
+    }
+
+    /**
+     * Resolve category based on mood keywords and score.
+     */
+    private function resolveCategory(string $mood, ?int $moodScore): string
+    {
+        $haystack = Str::lower($mood);
+
+        $categoryKeywords = [
+            'joyful' => ['bahagia', 'senang', 'gembira', 'ceria', 'optimis', 'positif', 'bersemangat', 'lega'],
+            'comfort' => ['sedih', 'murung', 'lelah', 'letih', 'kecewa', 'down', 'capek', 'patah', 'galau', 'sepi', 'sunyi', 'kesepian'],
+            'grounding' => ['cemas', 'gelisah', 'khawatir', 'resah', 'stres', 'stress', 'tegang', 'panik', 'overwhelmed', 'kacau', 'takut'],
+            'reflective' => ['tenang', 'damai', 'reflektif', 'nostalgia', 'merenung', 'kontemplatif', 'campur', 'campuran', 'mixed'],
+            'motivational' => ['termotivasi', 'ambisius', 'ambitious', 'fokus', 'produktif', 'berdaya', 'tekad', 'berani', 'gigih', 'semangat'],
+        ];
+
+        foreach ($categoryKeywords as $category => $keywords) {
+            foreach ($keywords as $keyword) {
                 if ($keyword !== '' && Str::contains($haystack, $keyword)) {
                     return $category;
                 }
             }
         }
 
+        // Score-based fallback
         if ($moodScore !== null) {
-            if ($moodScore >= 70) {
-                return 'joyful';
-            }
-
-            if ($moodScore <= 40) {
-                return 'comfort';
-            }
-
-            if ($moodScore >= 55) {
-                return 'motivational';
-            }
+            if ($moodScore >= 70) return 'joyful';
+            if ($moodScore <= 40) return 'comfort';
+            if ($moodScore >= 55) return 'motivational';
         }
 
-        return self::DEFAULT_CATEGORY;
+        return 'balanced';
     }
 
     private function normalizeMood(string $mood): string
     {
         return (string) Str::of($mood)->lower()->trim();
-    }
-
-    private function formatCopy(string $copy, string $moodLabel): string
-    {
-        return Str::contains($copy, '%s') ? sprintf($copy, $moodLabel) : $copy;
     }
 }

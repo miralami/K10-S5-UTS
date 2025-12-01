@@ -2,13 +2,15 @@
   "name": "uts_sem5-workspace",
   "version": "1.0.0",
   "private": true,
-  "description": "Workspace runner to start Laravel, Express WebSocket and React dev server together",
+  "description": "Workspace runner to start all services together",
   "scripts": {
-    "dev": "concurrently \"cd backend && php artisan serve --host=127.0.0.1 --port=8000\" \"node ./scripts/start-envoy.js\" \"cd grpc-service && npm run server:start\" \"cd grpc-service && npm run grpc:start\" \"cd frontend && npm run dev\"",
-    "dev:simple": "concurrently \"cd backend && php artisan serve --host=127.0.0.1 --port=8000\" \"cd grpc-service && npm run server:start\" \"cd frontend && npm run dev\"",
-    "envoy:start": "node ./scripts/start-envoy.js",
-    "envoy:stop": "node ./scripts/stop-envoy.js",
-    "install-all": "npm --prefix grpc-service install && npm --prefix frontend install && (cd backend && echo 'Run composer install in backend if needed')",
+    "dev": "concurrently -n \"BACKEND,FRONTEND,WEBSOCKET,AI\" -c \"blue,green,yellow,magenta\" \"npm run dev:backend\" \"npm run dev:frontend\" \"npm run dev:websocket\" \"npm run dev:ai\"",
+    "dev:no-ai": "concurrently -n \"BACKEND,FRONTEND,WEBSOCKET\" -c \"blue,green,yellow\" \"npm run dev:backend\" \"npm run dev:frontend\" \"npm run dev:websocket\"",
+    "dev:backend": "cd backend && php artisan serve --host=127.0.0.1 --port=8000",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:websocket": "cd grpc-service && npm run server:start",
+    "dev:ai": "cd ai-service && .\\venv\\Scripts\\python.exe server.py",
+    "install-all": "npm install && cd backend && composer install && cd ../frontend && npm install && cd ../grpc-service && npm install",
     "gen:proto": "node ./scripts/gen-proto.js"
   },
   "devDependencies": {

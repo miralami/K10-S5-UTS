@@ -1,6 +1,16 @@
 import express from 'express';
 import { createServer } from 'http';
 import WebSocket, { WebSocketServer } from 'ws';
+import jwt from 'jsonwebtoken';
+import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Load env from backend to get JWT_SECRET
+dotenv.config({ path: path.resolve(__dirname, '../../backend/.env') });
 
 const app = express();
 const server = createServer(app);
@@ -8,6 +18,11 @@ const server = createServer(app);
 app.use(express.static('public'));
 
 const PORT = process.env.PORT || 8080;
+const JWT_SECRET = process.env.JWT_SECRET;
+
+if (!JWT_SECRET) {
+  console.warn('⚠️  JWT_SECRET not found in environment. JWT verification will be skipped (dev mode).');
+}
 
 /**
  * UserManager - Mengelola semua user yang terkoneksi
@@ -211,7 +226,7 @@ wss.on('connection', function connection(ws, request) {
 
       // Handle auth message
       if (parsed.type === 'auth') {
-        const { userId, userName } = parsed;
+        const { userId, userName, token } = parsed;
         
         if (!userId || !userName) {
           userManager.sendToSocket(ws, {
@@ -219,6 +234,35 @@ wss.on('connection', function connection(ws, request) {
             message: 'userId and userName required for authentication',
           });
           return;
+        }
+
+        // Verify JWT token if JWT_SECRET is configured
+        if (JWT_SECRET && token) {
+          try {
+            const decoded = jwt.verify(token, JWT_SECRET);
+            // Optionally verify that the token's sub matches the userId
+            if (String(decoded.sub) !== String(userId)) {
+              console.warn(`Token sub (${decoded.sub}) does not match userId (${userId})`);
+              userManager.sendToSocket(ws, {
+                type: 'error',
+                message: 'Token user mismatch',
+              });
+              return;
+            }
+            console.log(`JWT verified for user ${userName} (${userId})`);
+          } catch (err) {
+            console.warn(`JWT verification failed for ${userName}: ${err.message}`);
+            userManager.sendToSocket(ws, {
+              type: 'error',
+              message: 'Invalid or expired token',
+            });
+            return;
+          }
+        } else if (JWT_SECRET && !token) {
+          // JWT_SECRET is set but no token provided - reject in production
+          console.warn(`No token provided for ${userName}, but JWT_SECRET is set`);
+          // Allow for now with warning (remove this in production)
+          console.warn('⚠️  Allowing unauthenticated connection (dev mode)');
         }
 
         // Register user

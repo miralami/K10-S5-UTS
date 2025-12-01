@@ -3,20 +3,41 @@ import PropTypes from 'prop-types';
 import { format, startOfWeek, endOfWeek, isSameDay } from 'date-fns';
 import { id } from 'date-fns/locale';
 
+// --- THEME CONFIGURATION (Warm Organic & Minimal Sans - matching Home.jsx) ---
+const THEME = {
+  colors: {
+    bg: '#FDFCF8', // Warm off-white
+    cardBg: '#FFFFFF',
+    textPrimary: '#2D3748',
+    textSecondary: '#718096',
+    textMuted: '#A0AEC0',
+    accent: '#D6BCFA', // Soft Purple
+    accentHover: '#B794F4',
+    warmHighlight: '#F6E05E', // Soft Yellow
+    success: '#68D391',
+    border: '#E2E8F0',
+    borderLight: '#EDF2F7',
+  },
+  fonts: {
+    sans: '"Inter", sans-serif',
+    serif: '"Merriweather", serif',
+  },
+};
+
 // Helper untuk greeting dinamis
 const getTimeBasedGreeting = () => {
   const hour = new Date().getHours();
 
   if (hour >= 5 && hour < 10) {
-    return { greeting: 'Selamat pagi! ☀️', message: 'Semoga hari ini penuh energi positif' };
+    return { greeting: 'Good Morning', message: 'Start your day with reflection' };
   } else if (hour >= 10 && hour < 15) {
-    return { greeting: 'Halo! 👋', message: 'Ayo lihat perjalanan moodmu minggu ini' };
+    return { greeting: 'Good Afternoon', message: "Check your week's journey" };
   } else if (hour >= 15 && hour < 18) {
-    return { greeting: 'Selamat sore! 🌤️', message: 'Waktunya refleksi sejenak' };
+    return { greeting: 'Good Evening', message: 'Time for a moment of clarity' };
   } else if (hour >= 18 && hour < 22) {
-    return { greeting: 'Selamat malam! 🌙', message: 'Lihat catatan harianmu hari ini' };
+    return { greeting: 'Good Night', message: "Review today's thoughts" };
   } else {
-    return { greeting: 'Masih terjaga? 🦉', message: 'Jangan lupa istirahat ya' };
+    return { greeting: 'Still awake?', message: "Don't forget to rest" };
   }
 };
 import {
@@ -51,8 +72,9 @@ import {
   Badge,
   Wrap,
   WrapItem,
+  Tag,
+  TagLabel,
 } from '@chakra-ui/react';
-import { GlassCard } from '../components/GlassCard';
 import CircularProgress from '../components/CircularProgress';
 import { motion } from 'framer-motion';
 import MoodEmoji from '../components/MoodEmoji';
@@ -74,6 +96,37 @@ import {
   generateWeeklyForCurrentUser,
 } from '../services/journalService';
 
+// Framer Motion wrapper
+const MotionBox = motion(Box);
+
+// Warm Card Component - Following AI guide principles
+const WarmCard = ({ children, hover = true, ...props }) => (
+  <MotionBox
+    bg="white"
+    borderRadius="2xl"
+    p={6}
+    border="1px solid"
+    borderColor="gray.200"
+    boxShadow="0 4px 20px rgba(0, 0, 0, 0.06)"
+    transition="all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)"
+    {...(hover && {
+      _hover: {
+        boxShadow: '0 8px 30px rgba(0, 0, 0, 0.1)',
+        transform: 'translateY(-2px)',
+        borderColor: 'gray.300',
+      },
+    })}
+    {...props}
+  >
+    {children}
+  </MotionBox>
+);
+
+WarmCard.propTypes = {
+  children: PropTypes.node.isRequired,
+  hover: PropTypes.bool,
+};
+
 // Helper component for info cards - commented out as it's unused currently
 // function InfoCard({ label, value, color = 'whiteAlpha.800' }) {
 //   return (
@@ -93,8 +146,8 @@ const POSTER_FALLBACK =
   'data:image/svg+xml;utf8,' +
   encodeURIComponent(
     "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 600 900'>" +
-      "<rect width='100%' height='100%' fill='%23101720'/>" +
-      "<text x='50%' y='50%' fill='%23a3a3a3' font-size='22' text-anchor='middle' dominant-baseline='middle'>No Image</text>" +
+      "<rect width='100%' height='100%' fill='%23F7FAFC'/>" +
+      "<text x='50%' y='50%' fill='%23A0AEC0' font-size='22' text-anchor='middle' dominant-baseline='middle'>No Image</text>" +
       '</svg>'
   );
 
@@ -113,16 +166,18 @@ function getOmdbHref(movie) {
 function MoodMovieCard({ movie }) {
   return (
     <Box
-      bg="whiteAlpha.100"
-      borderRadius="lg"
+      bg="white"
+      borderRadius="xl"
       border="1px solid"
-      borderColor="whiteAlpha.200"
+      borderColor="gray.100"
       overflow="hidden"
       display="flex"
       flexDirection="column"
       h="100%"
       _hover={{
-        borderColor: 'pink.300',
+        borderColor: 'purple.200',
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.06)',
+        transform: 'translateY(-2px)',
       }}
       transition="all 0.3s"
     >
@@ -141,38 +196,38 @@ function MoodMovieCard({ movie }) {
           />
         </Link>
       ) : (
-        <Flex align="center" justify="center" w="100%" h="120px" bg="whiteAlpha.200">
+        <Flex align="center" justify="center" w="100%" h="120px" bg="gray.50">
           <Text fontSize="2xl">🎬</Text>
         </Flex>
       )}
-      <Stack spacing={1.5} p={2} flex="1">
+      <Stack spacing={1.5} p={3} flex="1">
         <Box>
-          <Heading size="xs" color="pink.200" noOfLines={1}>
+          <Heading size="xs" color={THEME.colors.textPrimary} noOfLines={1}>
             {movie.title}
           </Heading>
           <HStack spacing={1} mt={1}>
             {movie.year && (
-              <Badge colorScheme="purple" variant="subtle" fontSize="2xs">
-                {movie.year}
-              </Badge>
+              <Tag size="sm" borderRadius="full" variant="subtle" colorScheme="purple" bg="purple.50">
+                <TagLabel fontSize="2xs">{movie.year}</TagLabel>
+              </Tag>
             )}
             {movie.imdbId && (
-              <Badge colorScheme="pink" variant="outline" fontSize="2xs">
-                IMDb
-              </Badge>
+              <Tag size="sm" borderRadius="full" variant="outline" colorScheme="orange">
+                <TagLabel fontSize="2xs">IMDb</TagLabel>
+              </Tag>
             )}
           </HStack>
         </Box>
-        <Text fontSize="2xs" color="whiteAlpha.900" lineHeight="short" noOfLines={2}>
+        <Text fontSize="xs" color={THEME.colors.textSecondary} lineHeight="short" noOfLines={2}>
           {movie.reason}
         </Text>
         {Array.isArray(movie.genres) && movie.genres.length > 0 && (
           <Wrap spacing={1}>
             {movie.genres.slice(0, 3).map((genre) => (
               <WrapItem key={genre}>
-                <Badge colorScheme="cyan" variant="subtle" fontSize="2xs">
-                  {genre}
-                </Badge>
+                <Tag size="sm" borderRadius="full" variant="subtle" colorScheme="teal" bg="teal.50">
+                  <TagLabel fontSize="2xs">{genre}</TagLabel>
+                </Tag>
               </WrapItem>
             ))}
           </Wrap>
@@ -523,10 +578,10 @@ export default function Dashboard() {
   // Loading state
   if (weeklyLoading || notesLoading) {
     const quotes = [
-      "Refleksi adalah jembatan antara pengalaman dan kebijaksanaan ✨",
-      "Setiap catatan adalah langkah menuju pemahaman diri 🌟",
-      "Tulisanmu hari ini adalah hadiah untuk dirimu di masa depan 💫",
-      "Dalam ketenangan refleksi, kita menemukan kekuatan 🌙"
+      "Reflection is the bridge between experience and wisdom ✨",
+      "Every note is a step towards self-understanding 🌟",
+      "Your words today are a gift to your future self 💫",
+      "In the stillness of reflection, we find strength 🌙"
     ];
     const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
 
@@ -535,28 +590,41 @@ export default function Dashboard() {
         justify="center"
         align="center"
         minH="100vh"
-        bgGradient="linear(to-br, #1a1a2e, #16213e, #0f3460, #533483)"
+        bg={THEME.colors.bg}
         flexDirection="column"
         gap={6}
         position="relative"
         overflow="hidden"
-        _before={{
-          content: '""',
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          bgImage:
-            'radial-gradient(circle at 20% 50%, rgba(56, 189, 248, 0.1) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(167, 139, 250, 0.1) 0%, transparent 50%)',
-          pointerEvents: 'none',
-        }}
       >
+        {/* Floating Background Elements - Subtle & Organic */}
+        <Box
+          position="absolute"
+          top="-10%"
+          right="-5%"
+          w="500px"
+          h="500px"
+          bg="radial-gradient(circle, rgba(214, 188, 250, 0.15) 0%, rgba(255,255,255,0) 70%)"
+          borderRadius="full"
+          filter="blur(60px)"
+          zIndex={0}
+        />
+        <Box
+          position="absolute"
+          bottom="10%"
+          left="-10%"
+          w="400px"
+          h="400px"
+          bg="radial-gradient(circle, rgba(246, 224, 94, 0.1) 0%, rgba(255,255,255,0) 70%)"
+          borderRadius="full"
+          filter="blur(50px)"
+          zIndex={0}
+        />
+
         {/* Breathing Circle Animation */}
         <motion.div
           animate={{
-            scale: [1, 1.2, 1],
-            opacity: [0.3, 0.6, 0.3],
+            scale: [1, 1.1, 1],
+            opacity: [0.4, 0.7, 0.4],
           }}
           transition={{
             duration: 3,
@@ -565,11 +633,11 @@ export default function Dashboard() {
           }}
         >
           <Box
-            w="200px"
-            h="200px"
+            w="150px"
+            h="150px"
             borderRadius="full"
-            bgGradient="linear(to-br, cyan.400, purple.400)"
-            filter="blur(40px)"
+            bg="linear-gradient(135deg, rgba(214, 188, 250, 0.4) 0%, rgba(183, 148, 244, 0.3) 100%)"
+            filter="blur(30px)"
           />
         </motion.div>
 
@@ -583,7 +651,7 @@ export default function Dashboard() {
             ease: 'easeOut',
           }}
         >
-          <Text fontSize="6xl">📔</Text>
+          <Text fontSize="5xl">📔</Text>
         </motion.div>
 
         {/* Loading text */}
@@ -593,10 +661,10 @@ export default function Dashboard() {
           transition={{ delay: 0.3, duration: 0.6 }}
         >
           <Stack spacing={3} align="center" textAlign="center" maxW="md" px={6}>
-            <Text color="whiteAlpha.900" fontSize="2xl" fontWeight="bold">
-              Memuat refleksi harianmu
+            <Text color={THEME.colors.textPrimary} fontSize="xl" fontWeight="500">
+              Loading your reflections
             </Text>
-            <Text color="whiteAlpha.600" fontSize="sm" fontStyle="italic">
+            <Text color={THEME.colors.textSecondary} fontSize="sm" fontStyle="italic">
               {randomQuote}
             </Text>
           </Stack>
@@ -607,335 +675,324 @@ export default function Dashboard() {
 
   return (
     <Box
-      h="100vh"
-      overflow="hidden"
-      bgGradient="linear(to-br, #1a1a2e, #16213e, #0f3460, #533483)"
-      color="white"
+      minH="100vh"
+      bg={THEME.colors.bg}
+      color={THEME.colors.textPrimary}
+      fontFamily={THEME.fonts.sans}
       position="relative"
-      _before={{
-        content: '""',
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        bgImage:
-          'radial-gradient(circle at 20% 50%, rgba(56, 189, 248, 0.05) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(167, 139, 250, 0.05) 0%, transparent 50%)',
-        pointerEvents: 'none',
-      }}
+      overflowX="hidden"
     >
-      <Container maxW="7xl" h="full" py={3} position="relative" zIndex={1}>
-        <Stack spacing={3} h="full">
-          {/* Header - Compact */}
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
+      {/* Floating Background Elements - Subtle & Organic */}
+      <Box
+        position="absolute"
+        top="-10%"
+        right="-5%"
+        w="500px"
+        h="500px"
+        bg="radial-gradient(circle, rgba(214, 188, 250, 0.12) 0%, rgba(255,255,255,0) 70%)"
+        borderRadius="full"
+        filter="blur(60px)"
+        zIndex={0}
+        pointerEvents="none"
+      />
+      <Box
+        position="absolute"
+        bottom="10%"
+        left="-10%"
+        w="400px"
+        h="400px"
+        bg="radial-gradient(circle, rgba(246, 224, 94, 0.08) 0%, rgba(255,255,255,0) 70%)"
+        borderRadius="full"
+        filter="blur(50px)"
+        zIndex={0}
+        pointerEvents="none"
+      />
+
+      <Container maxW="7xl" pt={{ base: 6, md: 10 }} pb={10} position="relative" zIndex={1}>
+        <Stack spacing={8}>
+          {/* Header Section - Minimal & Welcoming */}
+          <MotionBox
+            initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
+            transition={{ duration: 0.8, ease: [0.2, 0.65, 0.3, 0.9] }}
           >
-            <GlassCard p={3} backdropFilter="blur(20px)">
-              <Flex justify="space-between" align="center" gap={3}>
-                <HStack spacing={3}>
-                  <Box>
-                    <HStack spacing={2} mb={1}>
-                      <Badge
-                        colorScheme="purple"
-                        px={2}
-                        py={0.5}
-                        borderRadius="full"
-                        textTransform="none"
-                        fontSize="xs"
-                      >
-                        🔒 Private
-                      </Badge>
-                      <Badge
-                        colorScheme="pink"
-                        px={2}
-                        py={0.5}
-                        borderRadius="full"
-                        textTransform="none"
-                        fontSize="xs"
-                      >
-                        Refleksi
-                      </Badge>
-                    </HStack>
-                    <Heading
-                      size="md"
-                      bgGradient="linear(to-r, orange.200, pink.200)"
-                      bgClip="text"
-                    >
-                      {greeting.greeting}
-                    </Heading>
-                    <Text color="whiteAlpha.600" fontSize="xs">
-                      {format(selectedDate, 'EEEE, d MMM yyyy', { locale: id })}
-                    </Text>
-                  </Box>
-                </HStack>
-                <HStack spacing={2}>
-                  <IconButton
-                    icon={<RepeatIcon />}
-                    onClick={() => {
-                      fetchWeeklySummaryData();
-                      fetchAllNotes();
-                    }}
-                    isLoading={weeklyLoading || notesLoading}
-                    variant="ghost"
-                    colorScheme="purple"
-                    _hover={{ bg: 'whiteAlpha.200' }}
-                    size="sm"
-                    aria-label="Refresh"
-                  />
-                  <Button
-                    colorScheme="pink"
-                    size="sm"
-                    onClick={() => (window.location.href = '/')}
-                    leftIcon={<AddIcon />}
-                  >
-                    Tulis
-                  </Button>
-                </HStack>
-              </Flex>
-            </GlassCard>
-          </motion.div>
+            <Flex justify="space-between" align="flex-start" wrap="wrap" gap={4}>
+              <Stack spacing={1}>
+                <Text fontSize="sm" color={THEME.colors.textSecondary} letterSpacing="wide" textTransform="uppercase">
+                  {format(selectedDate, 'EEEE, MMMM d, yyyy', { locale: id })}
+                </Text>
+                <Heading
+                  fontSize={{ base: '3xl', md: '4xl' }}
+                  fontWeight="300"
+                  fontFamily={THEME.fonts.serif}
+                  letterSpacing="-0.02em"
+                  color={THEME.colors.textPrimary}
+                >
+                  {greeting.greeting}
+                </Heading>
+                <Text fontSize="md" color={THEME.colors.textSecondary} maxW="xl" mt={1}>
+                  {greeting.message}
+                </Text>
+              </Stack>
+              <HStack spacing={3}>
+                <IconButton
+                  icon={<RepeatIcon />}
+                  onClick={() => {
+                    fetchWeeklySummaryData();
+                    fetchAllNotes();
+                  }}
+                  isLoading={weeklyLoading || notesLoading}
+                  variant="ghost"
+                  size="md"
+                  borderRadius="full"
+                  color={THEME.colors.textSecondary}
+                  _hover={{ bg: 'gray.100' }}
+                  aria-label="Refresh"
+                />
+                <Button
+                  size="md"
+                  onClick={() => (window.location.href = '/')}
+                  leftIcon={<AddIcon />}
+                  bg="gray.900"
+                  color="white"
+                  borderRadius="full"
+                  px={6}
+                  fontWeight="500"
+                  _hover={{ bg: 'gray.700', transform: 'translateY(-2px)' }}
+                  _active={{ transform: 'scale(0.98)' }}
+                  transition="all 0.2s"
+                  boxShadow="lg"
+                >
+                  New Entry
+                </Button>
+              </HStack>
+            </Flex>
+          </MotionBox>
 
           {/* Sidebar Toggle Button (Mobile) */}
           {showSidebarToggle && (
-            <Box mb={4}>
+            <Box>
               <IconButton
                 icon={<HamburgerIcon />}
                 onClick={onSidebarToggle}
                 variant="ghost"
                 aria-label="Toggle Sidebar"
                 size="lg"
-                _hover={{ bg: 'whiteAlpha.200' }}
+                borderRadius="full"
+                _hover={{ bg: 'gray.100' }}
               />
             </Box>
           )}
 
           <Grid
-            templateColumns={{ base: '1fr', xl: isSidebarOpen ? '320px 1fr' : '0 1fr' }}
-            gap={3}
-            flex="1"
-            overflow="hidden"
+            templateColumns={{ base: '1fr', xl: isSidebarOpen ? '340px 1fr' : '1fr' }}
+            gap={8}
           >
             {/* Left Side - Calendar & Notes */}
             <Box
-              display={{ base: isSidebarOpen ? 'block' : 'none', xl: 'block' }}
-              width={{ base: 'full', xl: isSidebarOpen ? '320px' : '0' }}
-              transition="width 0.2s"
-              overflow="hidden"
+              display={{ base: isSidebarOpen ? 'block' : 'none', xl: isSidebarOpen ? 'block' : 'none' }}
             >
-              <Stack
-                spacing={3}
-                h="full"
-                overflow="auto"
-                pr={2}
-                sx={{
-                  '&::-webkit-scrollbar': { width: '6px' },
-                  '&::-webkit-scrollbar-track': { bg: 'whiteAlpha.100' },
-                  '&::-webkit-scrollbar-thumb': { bg: 'whiteAlpha.400', borderRadius: 'full' },
-                }}
-              >
-                {/* Calendar */}
-                <motion.div
+              <Stack spacing={6}>
+                {/* Calendar Card */}
+                <MotionBox
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.5, delay: 0.1 }}
                 >
-                  <GlassCard p={3} _hover={{ borderColor: 'purple.300' }} transition="all 0.3s">
+                  <WarmCard p={5}>
                     <JournalCalendar
                       selectedDate={selectedDate}
                       onSelectDate={handleDateSelect}
                       notes={allNotes}
                     />
-                    <Flex justify="space-between" mt={2} align="center" gap={1}>
+                    <Flex justify="space-between" mt={4} align="center" gap={2}>
                       <IconButton
                         icon={<ChevronLeftIcon />}
                         onClick={goToPreviousWeek}
-                        size="xs"
-                        variant="ghost"
-                        colorScheme="purple"
+                        size="sm"
+                        variant="solid"
+                        bg="gray.100"
+                        color="gray.600"
+                        borderRadius="full"
                         aria-label="Previous week"
+                        _hover={{ bg: 'purple.100', color: 'purple.600' }}
                       />
-                      <Text fontSize="xs" fontWeight="medium" color="orange.200" textAlign="center">
-                        {format(dateRange.start, 'd MMM', { locale: id })} -{' '}
-                        {format(dateRange.end, 'd MMM', { locale: id })}
-                      </Text>
+                      <Tag size="md" borderRadius="full" variant="subtle" colorScheme="purple" bg="purple.50" px={4}>
+                        <TagLabel fontWeight="500" color="purple.700">
+                          {format(dateRange.start, 'd MMM', { locale: id })} - {format(dateRange.end, 'd MMM', { locale: id })}
+                        </TagLabel>
+                      </Tag>
                       <IconButton
                         icon={<ChevronRightIcon />}
                         onClick={goToNextWeek}
-                        size="xs"
-                        variant="ghost"
-                        colorScheme="purple"
+                        size="sm"
+                        variant="solid"
+                        bg="gray.100"
+                        color="gray.600"
+                        borderRadius="full"
                         aria-label="Next week"
+                        _hover={{ bg: 'purple.100', color: 'purple.600' }}
                       />
                     </Flex>
-                  </GlassCard>
-                </motion.div>
+                  </WarmCard>
+                </MotionBox>
 
-                {/* Daily Notes */}
-                <motion.div
+                {/* Daily Notes Card */}
+                <MotionBox
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.5, delay: 0.2 }}
                 >
-                  <GlassCard
-                    p={3}
-                    _hover={{ borderColor: 'pink.300' }}
-                    transition="all 0.3s"
-                    maxH="calc(100vh - 420px)"
+                  <WarmCard
+                    p={5}
+                    maxH="calc(100vh - 500px)"
                     overflow="auto"
                     sx={{
-                      '&::-webkit-scrollbar': { width: '6px' },
-                      '&::-webkit-scrollbar-track': { bg: 'whiteAlpha.100' },
-                      '&::-webkit-scrollbar-thumb': { bg: 'whiteAlpha.400', borderRadius: 'full' },
+                      '&::-webkit-scrollbar': { width: '4px' },
+                      '&::-webkit-scrollbar-track': { bg: 'transparent' },
+                      '&::-webkit-scrollbar-thumb': { bg: 'gray.200', borderRadius: 'full' },
                     }}
                   >
-                    <Flex justify="space-between" align="center" mb={2}>
+                    <Flex justify="space-between" align="center" mb={4}>
                       <HStack>
-                        <Heading size="sm">Catatan</Heading>
+                        <Heading size="sm" color={THEME.colors.textPrimary}>Notes</Heading>
                         <Text fontSize="lg">📝</Text>
                       </HStack>
                     </Flex>
 
                     {notesForSelectedDate.length === 0 ? (
-                      <Box textAlign="center" py={4} color="whiteAlpha.600">
-                        <Text fontSize="2xl" mb={1}>
-                          ✨
-                        </Text>
-                        <Text fontSize="sm">Belum ada catatan</Text>
+                      <Box textAlign="center" py={8}>
+                        <Text fontSize="3xl" mb={2}>✨</Text>
+                        <Text fontSize="sm" color={THEME.colors.textSecondary}>No notes for this day</Text>
+                        <Text fontSize="xs" color={THEME.colors.textMuted} mt={1}>Start writing to capture your thoughts</Text>
                       </Box>
                     ) : (
-                      <Stack spacing={2}>
+                      <Stack spacing={3}>
                         {notesForSelectedDate.map((note, idx) => (
-                          <motion.div
+                          <MotionBox
                             key={note.id}
-                            initial={{ opacity: 0, y: 20 }}
+                            initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.3, delay: idx * 0.05 }}
                           >
                             <Box
-                              p={2}
-                              bg="whiteAlpha.50"
-                              borderRadius="lg"
+                              p={4}
+                              bg="white"
+                              borderRadius="xl"
                               border="1px solid"
-                              borderColor="whiteAlpha.100"
+                              borderColor="gray.200"
+                              boxShadow="0 1px 3px rgba(0,0,0,0.04)"
                               _hover={{
-                                bg: 'whiteAlpha.100',
-                                borderColor: 'pink.300',
+                                borderColor: 'purple.300',
+                                boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
                               }}
                               transition="all 0.2s"
                             >
-                              <Flex justify="space-between" align="start" gap={2}>
+                              <Flex justify="space-between" align="start" gap={3}>
                                 <Box flex="1" minW="0">
-                                  <Flex align="center" mb={1}>
+                                  <Flex align="center" mb={2}>
                                     <Text
-                                      fontWeight="semibold"
-                                      fontSize="xs"
-                                      color="orange.200"
+                                      fontWeight="600"
+                                      fontSize="sm"
+                                      color={THEME.colors.textPrimary}
                                       noOfLines={1}
                                     >
-                                      {note.title || 'Tanpa Judul'}
+                                      {note.title || 'Untitled'}
                                     </Text>
                                     <Text
                                       fontSize="xs"
-                                      color="whiteAlpha.600"
+                                      color={THEME.colors.textMuted}
                                       ml={2}
                                       flexShrink={0}
                                     >
                                       {format(
-                                        new Date(
-                                          note.createdAt || note.note_date || note.updatedAt
-                                        ),
+                                        new Date(note.createdAt || note.note_date || note.updatedAt),
                                         'HH:mm'
                                       )}
                                     </Text>
                                   </Flex>
                                   <Text
-                                    fontSize="xs"
-                                    color="whiteAlpha.800"
+                                    fontSize="sm"
+                                    color={THEME.colors.textSecondary}
                                     noOfLines={2}
-                                    lineHeight="short"
+                                    lineHeight="tall"
                                   >
                                     {note.body}
                                   </Text>
                                 </Box>
-                                <HStack spacing={0.5}>
+                                <HStack spacing={1}>
                                   <IconButton
                                     icon={<EditIcon />}
-                                    size="xs"
-                                    variant="ghost"
+                                    size="sm"
+                                    variant="solid"
                                     aria-label="Edit"
-                                    colorScheme="purple"
+                                    borderRadius="full"
                                     isDisabled={!canEdit(note)}
                                     onClick={() => handleStartEdit(note)}
+                                    bg="gray.100"
+                                    color="gray.500"
+                                    _hover={{ bg: 'purple.100', color: 'purple.600' }}
                                   />
                                   <IconButton
                                     icon={<DeleteIcon />}
-                                    size="xs"
-                                    variant="ghost"
-                                    colorScheme="red"
-                                    aria-label="Hapus"
+                                    size="sm"
+                                    variant="solid"
+                                    aria-label="Delete"
+                                    borderRadius="full"
                                     onClick={() => handleDeleteNote(note)}
                                     isLoading={isDeleting}
+                                    bg="gray.100"
+                                    color="gray.500"
+                                    _hover={{ bg: 'red.100', color: 'red.500' }}
                                   />
                                 </HStack>
                               </Flex>
                             </Box>
-                          </motion.div>
+                          </MotionBox>
                         ))}
                       </Stack>
                     )}
-                  </GlassCard>
-                </motion.div>
+                  </WarmCard>
+                </MotionBox>
               </Stack>
             </Box>
 
             {/* Right Side - Weekly Summary */}
-            <Box
-              overflow="auto"
-              h="full"
-              sx={{
-                '&::-webkit-scrollbar': { width: '6px' },
-                '&::-webkit-scrollbar-track': { bg: 'whiteAlpha.100' },
-                '&::-webkit-scrollbar-thumb': { bg: 'whiteAlpha.400', borderRadius: 'full' },
-              }}
-            >
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
+            <Box>
+              <MotionBox
+                initial={{ opacity: 0, scale: 0.98 }}
                 animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.5, delay: 0.15 }}
+                transition={{ duration: 0.6, delay: 0.15 }}
               >
-                <Box
-                  bg="rgba(15, 23, 42, 0.75)"
-                  borderRadius="xl"
-                  p={3}
-                  border="1px solid"
-                  borderColor="whiteAlpha.200"
-                  backdropFilter="blur(20px)"
-                  boxShadow="0 0 40px rgba(167, 139, 250, 0.1)"
-                >
-                  <Stack spacing={3}>
-                    <Flex justify="space-between" align="center">
+                <WarmCard p={{ base: 5, md: 8 }}>
+                  <Stack spacing={6}>
+                    <Flex justify="space-between" align="center" wrap="wrap" gap={3}>
                       <HStack>
                         <Heading
-                          size="sm"
-                          bgGradient="linear(to-r, cyan.200, purple.200)"
-                          bgClip="text"
+                          size="md"
+                          fontWeight="400"
+                          fontFamily={THEME.fonts.serif}
+                          color={THEME.colors.textPrimary}
                         >
-                          Refleksi Mingguan
+                          Weekly Reflection
                         </Heading>
-                        <Text fontSize="lg">🌟</Text>
+                        <Text fontSize="xl">🌟</Text>
                       </HStack>
-                      <HStack spacing={2}>
-                        <Text color="orange.200" fontWeight="medium" fontSize="xs">
-                          {format(dateRange.start, 'd MMM', { locale: id })} -{' '}
-                          {format(dateRange.end, 'd MMM', { locale: id })}
-                        </Text>
+                      <HStack spacing={3}>
+                        <Tag size="md" borderRadius="full" variant="subtle" colorScheme="orange" bg="orange.50" px={4}>
+                          <TagLabel fontWeight="500" color="orange.700">
+                            {format(dateRange.start, 'd MMM', { locale: id })} - {format(dateRange.end, 'd MMM', { locale: id })}
+                          </TagLabel>
+                        </Tag>
                         <Button
-                          size="xs"
-                          colorScheme="cyan"
+                          size="sm"
                           onClick={handleGenerateWeekly}
                           isLoading={isGeneratingWeekly}
+                          bg="purple.500"
+                          color="white"
+                          borderRadius="full"
+                          _hover={{ bg: 'purple.600', transform: 'translateY(-1px)' }}
+                          _active={{ transform: 'scale(0.98)' }}
                         >
                           Generate
                         </Button>
@@ -943,132 +1000,105 @@ export default function Dashboard() {
                     </Flex>
 
                     {weeklyLoading ? (
-                      <Box textAlign="center" py={8}>
-                        <Spinner size="lg" color="cyan.200" />
-                        <Text mt={2} color="whiteAlpha.700">
-                          Memuat data...
-                        </Text>
+                      <Box textAlign="center" py={12}>
+                        <Spinner size="lg" color="purple.400" thickness="3px" />
+                        <Text mt={3} color={THEME.colors.textSecondary}>Loading data...</Text>
                       </Box>
                     ) : weeklyData.status === 'error' ? (
-                      <Box textAlign="center" py={8} color="red.300">
-                        <Text>Gagal memuat data: {weeklyData.message}</Text>
+                      <Box textAlign="center" py={12}>
+                        <Text color="red.500" mb={4}>Failed to load: {weeklyData.message}</Text>
                         <Button
-                          mt={4}
                           size="sm"
                           onClick={fetchWeeklySummaryData}
                           leftIcon={<RepeatIcon />}
+                          variant="outline"
+                          borderRadius="full"
                         >
-                          Coba Lagi
+                          Try Again
                         </Button>
                       </Box>
                     ) : weeklyData.analysis ? (
-                      <Stack spacing={6}>
+                      <Stack spacing={8}>
                         {/* Mood Summary */}
-                        <ScaleFade in={true} initialScale={0.9}>
-                          <Box>
-                            <Flex direction={{ base: 'column', md: 'row' }} gap={3} mb={3}>
-                              {/* Mood Score */}
-                              <Box
-                                flex="1"
-                                bg="whiteAlpha.100"
-                                p={3}
-                                borderRadius="lg"
-                                border="1px solid"
-                                borderColor="whiteAlpha.200"
-                                display="flex"
-                                alignItems="center"
-                                justifyContent="center"
-                                flexDirection="column"
-                                gap={2}
-                                _hover={{
-                                  borderColor: 'purple.300',
-                                }}
-                                transition="all 0.3s"
-                              >
-                                <Flex align="center" gap={1}>
-                                  <Heading size="xs">Skor</Heading>
-                                  <MoodEmoji mood={weeklyData.analysis.dominantMood} size="20px" />
-                                </Flex>
-                                <CircularProgress
-                                  value={weeklyData.analysis.moodScore || 0}
-                                  size={100}
-                                  color="pink.400"
-                                />
-                              </Box>
+                        <ScaleFade in={true} initialScale={0.95}>
+                          <Flex direction={{ base: 'column', md: 'row' }} gap={4}>
+                            {/* Mood Score */}
+                            <Box
+                              flex="1"
+                              bg="purple.50"
+                              p={6}
+                              borderRadius="2xl"
+                              display="flex"
+                              alignItems="center"
+                              justifyContent="center"
+                              flexDirection="column"
+                              gap={3}
+                            >
+                              <Flex align="center" gap={2}>
+                                <Heading size="sm" color="purple.700">Score</Heading>
+                                <MoodEmoji mood={weeklyData.analysis.dominantMood} size="24px" />
+                              </Flex>
+                              <CircularProgress
+                                value={weeklyData.analysis.moodScore || 0}
+                                size={100}
+                                color="purple.500"
+                              />
+                            </Box>
 
-                              {/* Mood Details */}
-                              <Stack flex="2" spacing={2}>
-                                <SimpleGrid columns={{ base: 1, md: 2 }} spacing={2}>
-                                  <Box
-                                    bg="whiteAlpha.100"
-                                    p={3}
-                                    borderRadius="lg"
-                                    border="1px solid"
-                                    borderColor="whiteAlpha.200"
-                                    _hover={{
-                                      borderColor: 'cyan.300',
-                                    }}
-                                    transition="all 0.3s"
+                            {/* Mood Details */}
+                            <Stack flex="2" spacing={3}>
+                              <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
+                                <Box
+                                  bg="teal.50"
+                                  p={5}
+                                  borderRadius="xl"
+                                >
+                                  <Text fontSize="xs" color="teal.600" fontWeight="600" mb={2} textTransform="uppercase" letterSpacing="wide">
+                                    🎭 Dominant Mood
+                                  </Text>
+                                  <Heading size="sm" color="teal.800">
+                                    {weeklyData.analysis.dominantMood || 'No data yet'}
+                                  </Heading>
+                                </Box>
+                                <Box
+                                  bg="orange.50"
+                                  p={5}
+                                  borderRadius="xl"
+                                >
+                                  <Text fontSize="xs" color="orange.600" fontWeight="600" mb={2} textTransform="uppercase" letterSpacing="wide">
+                                    ✨ Affirmation
+                                  </Text>
+                                  <Text
+                                    fontSize="sm"
+                                    color="orange.800"
+                                    fontWeight="500"
+                                    lineHeight="tall"
+                                    noOfLines={3}
                                   >
-                                    <Text fontSize="xs" color="whiteAlpha.600" mb={1}>
-                                      🎭 Mood Dominan
-                                    </Text>
-                                    <Heading size="xs" color="cyan.200">
-                                      {weeklyData.analysis.dominantMood || 'Belum ada data'}
-                                    </Heading>
-                                  </Box>
-                                  <Box
-                                    bg="whiteAlpha.100"
-                                    p={3}
-                                    borderRadius="lg"
-                                    border="1px solid"
-                                    borderColor="whiteAlpha.200"
-                                    _hover={{
-                                      borderColor: 'orange.300',
-                                    }}
-                                    transition="all 0.3s"
-                                  >
-                                    <Text fontSize="xs" color="whiteAlpha.600" mb={1}>
-                                      ✨ Afirmasi
-                                    </Text>
-                                    <Text
-                                      fontSize="xs"
-                                      color="orange.200"
-                                      fontWeight="500"
-                                      lineHeight="short"
-                                      noOfLines={2}
-                                    >
-                                      {weeklyData.analysis.affirmation || 'Belum ada'}
-                                    </Text>
-                                  </Box>
-                                </SimpleGrid>
-                              </Stack>
-                            </Flex>
-                          </Box>
+                                    {weeklyData.analysis.affirmation || 'None yet'}
+                                  </Text>
+                                </Box>
+                              </SimpleGrid>
+                            </Stack>
+                          </Flex>
                         </ScaleFade>
 
                         {/* Summary */}
                         {weeklyData.analysis.summary && (
                           <SlideFade in={true} offsetY={20}>
                             <Box>
-                              <Flex align="center" mb={1}>
-                                <Heading size="xs" mr={2} color="purple.200">
-                                  Ringkasan
+                              <Flex align="center" mb={3}>
+                                <Heading size="sm" mr={2} color={THEME.colors.textPrimary} fontWeight="500">
+                                  Summary
                                 </Heading>
-                                <Text fontSize="md">📝</Text>
+                                <Text fontSize="lg">📝</Text>
                               </Flex>
                               <Box
-                                bg="whiteAlpha.100"
-                                p={3}
-                                borderRadius="lg"
-                                border="1px solid"
-                                borderColor="whiteAlpha.200"
-                                _hover={{
-                                  borderColor: 'purple.300',
-                                }}
-                                transition="all 0.3s"
+                                bg="gray.50"
+                                p={5}
+                                borderRadius="xl"
                               >
-                                <Text lineHeight="short" color="whiteAlpha.900" fontSize="xs">
+                                <Text lineHeight="tall" color={THEME.colors.textSecondary} fontSize="sm">
                                   {weeklyData.analysis.summary}
                                 </Text>
                               </Box>
@@ -1077,39 +1107,31 @@ export default function Dashboard() {
                         )}
 
                         {/* Highlights & Advice */}
-                        <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
+                        <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
                           <Box>
-                            <Flex align="center" mb={1}>
-                              <Heading size="xs" mr={2} color="orange.200">
-                                Sorotan
+                            <Flex align="center" mb={3}>
+                              <Heading size="sm" mr={2} color={THEME.colors.textPrimary} fontWeight="500">
+                                Highlights
                               </Heading>
-                              <Text fontSize="md">🌟</Text>
+                              <Text fontSize="lg">🌟</Text>
                             </Flex>
                             <Box
-                              bg="whiteAlpha.100"
-                              p={3}
-                              borderRadius="lg"
-                              border="1px solid"
-                              borderColor="whiteAlpha.200"
-                              _hover={{
-                                borderColor: 'orange.300',
-                              }}
-                              transition="all 0.3s"
+                              bg="yellow.50"
+                              p={5}
+                              borderRadius="xl"
                             >
-                              <Stack spacing={1.5}>
-                                {(weeklyData.analysis.highlights || ['Belum ada sorotan']).map(
+                              <Stack spacing={2}>
+                                {(weeklyData.analysis.highlights || ['No highlights yet']).map(
                                   (item, idx) => (
                                     <Text
                                       key={idx}
                                       display="flex"
                                       alignItems="flex-start"
-                                      color="whiteAlpha.900"
-                                      lineHeight="short"
-                                      fontSize="xs"
+                                      color="yellow.800"
+                                      lineHeight="tall"
+                                      fontSize="sm"
                                     >
-                                      <Text as="span" mr={1} color="orange.300">
-                                        ✦
-                                      </Text>
+                                      <Text as="span" mr={2} color="yellow.600">✦</Text>
                                       {item}
                                     </Text>
                                   )
@@ -1119,37 +1141,29 @@ export default function Dashboard() {
                           </Box>
 
                           <Box>
-                            <Flex align="center" mb={1}>
-                              <Heading size="xs" mr={2} color="cyan.200">
-                                Saran
+                            <Flex align="center" mb={3}>
+                              <Heading size="sm" mr={2} color={THEME.colors.textPrimary} fontWeight="500">
+                                Suggestions
                               </Heading>
-                              <Text fontSize="md">💡</Text>
+                              <Text fontSize="lg">💡</Text>
                             </Flex>
                             <Box
-                              bg="whiteAlpha.100"
-                              p={3}
-                              borderRadius="lg"
-                              border="1px solid"
-                              borderColor="whiteAlpha.200"
-                              _hover={{
-                                borderColor: 'cyan.300',
-                              }}
-                              transition="all 0.3s"
+                              bg="blue.50"
+                              p={5}
+                              borderRadius="xl"
                             >
-                              <Stack spacing={1.5}>
-                                {(weeklyData.analysis.advice || ['Belum ada saran']).map(
+                              <Stack spacing={2}>
+                                {(weeklyData.analysis.advice || ['No suggestions yet']).map(
                                   (item, idx) => (
                                     <Text
                                       key={idx}
                                       display="flex"
                                       alignItems="flex-start"
-                                      color="whiteAlpha.900"
-                                      lineHeight="short"
-                                      fontSize="xs"
+                                      color="blue.800"
+                                      lineHeight="tall"
+                                      fontSize="sm"
                                     >
-                                      <Text as="span" mr={1} color="cyan.300">
-                                        ⚡
-                                      </Text>
+                                      <Text as="span" mr={2} color="blue.500">⚡</Text>
                                       {item}
                                     </Text>
                                   )
@@ -1159,81 +1173,113 @@ export default function Dashboard() {
                           </Box>
                         </SimpleGrid>
 
+                        {/* Movie Recommendations */}
                         {weeklyData.recommendations?.items?.length ? (
                           <Box>
-                            <Flex align="center" mb={2}>
-                              <Heading size="xs" mr={2} color="pink.200">
-                                {weeklyData.recommendations.headline || 'Rekomendasi Film'}
+                            <Flex align="center" mb={3}>
+                              <Heading size="sm" mr={2} color={THEME.colors.textPrimary} fontWeight="500">
+                                {weeklyData.recommendations.headline || 'Movie Recommendations'}
                               </Heading>
-                              <Text fontSize="md">🎬</Text>
+                              <Text fontSize="lg">🎬</Text>
                             </Flex>
-                            <Text color="whiteAlpha.700" mb={2} fontSize="xs">
-                              {weeklyData.recommendations.description ||
-                                'Film pilihan untuk mood minggu ini.'}
+                            <Text color={THEME.colors.textSecondary} mb={4} fontSize="sm">
+                              {weeklyData.recommendations.description || 'Films curated for your weekly mood.'}
                             </Text>
-                            {/* Rekomendasi film tematik berbasis mood mingguan */}
-                            <SimpleGrid columns={{ base: 1, md: 3 }} spacing={2}>
+                            <SimpleGrid columns={{ base: 1, sm: 2, md: 3 }} spacing={4}>
                               {weeklyData.recommendations.items.map((movie, idx) => (
-                                <MoodMovieCard
-                                  key={`${movie.title}-${idx}`}
-                                  movie={movie}
-                                  index={idx}
-                                />
+                                <MoodMovieCard key={`${movie.title}-${idx}`} movie={movie} />
                               ))}
                             </SimpleGrid>
                           </Box>
                         ) : null}
                       </Stack>
                     ) : (
-                      <Box textAlign="center" py={8} color="whiteAlpha.600">
-                        <Text fontSize="3xl" mb={2}>
-                          📊
-                        </Text>
-                        <Text>Belum ada data refleksi untuk minggu ini.</Text>
-                        <Text mt={2} fontSize="sm">
-                          Tulis catatan harianmu untuk melihat wawasan mingguan.
+                      <Box textAlign="center" py={12}>
+                        <Text fontSize="4xl" mb={3}>📊</Text>
+                        <Text color={THEME.colors.textSecondary} fontSize="md">No reflection data for this week.</Text>
+                        <Text mt={2} fontSize="sm" color={THEME.colors.textMuted}>
+                          Write daily entries to see weekly insights.
                         </Text>
                       </Box>
                     )}
                   </Stack>
-                </Box>
-              </motion.div>
+                </WarmCard>
+              </MotionBox>
             </Box>
           </Grid>
         </Stack>
       </Container>
 
-      <Modal isOpen={isEditOpen} onClose={onEditClose} isCentered>
-        <ModalOverlay />
-        <ModalContent bg="rgba(15, 23, 42, 0.98)" border="1px solid" borderColor="whiteAlpha.200">
-          <ModalHeader>Edit Catatan</ModalHeader>
-          <ModalCloseButton />
+      {/* Edit Note Modal - Warm Theme */}
+      <Modal isOpen={isEditOpen} onClose={onEditClose} isCentered size="lg">
+        <ModalOverlay bg="blackAlpha.300" backdropFilter="blur(10px)" />
+        <ModalContent
+          bg="white"
+          borderRadius="2xl"
+          boxShadow="0 25px 50px -12px rgba(0, 0, 0, 0.15)"
+          mx={4}
+        >
+          <ModalHeader
+            fontFamily={THEME.fonts.serif}
+            fontWeight="400"
+            fontSize="xl"
+            color={THEME.colors.textPrimary}
+            pb={2}
+          >
+            Edit Note
+          </ModalHeader>
+          <ModalCloseButton borderRadius="full" />
           <ModalBody>
-            <Stack spacing={3}>
+            <Stack spacing={4}>
               <Input
-                placeholder="Judul (opsional)"
+                placeholder="Title (optional)"
                 value={editTitle}
                 onChange={(e) => setEditTitle(e.target.value)}
+                variant="unstyled"
+                fontSize="lg"
+                fontWeight="600"
+                color={THEME.colors.textPrimary}
+                _placeholder={{ color: 'gray.300' }}
+                px={0}
               />
               <Textarea
-                placeholder="Tulis isi catatan"
+                placeholder="Write your thoughts..."
                 rows={8}
                 value={editBody}
                 onChange={(e) => setEditBody(e.target.value)}
+                variant="unstyled"
+                fontSize="md"
+                lineHeight="1.8"
+                color={THEME.colors.textPrimary}
+                _placeholder={{ color: 'gray.300' }}
+                resize="none"
+                px={0}
               />
             </Stack>
           </ModalBody>
-          <ModalFooter>
-            <Button variant="ghost" mr={3} onClick={onEditClose}>
-              Batal
+          <ModalFooter pt={4} borderTop="1px solid" borderColor="gray.100">
+            <Button
+              variant="ghost"
+              mr={3}
+              onClick={onEditClose}
+              borderRadius="full"
+              color={THEME.colors.textSecondary}
+              _hover={{ bg: 'gray.100' }}
+            >
+              Cancel
             </Button>
             <Button
-              colorScheme="pink"
               onClick={handleSaveEdit}
               isLoading={isSavingEdit}
               isDisabled={!editBody?.trim()?.length}
+              bg="gray.900"
+              color="white"
+              borderRadius="full"
+              px={6}
+              _hover={{ bg: 'gray.700', transform: 'translateY(-1px)' }}
+              _active={{ transform: 'scale(0.98)' }}
             >
-              Simpan
+              Save
             </Button>
           </ModalFooter>
         </ModalContent>

@@ -45,4 +45,10 @@ return [
         'model' => env('GOOGLE_GENAI_MODEL', 'gemini-2.5-flash'),
     ],
 
+    'ai_grpc' => [
+        'host' => env('AI_GRPC_HOST', 'localhost'),
+        'port' => env('AI_GRPC_PORT', 50052),
+        'enabled' => env('AI_GRPC_ENABLED', false),
+    ],
+
 ];

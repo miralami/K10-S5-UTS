@@ -23,6 +23,10 @@ class GeminiMoodAnalysisService
 
     private string $model;
 
+    private bool $useGrpc;
+
+    private ?AIGrpcClient $grpcClient = null;
+
     /**
      * Execute HTTP request with retry mechanism and exponential backoff
      */
@@ -82,12 +86,17 @@ class GeminiMoodAnalysisService
         throw $lastException ?? new RuntimeException('Failed to complete API request after '.self::MAX_RETRIES.' attempts');
     }
 
-    public function __construct()
+    public function __construct(?AIGrpcClient $grpcClient = null)
     {
         $this->apiKey = (string) config('services.google_genai.api_key', '');
         $this->model = (string) config('services.google_genai.model', 'gemini-2.5-flash');
+        $this->useGrpc = (bool) config('services.ai_grpc.enabled', false);
 
-        if ($this->apiKey === '') {
+        if ($this->useGrpc) {
+            $this->grpcClient = $grpcClient ?? new AIGrpcClient();
+        }
+
+        if (! $this->useGrpc && $this->apiKey === '') {
             throw new RuntimeException('Google Gemini API key is missing. Please set GOOGLE_GENAI_API_KEY.');
         }
     }
@@ -113,12 +122,45 @@ class GeminiMoodAnalysisService
             ];
         }
 
+        // Use gRPC if enabled
+        if ($this->useGrpc && $this->grpcClient) {
+            $notesArray = $notes->map(function ($note) {
+                $data = $note instanceof JournalNote
+                    ? [
+                        'id' => $note->id,
+                        'title' => $note->title ?? '',
+                        'body' => $note->body ?? '',
+                        'created_at' => $note->created_at?->toIso8601String() ?? '',
+                    ]
+                    : [
+                        'id' => $note['id'] ?? 0,
+                        'title' => $note['title'] ?? '',
+                        'body' => $note['body'] ?? '',
+                        'created_at' => isset($note['created_at'])
+                            ? CarbonImmutable::parse($note['created_at'])->toIso8601String()
+                            : '',
+                    ];
+
+                return $data;
+            })->values()->all();
+
+            // Get user_id from first note
+            $userId = $notes->first() instanceof JournalNote
+                ? (string) $notes->first()->user_id
+                : (string) ($notes->first()['user_id'] ?? '0');
+
+            return $this->grpcClient->analyzeDaily(
+                $userId,
+                $dayStart->toDateString(),
+                $notesArray
+            );
+        }
+
+        // Fallback to direct HTTP call with retry mechanism
         $prompt = $this->buildDailyPrompt($notes, $dayStart, $dayEnd);
 
-        $response = Http::withHeaders([
-            'Content-Type' => 'application/json',
-            'x-goog-api-key' => $this->apiKey,
-        ])->post('https://generativelanguage.googleapis.com/v1beta/models/'.$this->model.':generateContent', [
+        $url = 'https://generativelanguage.googleapis.com/v1beta/models/'.$this->model.':generateContent';
+        $data = [
             'contents' => [
                 [
                     'role' => 'user',
@@ -132,13 +174,12 @@ class GeminiMoodAnalysisService
             'generationConfig' => [
                 'responseMimeType' => 'application/json',
             ],
-        ]);
+        ];
 
-        if ($response->failed()) {
-            throw new RuntimeException(
-                'Failed to get Gemini analysis: '.($response->json('error.message') ?? $response->body())
-            );
-        }
+        $response = $this->httpRequestWithRetry($url, $data, [
+            'Content-Type' => 'application/json',
+            'x-goog-api-key' => $this->apiKey,
+        ]);
 
         return $this->transformResponse($response->json());
     }
@@ -150,10 +191,8 @@ class GeminiMoodAnalysisService
 
         $prompt = $this->buildWeeklyPrompt($notes, $weekStart, $weekEnd);
 
-        $response = Http::withHeaders([
-            'Content-Type' => 'application/json',
-            'x-goog-api-key' => $this->apiKey,
-        ])->post('https://generativelanguage.googleapis.com/v1beta/models/'.$this->model.':generateContent', [
+        $url = 'https://generativelanguage.googleapis.com/v1beta/models/'.$this->model.':generateContent';
+        $data = [
             'contents' => [
                 [
                     'role' => 'user',
@@ -167,13 +206,12 @@ class GeminiMoodAnalysisService
             'generationConfig' => [
                 'responseMimeType' => 'application/json',
             ],
-        ]);
+        ];
 
-        if ($response->failed()) {
-            throw new RuntimeException(
-                'Failed to get Gemini analysis: '.($response->json('error.message') ?? $response->body())
-            );
-        }
+        $response = $this->httpRequestWithRetry($url, $data, [
+            'Content-Type' => 'application/json',
+            'x-goog-api-key' => $this->apiKey,
+        ]);
 
         return $this->transformResponse($response->json());
     }
@@ -206,12 +244,54 @@ class GeminiMoodAnalysisService
             ];
         }
 
+        // Use gRPC if enabled
+        if ($this->useGrpc && $this->grpcClient) {
+            $summariesArray = $dailyAnalyses->map(function ($daily) {
+                if ($daily instanceof DailyJournalAnalysis) {
+                    $analysis = $daily->analysis ?? [];
+
+                    return [
+                        'date' => $daily->analysis_date?->toDateString() ?? '',
+                        'summary' => $analysis['summary'] ?? '',
+                        'dominantMood' => $analysis['dominantMood'] ?? 'unknown',
+                        'moodScore' => (int) ($analysis['moodScore'] ?? 0),
+                        'highlights' => $analysis['highlights'] ?? [],
+                        'advice' => $analysis['advice'] ?? [],
+                        'noteCount' => (int) ($analysis['noteCount'] ?? 0),
+                    ];
+                }
+
+                $analysis = $daily['analysis'] ?? [];
+
+                return [
+                    'date' => $daily['analysis_date'] ?? '',
+                    'summary' => $analysis['summary'] ?? '',
+                    'dominantMood' => $analysis['dominantMood'] ?? 'unknown',
+                    'moodScore' => (int) ($analysis['moodScore'] ?? 0),
+                    'highlights' => $analysis['highlights'] ?? [],
+                    'advice' => $analysis['advice'] ?? [],
+                    'noteCount' => (int) ($analysis['noteCount'] ?? 0),
+                ];
+            })->values()->all();
+
+            // Get user_id from first daily analysis
+            $userId = $dailyAnalyses->first() instanceof DailyJournalAnalysis
+                ? (string) $dailyAnalyses->first()->user_id
+                : (string) ($dailyAnalyses->first()['user_id'] ?? '0');
+
+            return $this->grpcClient->analyzeWeekly(
+                $userId,
+                $weekStart->toDateString(),
+                $weekEnd->toDateString(),
+                $summariesArray
+            );
+        }
+
+        // Fallback to direct HTTP call with retry mechanism
         $prompt = $this->buildWeeklyFromDailyPrompt($dailyAnalyses, $weekStart, $weekEnd);
 
-        $response = Http::withHeaders([
-            'Content-Type' => 'application/json',
-            'x-goog-api-key' => $this->apiKey,
-        ])->post('https://generativelanguage.googleapis.com/v1beta/models/'.$this->model.':generateContent', [
+        $url = 'https://generativelanguage.googleapis.com/v1beta/models/'.$this->model.':generateContent';
+        $data = [
             'contents' => [
                 [
                     'role' => 'user',
@@ -225,13 +305,12 @@ class GeminiMoodAnalysisService
             'generationConfig' => [
                 'responseMimeType' => 'application/json',
             ],
-        ]);
+        ];
 
-        if ($response->failed()) {
-            throw new RuntimeException(
-                'Failed to get Gemini analysis: '.($response->json('error.message') ?? $response->body())
-            );
-        }
+        $response = $this->httpRequestWithRetry($url, $data, [
+            'Content-Type' => 'application/json',
+            'x-goog-api-key' => $this->apiKey,
+        ]);
 
         return $this->transformResponse($response->json());
     }

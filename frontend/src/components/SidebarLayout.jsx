@@ -1,9 +1,21 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import PropTypes from 'prop-types';
 import { useState } from 'react';
-import { Box, Button, Flex, Heading, Icon, IconButton, Stack, Text, Tooltip, useColorModeValue } from '@chakra-ui/react';
+import { Box, Button, Flex, Heading, Icon, IconButton, Stack, Text, Tooltip } from '@chakra-ui/react';
 import { AtSignIcon, CalendarIcon, ChatIcon, HamburgerIcon, CloseIcon } from '@chakra-ui/icons';
 import { logout } from '../services/authService';
+
+// Theme configuration
+const THEME = {
+  bg: '#FDFCF8',
+  textPrimary: '#2D3748',
+  textSecondary: '#718096',
+  accent: '#805AD5',
+  accentLight: '#E9D8FD',
+  accentDark: '#6B46C1',
+  card: '#FFFFFF',
+  shadow: 'rgba(0, 0, 0, 0.06)',
+};
 
 const navItems = [
   {
@@ -46,12 +58,14 @@ function LogoutButton({ isCollapsed }) {
         <IconButton
           onClick={handleLogout}
           icon={<CloseIcon />}
-          variant="ghost"
-          colorScheme="red"
+          variant="solid"
+          bg="red.50"
+          color="red.500"
           size="lg"
           borderRadius="xl"
           _hover={{
-            bg: 'red.900',
+            bg: 'red.100',
+            color: 'red.600',
           }}
           aria-label="Keluar"
         />
@@ -63,12 +77,15 @@ function LogoutButton({ isCollapsed }) {
     <Button
       onClick={handleLogout}
       width="full"
-      variant="ghost"
-      colorScheme="red"
+      variant="solid"
+      bg="red.50"
+      color="red.500"
       size="lg"
       borderRadius="xl"
+      fontWeight="600"
       _hover={{
-        bg: 'red.900',
+        bg: 'red.100',
+        color: 'red.600',
       }}
     >
       Keluar
@@ -84,25 +101,20 @@ export default function SidebarLayout({ children }) {
   // State untuk mengontrol sidebar collapsed/expanded
   // State to control sidebar collapsed/expanded
   const [isCollapsed, setIsCollapsed] = useState(false);
-  
-  const sidebarBg = useColorModeValue('white', 'gray.900');
-  const sidebarBorder = useColorModeValue('gray.200', 'whiteAlpha.200');
-  const activeBg = useColorModeValue('blue.50', 'whiteAlpha.100');
-  const activeColor = useColorModeValue('blue.600', 'cyan.200');
 
   // Lebar sidebar: collapsed = 20 (80px), expanded = 72 (288px)
   // Sidebar width: collapsed = 20 (80px), expanded = 72 (288px)
   const sidebarWidth = isCollapsed ? 20 : 72;
 
   return (
-    <Flex minH="100vh" bgGradient="linear(to-br, gray.900, gray.800)">
+    <Flex minH="100vh" bg={THEME.bg}>
       <Box
         as="nav"
         w={{ base: 'full', md: sidebarWidth }}
         borderRight="1px"
-        borderColor={sidebarBorder}
-        bg={sidebarBg}
-        color={useColorModeValue('gray.800', 'whiteAlpha.900')}
+        borderColor="gray.200"
+        bg={THEME.card}
+        color={THEME.textPrimary}
         p={isCollapsed ? 3 : 6}
         minH="100vh"
         position="fixed"
@@ -115,6 +127,7 @@ export default function SidebarLayout({ children }) {
         justifyContent="space-between"
         overflow="hidden"
         transition="all 0.3s ease"
+        boxShadow={`4px 0 20px ${THEME.shadow}`}
       >
         <Stack spacing={isCollapsed ? 4 : 8}>
           {/* Header dengan toggle button */}
@@ -122,8 +135,8 @@ export default function SidebarLayout({ children }) {
           <Flex align="center" justify={isCollapsed ? 'center' : 'space-between'}>
             {!isCollapsed && (
               <Box>
-                <Heading size="md">Mood Journal</Heading>
-                <Text fontSize="sm" color={useColorModeValue('gray.500', 'whiteAlpha.700')} mt={1}>
+                <Heading size="md" color={THEME.accent}>Mood Journal</Heading>
+                <Text fontSize="sm" color={THEME.textSecondary} mt={1}>
                   Rekam perjalanan emosimu setiap hari
                 </Text>
               </Box>
@@ -131,11 +144,13 @@ export default function SidebarLayout({ children }) {
             <Tooltip label={isCollapsed ? 'Buka sidebar' : 'Tutup sidebar'} placement="right" hasArrow>
               <IconButton
                 icon={isCollapsed ? <HamburgerIcon /> : <CloseIcon />}
-                variant="ghost"
+                variant="solid"
+                bg="gray.100"
+                color="gray.600"
                 size="sm"
                 onClick={() => setIsCollapsed(!isCollapsed)}
                 aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-                _hover={{ bg: 'whiteAlpha.200' }}
+                _hover={{ bg: 'gray.200' }}
               />
             </Tooltip>
           </Flex>
@@ -145,8 +160,6 @@ export default function SidebarLayout({ children }) {
               <NavItem 
                 key={item.to} 
                 item={item} 
-                activeBg={activeBg} 
-                activeColor={activeColor} 
                 isCollapsed={isCollapsed}
               />
             ))}
@@ -164,7 +177,7 @@ export default function SidebarLayout({ children }) {
   );
 }
 
-function NavItem({ item, activeBg, activeColor, isCollapsed }) {
+function NavItem({ item, isCollapsed }) {
   // Jika collapsed, tampilkan icon saja dengan tooltip
   // If collapsed, show icon only with tooltip
   if (isCollapsed) {
@@ -178,9 +191,9 @@ function NavItem({ item, activeBg, activeColor, isCollapsed }) {
               p={3}
               borderRadius="xl"
               transition="all 0.2s"
-              bg={isActive ? activeBg : 'transparent'}
-              color={isActive ? activeColor : undefined}
-              _hover={{ bg: isActive ? activeBg : 'whiteAlpha.100' }}
+              bg={isActive ? 'purple.50' : 'transparent'}
+              color={isActive ? THEME.accent : THEME.textSecondary}
+              _hover={{ bg: isActive ? 'purple.50' : 'gray.100' }}
             >
               <Icon as={item.icon} boxSize={5} />
             </Flex>
@@ -199,14 +212,14 @@ function NavItem({ item, activeBg, activeColor, isCollapsed }) {
           p={4}
           borderRadius="xl"
           transition="all 0.2s"
-          bg={isActive ? activeBg : 'transparent'}
-          color={isActive ? activeColor : undefined}
-          _hover={{ bg: isActive ? activeBg : 'whiteAlpha.100' }}
+          bg={isActive ? 'purple.50' : 'transparent'}
+          color={isActive ? THEME.accent : THEME.textPrimary}
+          _hover={{ bg: isActive ? 'purple.50' : 'gray.100' }}
         >
-          <Icon as={item.icon} boxSize={5} mt={1} />
+          <Icon as={item.icon} boxSize={5} mt={1} color={isActive ? THEME.accent : THEME.textSecondary} />
           <Box>
             <Text fontWeight="semibold">{item.label}</Text>
-            <Text fontSize="sm" color={isActive ? activeColor : 'whiteAlpha.700'}>
+            <Text fontSize="sm" color={isActive ? THEME.accentDark : THEME.textSecondary}>
               {item.description}
             </Text>
           </Box>
@@ -227,7 +240,5 @@ NavItem.propTypes = {
     icon: PropTypes.elementType,
     description: PropTypes.string,
   }).isRequired,
-  activeBg: PropTypes.string.isRequired,
-  activeColor: PropTypes.string.isRequired,
   isCollapsed: PropTypes.bool,
 };

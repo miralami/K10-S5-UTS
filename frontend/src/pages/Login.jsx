@@ -19,9 +19,36 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { EmailIcon, LockIcon } from '@chakra-ui/icons';
 import { login } from '../services/authService';
-import { GlassCard } from '../components/GlassCard';
 
 const MotionBox = motion(Box);
+
+// Theme configuration
+const THEME = {
+  bg: '#FDFCF8',
+  textPrimary: '#2D3748',
+  textSecondary: '#718096',
+  accent: '#805AD5',
+  accentLight: '#E9D8FD',
+  accentDark: '#6B46C1',
+  card: '#FFFFFF',
+  shadow: 'rgba(0, 0, 0, 0.06)',
+};
+
+// WarmCard component
+const WarmCard = ({ children, ...props }) => (
+  <Box
+    bg={THEME.card}
+    borderRadius="2xl"
+    border="1px solid"
+    borderColor="gray.200"
+    boxShadow={`0 4px 20px ${THEME.shadow}`}
+    p={{ base: 6, md: 8 }}
+    transition="all 0.2s ease"
+    {...props}
+  >
+    {children}
+  </Box>
+);
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -62,94 +89,121 @@ export default function Login() {
   return (
     <Box
       minH="100vh"
-      bgGradient="linear(to-br, #1a1a2e, #16213e, #0f3460, #533483)"
+      bg={THEME.bg}
       display="flex"
       alignItems="center"
       justifyContent="center"
       position="relative"
       overflow="hidden"
-      _before={{
-        content: '""',
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        bgImage:
-          'radial-gradient(circle at 50% 50%, rgba(56, 189, 248, 0.1) 0%, transparent 50%)',
-        pointerEvents: 'none',
-      }}
     >
+      {/* Decorative floating orbs */}
+      <Box
+        position="absolute"
+        top="10%"
+        left="10%"
+        w="300px"
+        h="300px"
+        bg="purple.100"
+        borderRadius="full"
+        opacity={0.4}
+        filter="blur(60px)"
+        pointerEvents="none"
+      />
+      <Box
+        position="absolute"
+        bottom="20%"
+        right="10%"
+        w="250px"
+        h="250px"
+        bg="blue.100"
+        borderRadius="full"
+        opacity={0.3}
+        filter="blur(50px)"
+        pointerEvents="none"
+      />
+      <Box
+        position="absolute"
+        top="50%"
+        right="30%"
+        w="200px"
+        h="200px"
+        bg="yellow.100"
+        borderRadius="full"
+        opacity={0.3}
+        filter="blur(40px)"
+        pointerEvents="none"
+      />
+
       <Container maxW="md" position="relative" zIndex={1}>
         <MotionBox
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
         >
-          <GlassCard p={8}>
+          <WarmCard>
             <VStack spacing={8}>
               <Box textAlign="center">
                 <Heading
                   fontSize="3xl"
-                  bgGradient="linear(to-r, cyan.200, purple.200)"
-                  bgClip="text"
+                  fontWeight="700"
+                  color={THEME.accent}
                   mb={2}
                 >
                   Selamat Datang
                 </Heading>
-                <Text color="whiteAlpha.600">Masuk untuk melanjutkan perjalananmu</Text>
+                <Text color={THEME.textSecondary}>Masuk untuk melanjutkan perjalananmu</Text>
               </Box>
 
               <form onSubmit={handleSubmit} style={{ width: '100%' }}>
                 <Stack spacing={5}>
                   <FormControl isRequired>
-                    <FormLabel color="whiteAlpha.900">Email</FormLabel>
+                    <FormLabel color={THEME.textPrimary} fontWeight="500">Email</FormLabel>
                     <InputGroup>
                       <InputLeftElement pointerEvents="none">
-                        <Icon as={EmailIcon} color="whiteAlpha.400" />
+                        <Icon as={EmailIcon} color="gray.400" />
                       </InputLeftElement>
                       <Input
                         type="email"
                         placeholder="nama@email.com"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        bg="whiteAlpha.50"
+                        bg={THEME.card}
                         border="1px solid"
-                        borderColor="whiteAlpha.200"
-                        _hover={{ borderColor: 'whiteAlpha.300' }}
+                        borderColor="gray.200"
+                        borderRadius="xl"
+                        _hover={{ borderColor: 'gray.300' }}
                         _focus={{
-                          borderColor: 'cyan.300',
-                          bg: 'whiteAlpha.100',
-                          boxShadow: '0 0 0 1px rgba(56, 189, 248, 0.5)',
+                          borderColor: THEME.accent,
+                          boxShadow: `0 0 0 3px ${THEME.accentLight}`,
                         }}
-                        _placeholder={{ color: 'whiteAlpha.300' }}
-                        color="white"
+                        _placeholder={{ color: 'gray.400' }}
+                        color={THEME.textPrimary}
                       />
                     </InputGroup>
                   </FormControl>
 
                   <FormControl isRequired>
-                    <FormLabel color="whiteAlpha.900">Password</FormLabel>
+                    <FormLabel color={THEME.textPrimary} fontWeight="500">Password</FormLabel>
                     <InputGroup>
                       <InputLeftElement pointerEvents="none">
-                        <Icon as={LockIcon} color="whiteAlpha.400" />
+                        <Icon as={LockIcon} color="gray.400" />
                       </InputLeftElement>
                       <Input
                         type="password"
                         placeholder="••••••••"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        bg="whiteAlpha.50"
+                        bg={THEME.card}
                         border="1px solid"
-                        borderColor="whiteAlpha.200"
-                        _hover={{ borderColor: 'whiteAlpha.300' }}
+                        borderColor="gray.200"
+                        borderRadius="xl"
+                        _hover={{ borderColor: 'gray.300' }}
                         _focus={{
-                          borderColor: 'cyan.300',
-                          bg: 'whiteAlpha.100',
-                          boxShadow: '0 0 0 1px rgba(56, 189, 248, 0.5)',
+                          borderColor: THEME.accent,
+                          boxShadow: `0 0 0 3px ${THEME.accentLight}`,
                         }}
-                        _placeholder={{ color: 'whiteAlpha.300' }}
-                        color="white"
+                        _placeholder={{ color: 'gray.400' }}
+                        color={THEME.textPrimary}
                       />
                     </InputGroup>
                   </FormControl>
@@ -159,10 +213,12 @@ export default function Login() {
                     size="lg"
                     w="full"
                     isLoading={isLoading}
-                    bgGradient="linear(to-r, cyan.500, blue.500)"
+                    bg={THEME.accent}
                     color="white"
+                    borderRadius="xl"
+                    fontWeight="600"
                     _hover={{
-                      bgGradient: 'linear(to-r, cyan.400, blue.400)',
+                      bg: THEME.accentDark,
                       transform: 'translateY(-2px)',
                       boxShadow: 'lg',
                     }}
@@ -174,20 +230,20 @@ export default function Login() {
                 </Stack>
               </form>
 
-              <Text color="whiteAlpha.600" fontSize="sm">
+              <Text color={THEME.textSecondary} fontSize="sm">
                 Belum punya akun?{' '}
                 <Button
                   variant="link"
-                  color="cyan.300"
+                  color={THEME.accent}
                   fontWeight="bold"
                   onClick={() => navigate('/register')}
-                  _hover={{ textDecoration: 'none', color: 'cyan.200' }}
+                  _hover={{ textDecoration: 'none', color: THEME.accentDark }}
                 >
                   Daftar sekarang
                 </Button>
               </Text>
             </VStack>
-          </GlassCard>
+          </WarmCard>
         </MotionBox>
       </Container>
     </Box>

@@ -65,8 +65,10 @@ export default function JournalCalendar({ selectedDate, onSelectDate, notes = []
           size="sm"
           variant="ghost"
           aria-label="Bulan sebelumnya"
+          color="gray.600"
+          _hover={{ bg: 'gray.100' }}
         />
-        <Text fontWeight="bold" fontSize="lg">
+        <Text fontWeight="bold" fontSize="lg" color="gray.800">
           {format(currentMonth, 'MMMM yyyy', { locale: id })}
         </Text>
         <IconButton
@@ -75,6 +77,8 @@ export default function JournalCalendar({ selectedDate, onSelectDate, notes = []
           size="sm"
           variant="ghost"
           aria-label="Bulan berikutnya"
+          color="gray.600"
+          _hover={{ bg: 'gray.100' }}
         />
       </Flex>
 
@@ -82,7 +86,7 @@ export default function JournalCalendar({ selectedDate, onSelectDate, notes = []
       <Grid templateColumns="repeat(7, 1fr)" gap={1} mb={2}>
         {weekDays.map((day, idx) => (
           <Flex key={`weekday-${idx}`} justify="center" align="center" h="32px">
-            <Text fontSize="sm" fontWeight="medium" color="whiteAlpha.600">
+            <Text fontSize="sm" fontWeight="medium" color="gray.400">
               {day}
             </Text>
           </Flex>
@@ -103,17 +107,17 @@ export default function JournalCalendar({ selectedDate, onSelectDate, notes = []
               position="relative"
               cursor="pointer"
               onClick={() => onSelectDate(date)}
-              bg={isSelected ? 'blue.500' : isToday ? 'blue.700' : 'transparent'}
-              color={!isCurrentMonth ? 'whiteAlpha.400' : 'white'}
+              bg={isSelected ? 'purple.500' : isToday ? 'purple.100' : 'transparent'}
+              color={isSelected ? 'white' : !isCurrentMonth ? 'gray.300' : 'gray.700'}
               borderRadius="md"
-              _hover={{ bg: isSelected ? 'blue.600' : 'whiteAlpha.100' }}
+              _hover={{ bg: isSelected ? 'purple.600' : 'gray.100' }}
               transition="all 0.2s"
               h="40px"
               display="flex"
               alignItems="center"
               justifyContent="center"
             >
-              <Text fontSize="sm" fontWeight={isToday ? 'bold' : 'normal'}>
+              <Text fontSize="sm" fontWeight={isToday || isSelected ? 'bold' : 'normal'}>
                 {format(date, 'd')}
               </Text>
               {noteExists && (
@@ -125,7 +129,7 @@ export default function JournalCalendar({ selectedDate, onSelectDate, notes = []
                   w="4px"
                   h="4px"
                   borderRadius="full"
-                  bg="green.400"
+                  bg={isSelected ? 'white' : 'green.500'}
                 />
               )}
             </Box>
