@@ -1,7 +1,17 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import PropTypes from 'prop-types';
 import { useState } from 'react';
-import { Box, Button, Flex, Heading, Icon, IconButton, Stack, Text, Tooltip } from '@chakra-ui/react';
+import {
+  Box,
+  Button,
+  Flex,
+  Heading,
+  Icon,
+  IconButton,
+  Stack,
+  Text,
+  Tooltip,
+} from '@chakra-ui/react';
 import { AtSignIcon, CalendarIcon, ChatIcon, HamburgerIcon, CloseIcon } from '@chakra-ui/icons';
 import { logout } from '../services/authService';
 
@@ -135,13 +145,19 @@ export default function SidebarLayout({ children }) {
           <Flex align="center" justify={isCollapsed ? 'center' : 'space-between'}>
             {!isCollapsed && (
               <Box>
-                <Heading size="md" color={THEME.accent}>Mood Journal</Heading>
+                <Heading size="md" color={THEME.accent}>
+                  Mood Journal
+                </Heading>
                 <Text fontSize="sm" color={THEME.textSecondary} mt={1}>
                   Rekam perjalanan emosimu setiap hari
                 </Text>
               </Box>
             )}
-            <Tooltip label={isCollapsed ? 'Buka sidebar' : 'Tutup sidebar'} placement="right" hasArrow>
+            <Tooltip
+              label={isCollapsed ? 'Buka sidebar' : 'Tutup sidebar'}
+              placement="right"
+              hasArrow
+            >
               <IconButton
                 icon={isCollapsed ? <HamburgerIcon /> : <CloseIcon />}
                 variant="solid"
@@ -157,11 +173,7 @@ export default function SidebarLayout({ children }) {
 
           <Stack spacing={2}>
             {navItems.map((item) => (
-              <NavItem 
-                key={item.to} 
-                item={item} 
-                isCollapsed={isCollapsed}
-              />
+              <NavItem key={item.to} item={item} isCollapsed={isCollapsed} />
             ))}
           </Stack>
         </Stack>
@@ -170,7 +182,12 @@ export default function SidebarLayout({ children }) {
         </Box>
       </Box>
 
-      <Box flex="1" overflow="auto" ml={{ base: 0, md: sidebarWidth }} transition="margin-left 0.3s ease">
+      <Box
+        flex="1"
+        overflow="auto"
+        ml={{ base: 0, md: sidebarWidth }}
+        transition="margin-left 0.3s ease"
+      >
         {children}
       </Box>
     </Flex>
@@ -216,7 +233,12 @@ function NavItem({ item, isCollapsed }) {
           color={isActive ? THEME.accent : THEME.textPrimary}
           _hover={{ bg: isActive ? 'purple.50' : 'gray.100' }}
         >
-          <Icon as={item.icon} boxSize={5} mt={1} color={isActive ? THEME.accent : THEME.textSecondary} />
+          <Icon
+            as={item.icon}
+            boxSize={5}
+            mt={1}
+            color={isActive ? THEME.accent : THEME.textSecondary}
+          />
           <Box>
             <Text fontWeight="semibold">{item.label}</Text>
             <Text fontSize="sm" color={isActive ? THEME.accentDark : THEME.textSecondary}>

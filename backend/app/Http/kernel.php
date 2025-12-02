@@ -2,9 +2,9 @@
 
 namespace App\Http;
 
-use Illuminate\Foundation\Http\Kernel as HttpKernel;
-use Tymon\JWTAuth\Middleware\Authenticate as AuthenticateJWT; // Import JWT middleware
-use Barryvdh\Cors\HandleCors; // Import CORS middleware
+use Barryvdh\Cors\HandleCors;
+use Illuminate\Foundation\Http\Kernel as HttpKernel; // Import JWT middleware
+use Tymon\JWTAuth\Middleware\Authenticate as AuthenticateJWT; // Import CORS middleware
 
 class Kernel extends HttpKernel
 {

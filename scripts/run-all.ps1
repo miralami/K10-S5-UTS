@@ -36,7 +36,7 @@ if ($SingleTerminal) {
     $commands = @(
         "`"cd backend && php artisan serve`"",
         "`"cd frontend && npm run dev`"",
-        "`"cd grpc-service && npm run server:start`""
+        "`"cd websocket-service && npm run server:start`""
     )
     
     if (-not $SkipAI) {
@@ -66,7 +66,7 @@ if ($SingleTerminal) {
     
     # WebSocket Service
     Write-Host "Starting WebSocket on port 8080..." -ForegroundColor Yellow
-    Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$RootDir\grpc-service'; Write-Host 'WebSocket Service' -ForegroundColor Yellow; npm run server:start"
+    Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$RootDir\websocket-service'; Write-Host 'WebSocket Service' -ForegroundColor Yellow; npm run server:start"
     
     # AI Service (Python) - optional
     if (-not $SkipAI) {

@@ -113,7 +113,7 @@ if (-not $SkipFrontend) {
 # Install WebSocket Service
 if (-not $SkipWebSocket) {
     Write-Host "Installing WebSocket Service..." -ForegroundColor Yellow
-    Push-Location "$RootDir\grpc-service"
+    Push-Location "$RootDir\websocket-service"
     npm install
     Pop-Location
     Write-Host "  [DONE] WebSocket service installed" -ForegroundColor Green

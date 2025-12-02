@@ -247,7 +247,12 @@ export default function DailyEntry() {
                   Mood Journal
                 </Badge>
               </HStack>
-              <Heading size="2xl" mt={2} bgGradient="linear(to-r, cyan.200, purple.200)" bgClip="text">
+              <Heading
+                size="2xl"
+                mt={2}
+                bgGradient="linear(to-r, cyan.200, purple.200)"
+                bgClip="text"
+              >
                 {greeting.greeting}
               </Heading>
               <Text color="orange.200" fontSize="xl" fontWeight="medium">
@@ -279,157 +284,157 @@ export default function DailyEntry() {
           >
             <GlassCard p={{ base: 6, md: 10 }}>
               <Stack spacing={8} align="center">
-              <Stack spacing={4} align="center" w="full">
-                <Text color="whiteAlpha.700" fontSize="md">
-                  Pilih vibe harianmu sebagai pemantik cerita:
-                </Text>
-                <Wrap spacing={3} justify="center">
-                  {MOOD_OPTIONS.map((option) => {
-                    const isActive = activeMood?.id === option.id;
-                    return (
-                      <WrapItem key={option.id}>
+                <Stack spacing={4} align="center" w="full">
+                  <Text color="whiteAlpha.700" fontSize="md">
+                    Pilih vibe harianmu sebagai pemantik cerita:
+                  </Text>
+                  <Wrap spacing={3} justify="center">
+                    {MOOD_OPTIONS.map((option) => {
+                      const isActive = activeMood?.id === option.id;
+                      return (
+                        <WrapItem key={option.id}>
+                          <MotionButton
+                            as={Button}
+                            variant={isActive ? 'solid' : 'outline'}
+                            colorScheme={isActive ? 'purple' : 'cyan'}
+                            size="sm"
+                            onClick={() => handleSelectMood(option)}
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            transition={{ type: 'spring', stiffness: 400, damping: 17 }}
+                          >
+                            {option.label}
+                          </MotionButton>
+                        </WrapItem>
+                      );
+                    })}
+                  </Wrap>
+                  <AnimatePresence mode="wait">
+                    <MotionBox
+                      key={activeMood?.id || 'default'}
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 10 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <Text
+                        color="orange.200"
+                        fontSize="sm"
+                        textAlign="center"
+                        maxW="2xl"
+                        fontWeight="medium"
+                      >
+                        {activeMood
+                          ? activeMood.helper
+                          : 'Kalau bingung mulai dari mana, klik salah satu mood di atas untuk inspirasi kalimat pertama.'}
+                      </Text>
+                    </MotionBox>
+                  </AnimatePresence>
+                </Stack>
+
+                <Box as="form" onSubmit={handleSubmit} w="full" maxW="3xl">
+                  <Stack spacing={6}>
+                    <FormControl>
+                      <FormLabel color="whiteAlpha.700">Judul (opsional)</FormLabel>
+                      <Input
+                        value={title}
+                        onChange={(event) => setTitle(event.target.value)}
+                        placeholder="Contoh: Hari produktif di kantor"
+                        bg="whiteAlpha.50"
+                        borderColor="whiteAlpha.200"
+                        borderRadius="xl"
+                        _focus={{
+                          borderColor: 'cyan.300',
+                          boxShadow: '0 0 0 1px rgba(56, 189, 248, 0.6)',
+                          bg: 'whiteAlpha.100',
+                        }}
+                        isDisabled={isSubmitting}
+                      />
+                    </FormControl>
+
+                    <FormControl>
+                      <FormLabel color="whiteAlpha.700">Ceritakan apa yang kamu rasakan</FormLabel>
+                      <Textarea
+                        value={body}
+                        onChange={(event) => setBody(event.target.value)}
+                        placeholder={
+                          activeMood?.placeholder ||
+                          'Tulis bebas: apa yang membuatmu tersenyum atau mengernyit hari ini?'
+                        }
+                        rows={8}
+                        fontSize="lg"
+                        bg="whiteAlpha.50"
+                        borderColor="whiteAlpha.200"
+                        borderRadius="3xl"
+                        px={6}
+                        py={5}
+                        _focus={{
+                          borderColor: activeMood ? 'purple.300' : 'cyan.300',
+                          boxShadow: activeMood
+                            ? `0 0 0 1px ${activeMood.glowColor}, 0 0 20px ${activeMood.glowColor}`
+                            : '0 0 0 1px rgba(56, 189, 248, 0.6)',
+                          bg: 'whiteAlpha.100',
+                        }}
+                        transition="all 0.3s ease-in-out"
+                        isDisabled={isSubmitting}
+                      />
+                    </FormControl>
+
+                    {submitError ? (
+                      <Alert status="error" variant="left-accent" borderRadius="lg">
+                        <AlertIcon />
+                        {submitError}
+                      </Alert>
+                    ) : null}
+
+                    <Button
+                      type="submit"
+                      bgGradient="linear(to-r, cyan.500, blue.500)"
+                      color="white"
+                      size="lg"
+                      height="56px"
+                      borderRadius="full"
+                      isLoading={isSubmitting}
+                      loadingText="Menyimpan catatan..."
+                      _hover={{
+                        bgGradient: 'linear(to-r, cyan.600, blue.600)',
+                        transform: 'translateY(-2px)',
+                        boxShadow: '0 8px 20px rgba(6, 182, 212, 0.4)',
+                      }}
+                      _active={{
+                        transform: 'translateY(0)',
+                      }}
+                      transition="all 0.2s"
+                    >
+                      Simpan cerita hari ini
+                    </Button>
+                  </Stack>
+                </Box>
+
+                <Stack spacing={4} w="full" maxW="3xl" textAlign="center">
+                  <Text color="whiteAlpha.600">Butuh ide? Coba salah satu pemantik ini:</Text>
+                  <Wrap spacing={3} justify="center">
+                    {QUICK_PROMPTS.map((prompt) => (
+                      <WrapItem key={prompt.id}>
                         <MotionButton
                           as={Button}
-                          variant={isActive ? 'solid' : 'outline'}
-                          colorScheme={isActive ? 'purple' : 'cyan'}
+                          variant="ghost"
+                          colorScheme="pink"
                           size="sm"
-                          onClick={() => handleSelectMood(option)}
-                          whileHover={{ scale: 1.05 }}
+                          onClick={() => handleApplyPrompt(prompt)}
+                          whileHover={{ scale: 1.05, y: -2 }}
                           whileTap={{ scale: 0.95 }}
-                          transition={{ type: 'spring', stiffness: 400, damping: 17 }}
                         >
-                          {option.label}
+                          {prompt.label}
                         </MotionButton>
                       </WrapItem>
-                    );
-                  })}
-                </Wrap>
-                <AnimatePresence mode="wait">
-                  <MotionBox
-                    key={activeMood?.id || 'default'}
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 10 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <Text
-                      color="orange.200"
-                      fontSize="sm"
-                      textAlign="center"
-                      maxW="2xl"
-                      fontWeight="medium"
-                    >
-                      {activeMood
-                        ? activeMood.helper
-                        : 'Kalau bingung mulai dari mana, klik salah satu mood di atas untuk inspirasi kalimat pertama.'}
-                    </Text>
-                  </MotionBox>
-                </AnimatePresence>
-              </Stack>
-
-              <Box as="form" onSubmit={handleSubmit} w="full" maxW="3xl">
-                <Stack spacing={6}>
-                  <FormControl>
-                    <FormLabel color="whiteAlpha.700">Judul (opsional)</FormLabel>
-                    <Input
-                      value={title}
-                      onChange={(event) => setTitle(event.target.value)}
-                      placeholder="Contoh: Hari produktif di kantor"
-                      bg="whiteAlpha.50"
-                      borderColor="whiteAlpha.200"
-                      borderRadius="xl"
-                      _focus={{
-                        borderColor: 'cyan.300',
-                        boxShadow: '0 0 0 1px rgba(56, 189, 248, 0.6)',
-                        bg: 'whiteAlpha.100'
-                      }}
-                      isDisabled={isSubmitting}
-                    />
-                  </FormControl>
-
-                  <FormControl>
-                    <FormLabel color="whiteAlpha.700">Ceritakan apa yang kamu rasakan</FormLabel>
-                    <Textarea
-                      value={body}
-                      onChange={(event) => setBody(event.target.value)}
-                      placeholder={
-                        activeMood?.placeholder ||
-                        'Tulis bebas: apa yang membuatmu tersenyum atau mengernyit hari ini?'
-                      }
-                      rows={8}
-                      fontSize="lg"
-                      bg="whiteAlpha.50"
-                      borderColor="whiteAlpha.200"
-                      borderRadius="3xl"
-                      px={6}
-                      py={5}
-                      _focus={{
-                        borderColor: activeMood ? 'purple.300' : 'cyan.300',
-                        boxShadow: activeMood
-                          ? `0 0 0 1px ${activeMood.glowColor}, 0 0 20px ${activeMood.glowColor}`
-                          : '0 0 0 1px rgba(56, 189, 248, 0.6)',
-                        bg: 'whiteAlpha.100'
-                      }}
-                      transition="all 0.3s ease-in-out"
-                      isDisabled={isSubmitting}
-                    />
-                  </FormControl>
-
-                  {submitError ? (
-                    <Alert status="error" variant="left-accent" borderRadius="lg">
-                      <AlertIcon />
-                      {submitError}
-                    </Alert>
-                  ) : null}
-
-                  <Button
-                    type="submit"
-                    bgGradient="linear(to-r, cyan.500, blue.500)"
-                    color="white"
-                    size="lg"
-                    height="56px"
-                    borderRadius="full"
-                    isLoading={isSubmitting}
-                    loadingText="Menyimpan catatan..."
-                    _hover={{
-                      bgGradient: "linear(to-r, cyan.600, blue.600)",
-                      transform: "translateY(-2px)",
-                      boxShadow: "0 8px 20px rgba(6, 182, 212, 0.4)"
-                    }}
-                    _active={{
-                      transform: "translateY(0)"
-                    }}
-                    transition="all 0.2s"
-                  >
-                    Simpan cerita hari ini
-                  </Button>
+                    ))}
+                  </Wrap>
+                  <Text color="whiteAlpha.500" fontSize="sm">
+                    Klik sekali untuk menambahkan kalimat pembuka ke catatanmu.
+                  </Text>
                 </Stack>
-              </Box>
-
-              <Stack spacing={4} w="full" maxW="3xl" textAlign="center">
-                <Text color="whiteAlpha.600">Butuh ide? Coba salah satu pemantik ini:</Text>
-                <Wrap spacing={3} justify="center">
-                  {QUICK_PROMPTS.map((prompt) => (
-                    <WrapItem key={prompt.id}>
-                      <MotionButton
-                        as={Button}
-                        variant="ghost"
-                        colorScheme="pink"
-                        size="sm"
-                        onClick={() => handleApplyPrompt(prompt)}
-                        whileHover={{ scale: 1.05, y: -2 }}
-                        whileTap={{ scale: 0.95 }}
-                      >
-                        {prompt.label}
-                      </MotionButton>
-                    </WrapItem>
-                  ))}
-                </Wrap>
-                <Text color="whiteAlpha.500" fontSize="sm">
-                  Klik sekali untuk menambahkan kalimat pembuka ke catatanmu.
-                </Text>
               </Stack>
-            </Stack>
             </GlassCard>
           </MotionBox>
 

@@ -60,13 +60,13 @@ class AIGrpcClient
      */
     public function analyzeDaily(string $userId, string $date, array $notes): array
     {
-        $request = new \Ai\DailyAnalysisRequest();
+        $request = new \Ai\DailyAnalysisRequest;
         $request->setUserId($userId);
         $request->setDate($date);
 
         $protoNotes = [];
         foreach ($notes as $note) {
-            $protoNote = new \Ai\JournalNote();
+            $protoNote = new \Ai\JournalNote;
             $protoNote->setId($note['id'] ?? 0);
             $protoNote->setTitle($note['title'] ?? '');
             $protoNote->setBody($note['body'] ?? '');
@@ -98,14 +98,14 @@ class AIGrpcClient
      */
     public function analyzeWeekly(string $userId, string $weekStart, string $weekEnd, array $dailySummaries): array
     {
-        $request = new \Ai\WeeklyAnalysisRequest();
+        $request = new \Ai\WeeklyAnalysisRequest;
         $request->setUserId($userId);
         $request->setWeekStart($weekStart);
         $request->setWeekEnd($weekEnd);
 
         $protoSummaries = [];
         foreach ($dailySummaries as $summary) {
-            $protoSummary = new \Ai\DailySummary();
+            $protoSummary = new \Ai\DailySummary;
             $protoSummary->setDate($summary['date'] ?? '');
             $protoSummary->setSummary($summary['summary'] ?? '');
             $protoSummary->setDominantMood($summary['dominantMood'] ?? 'unknown');

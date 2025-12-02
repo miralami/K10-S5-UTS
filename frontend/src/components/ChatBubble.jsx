@@ -9,7 +9,7 @@ const THEME = {
   textSecondary: '#718096',
 };
 
-export const ChatBubble = ({ message, isOwn, currentUserName, isPrivateChat = false }) => {
+export const ChatBubble = ({ message, isOwn, isPrivateChat = false }) => {
   const isSystem = message.type === 'system';
   const sender = message.sender;
   const senderName = typeof sender === 'object' ? sender?.name : sender;
@@ -18,10 +18,7 @@ export const ChatBubble = ({ message, isOwn, currentUserName, isPrivateChat = fa
 
   if (isSystem) {
     return (
-      <Box
-        textAlign="center"
-        w="full"
-      >
+      <Box textAlign="center" w="full">
         <Box
           display="inline-block"
           bg="gray.200"
@@ -40,16 +37,8 @@ export const ChatBubble = ({ message, isOwn, currentUserName, isPrivateChat = fa
   }
 
   return (
-    <Box
-      w="full"
-      display="flex"
-      justifyContent={isOwn ? 'flex-end' : 'flex-start'}
-    >
-      <VStack
-        align={isOwn ? 'flex-end' : 'flex-start'}
-        spacing={1}
-        maxW="70%"
-      >
+    <Box w="full" display="flex" justifyContent={isOwn ? 'flex-end' : 'flex-start'}>
+      <VStack align={isOwn ? 'flex-end' : 'flex-start'} spacing={1} maxW="70%">
         <Box position="relative">
           <Box
             bg={isOwn ? THEME.accent : 'gray.100'}
@@ -62,9 +51,9 @@ export const ChatBubble = ({ message, isOwn, currentUserName, isPrivateChat = fa
             style={{ opacity: 1, visibility: 'visible' }}
           >
             {showSenderName && (
-              <Text 
-                fontSize="xs" 
-                fontWeight="bold" 
+              <Text
+                fontSize="xs"
+                fontWeight="bold"
                 color={THEME.accentDark}
                 mb={1}
                 style={{ opacity: 1, visibility: 'visible' }}
@@ -72,18 +61,10 @@ export const ChatBubble = ({ message, isOwn, currentUserName, isPrivateChat = fa
                 {senderName}
               </Text>
             )}
-            <Text 
-              style={{ color: isOwn ? '#ffffff' : THEME.textPrimary }}
-            >
-              {body}
-            </Text>
+            <Text style={{ color: isOwn ? '#ffffff' : THEME.textPrimary }}>{body}</Text>
           </Box>
         </Box>
-        <Text
-          fontSize="xs"
-          color={THEME.textSecondary}
-          px={1}
-        >
+        <Text fontSize="xs" color={THEME.textSecondary} px={1}>
           {message.timestamp
             ? message.timestamp.toLocaleTimeString([], {
                 hour: '2-digit',

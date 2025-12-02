@@ -47,6 +47,8 @@ class JournalNoteController extends Controller
 
     public function show(JournalNote $note): JsonResponse
     {
+        $this->authorize('view', $note);
+
         return response()->json([
             'data' => $this->transformNote($note),
         ]);
@@ -54,6 +56,8 @@ class JournalNoteController extends Controller
 
     public function update(UpdateJournalRequest $request, JournalNote $note, DailyJournalAnalysisService $dailyService): JsonResponse
     {
+        $this->authorize('update', $note);
+
         $validated = $request->validated();
 
         if (empty($validated)) {
@@ -109,6 +113,8 @@ class JournalNoteController extends Controller
 
     public function destroy(JournalNote $note): JsonResponse
     {
+        $this->authorize('delete', $note);
+
         $note->delete();
 
         return response()->json(null, 204);
@@ -139,6 +145,7 @@ class JournalNoteController extends Controller
             if ($value instanceof \DateTimeInterface) {
                 return Carbon::instance($value)->setTimezone($tz)->startOfDay();
             }
+
             return Carbon::parse($value, $tz)->startOfDay();
         } catch (\Throwable $e) {
             return null;
@@ -158,6 +165,7 @@ class JournalNoteController extends Controller
             if ($value instanceof \DateTimeInterface) {
                 return Carbon::instance($value)->setTimezone($tz)->toAtomString();
             }
+
             return Carbon::parse($value)->setTimezone($tz)->toAtomString();
         } catch (\Throwable $e) {
             return null;

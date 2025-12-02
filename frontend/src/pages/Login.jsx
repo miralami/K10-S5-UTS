@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import PropTypes from 'prop-types';
 import {
   Box,
   Button,
@@ -49,6 +50,10 @@ const WarmCard = ({ children, ...props }) => (
     {children}
   </Box>
 );
+
+WarmCard.propTypes = {
+  children: PropTypes.node.isRequired,
+};
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -143,12 +148,7 @@ export default function Login() {
           <WarmCard>
             <VStack spacing={8}>
               <Box textAlign="center">
-                <Heading
-                  fontSize="3xl"
-                  fontWeight="700"
-                  color={THEME.accent}
-                  mb={2}
-                >
+                <Heading fontSize="3xl" fontWeight="700" color={THEME.accent} mb={2}>
                   Selamat Datang
                 </Heading>
                 <Text color={THEME.textSecondary}>Masuk untuk melanjutkan perjalananmu</Text>
@@ -157,7 +157,9 @@ export default function Login() {
               <form onSubmit={handleSubmit} style={{ width: '100%' }}>
                 <Stack spacing={5}>
                   <FormControl isRequired>
-                    <FormLabel color={THEME.textPrimary} fontWeight="500">Email</FormLabel>
+                    <FormLabel color={THEME.textPrimary} fontWeight="500">
+                      Email
+                    </FormLabel>
                     <InputGroup>
                       <InputLeftElement pointerEvents="none">
                         <Icon as={EmailIcon} color="gray.400" />
@@ -183,7 +185,9 @@ export default function Login() {
                   </FormControl>
 
                   <FormControl isRequired>
-                    <FormLabel color={THEME.textPrimary} fontWeight="500">Password</FormLabel>
+                    <FormLabel color={THEME.textPrimary} fontWeight="500">
+                      Password
+                    </FormLabel>
                     <InputGroup>
                       <InputLeftElement pointerEvents="none">
                         <Icon as={LockIcon} color="gray.400" />

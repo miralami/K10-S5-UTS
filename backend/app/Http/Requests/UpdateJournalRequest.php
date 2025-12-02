@@ -12,6 +12,7 @@ class UpdateJournalRequest extends FormRequest
     public function authorize(): bool
     {
         $note = $this->route('note');
+
         return auth()->check() && $note && (int) $note->user_id === (int) auth()->id();
     }
 

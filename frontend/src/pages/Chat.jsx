@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Box,
   Button,
@@ -103,10 +103,7 @@ export default function Chat() {
   const handleInputChange = (event) => {
     setInputValue(event.target.value);
 
-    const contextId =
-      activeChat.type === CHAT_CONTEXT.GLOBAL
-        ? 'global'
-        : activeChat.user?.id;
+    const contextId = activeChat.type === CHAT_CONTEXT.GLOBAL ? 'global' : activeChat.user?.id;
 
     sendTyping(contextId, true);
 
@@ -125,10 +122,7 @@ export default function Chat() {
     const text = inputValue.trim();
     if (!text || !isConnected) return;
 
-    const recipientId =
-      activeChat.type === CHAT_CONTEXT.PRIVATE
-        ? activeChat.user?.id
-        : null;
+    const recipientId = activeChat.type === CHAT_CONTEXT.PRIVATE ? activeChat.user?.id : null;
 
     try {
       await sendMessage(text, recipientId);
@@ -159,13 +153,7 @@ export default function Chat() {
   // Loading state (using isConnecting from context)
   if (isConnecting) {
     return (
-      <Box
-        h="100vh"
-        bg={THEME.bg}
-        display="flex"
-        alignItems="center"
-        justifyContent="center"
-      >
+      <Box h="100vh" bg={THEME.bg} display="flex" alignItems="center" justifyContent="center">
         <VStack spacing={4}>
           <Spinner size="xl" color={THEME.accent} thickness="3px" />
           <Text color={THEME.textSecondary}>Menghubungkan ke chat...</Text>
@@ -203,12 +191,7 @@ export default function Chat() {
               >
                 <Icon as={ArrowBackIcon} w={5} h={5} color="gray.600" />
               </Button>
-              <Avatar
-                size="sm"
-                name={currentUser?.name}
-                bg={THEME.accent}
-                color="white"
-              />
+              <Avatar size="sm" name={currentUser?.name} bg={THEME.accent} color="white" />
               <Box flex="1">
                 <Text fontWeight="600" fontSize="sm" color="gray.800">
                   {currentUser?.name}
@@ -236,7 +219,9 @@ export default function Chat() {
               py={3}
               cursor="pointer"
               bg={activeChat.type === CHAT_CONTEXT.GLOBAL ? 'purple.50' : 'transparent'}
-              borderLeft={activeChat.type === CHAT_CONTEXT.GLOBAL ? '3px solid' : '3px solid transparent'}
+              borderLeft={
+                activeChat.type === CHAT_CONTEXT.GLOBAL ? '3px solid' : '3px solid transparent'
+              }
               borderColor={THEME.accent}
               _hover={{ bg: 'gray.50' }}
               onClick={() => selectChat(CHAT_CONTEXT.GLOBAL)}
@@ -281,14 +266,12 @@ export default function Chat() {
                 py={2}
                 cursor="pointer"
                 bg={
-                  activeChat.type === CHAT_CONTEXT.PRIVATE &&
-                  activeChat.user?.id === user.id
+                  activeChat.type === CHAT_CONTEXT.PRIVATE && activeChat.user?.id === user.id
                     ? 'purple.50'
                     : 'transparent'
                 }
                 borderLeft={
-                  activeChat.type === CHAT_CONTEXT.PRIVATE &&
-                  activeChat.user?.id === user.id
+                  activeChat.type === CHAT_CONTEXT.PRIVATE && activeChat.user?.id === user.id
                     ? '3px solid'
                     : '3px solid transparent'
                 }
@@ -340,13 +323,7 @@ export default function Chat() {
         {/* Main Chat Area */}
         <Flex flex="1" direction="column" bg={THEME.card}>
           {/* Chat Header */}
-          <Box
-            px={6}
-            py={4}
-            borderBottom="1px solid"
-            borderColor="gray.100"
-            bg={THEME.card}
-          >
+          <Box px={6} py={4} borderBottom="1px solid" borderColor="gray.100" bg={THEME.card}>
             <HStack spacing={3}>
               {activeChat.type === CHAT_CONTEXT.GLOBAL ? (
                 <>
@@ -456,12 +433,7 @@ export default function Chat() {
           )}
 
           {/* Input Area */}
-          <Box
-            p={4}
-            bg={THEME.card}
-            borderTop="1px solid"
-            borderColor="gray.100"
-          >
+          <Box p={4} bg={THEME.card} borderTop="1px solid" borderColor="gray.100">
             <HStack spacing={3}>
               <Input
                 value={inputValue}

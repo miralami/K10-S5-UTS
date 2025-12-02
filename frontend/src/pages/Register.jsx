@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import PropTypes from 'prop-types';
 import {
   Box,
   Button,
@@ -50,6 +51,10 @@ const WarmCard = ({ children, ...props }) => (
     {children}
   </Box>
 );
+
+WarmCard.propTypes = {
+  children: PropTypes.node.isRequired,
+};
 
 export default function Register() {
   const [formData, setFormData] = useState({
@@ -208,12 +213,7 @@ export default function Register() {
           <WarmCard>
             <VStack spacing={8}>
               <Box textAlign="center">
-                <Heading
-                  fontSize="3xl"
-                  fontWeight="700"
-                  color={THEME.accent}
-                  mb={2}
-                >
+                <Heading fontSize="3xl" fontWeight="700" color={THEME.accent} mb={2}>
                   Buat Akun Baru
                 </Heading>
                 <Text color={THEME.textSecondary}>Bergabunglah dengan komunitas kami</Text>
@@ -222,7 +222,9 @@ export default function Register() {
               <form onSubmit={handleSubmit} style={{ width: '100%' }}>
                 <Stack spacing={5}>
                   <FormControl isInvalid={!!errors.name} isRequired>
-                    <FormLabel color={THEME.textPrimary} fontWeight="500">Nama</FormLabel>
+                    <FormLabel color={THEME.textPrimary} fontWeight="500">
+                      Nama
+                    </FormLabel>
                     <InputGroup>
                       <InputLeftElement pointerEvents="none">
                         <Icon as={InfoIcon} color="gray.400" />
@@ -249,7 +251,9 @@ export default function Register() {
                   </FormControl>
 
                   <FormControl isInvalid={!!errors.email} isRequired>
-                    <FormLabel color={THEME.textPrimary} fontWeight="500">Email</FormLabel>
+                    <FormLabel color={THEME.textPrimary} fontWeight="500">
+                      Email
+                    </FormLabel>
                     <InputGroup>
                       <InputLeftElement pointerEvents="none">
                         <Icon as={EmailIcon} color="gray.400" />
@@ -277,7 +281,9 @@ export default function Register() {
                   </FormControl>
 
                   <FormControl isInvalid={!!errors.password} isRequired>
-                    <FormLabel color={THEME.textPrimary} fontWeight="500">Password</FormLabel>
+                    <FormLabel color={THEME.textPrimary} fontWeight="500">
+                      Password
+                    </FormLabel>
                     <InputGroup>
                       <InputLeftElement pointerEvents="none">
                         <Icon as={LockIcon} color="gray.400" />
@@ -305,7 +311,9 @@ export default function Register() {
                   </FormControl>
 
                   <FormControl isInvalid={!!errors.password_confirmation} isRequired>
-                    <FormLabel color={THEME.textPrimary} fontWeight="500">Konfirmasi Password</FormLabel>
+                    <FormLabel color={THEME.textPrimary} fontWeight="500">
+                      Konfirmasi Password
+                    </FormLabel>
                     <InputGroup>
                       <InputLeftElement pointerEvents="none">
                         <Icon as={LockIcon} color="gray.400" />

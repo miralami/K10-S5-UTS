@@ -7,8 +7,76 @@ on:
     branches: [ "main", "master" ]
 
 jobs:
+  # Top-level lint job that runs all linting in parallel
+  lint:
+    name: All Services Lint
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: backend
+            setup: php
+          - service: frontend
+            setup: node
+          - service: websocket-service
+            setup: node
+    steps:
+    - uses: actions/checkout@v4
+
+    # PHP setup for backend
+    - name: Setup PHP
+      if: matrix.setup == 'php'
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.2'
+        extensions: mbstring, dom, fileinfo
+        coverage: none
+
+    # Node setup for frontend and grpc-service
+    - name: Setup Node.js
+      if: matrix.setup == 'node'
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: ${{ matrix.service }}/package-lock.json
+
+    # Install and lint backend
+    - name: Install Backend Dependencies
+      if: matrix.service == 'backend'
+      working-directory: ./backend
+      run: composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
+
+    - name: Lint Backend (Pint)
+      if: matrix.service == 'backend'
+      working-directory: ./backend
+      run: ./vendor/bin/pint --test
+
+    # Install and lint frontend
+    - name: Install Frontend Dependencies
+      if: matrix.service == 'frontend'
+      working-directory: ./frontend
+      run: npm install
+
+    - name: Lint Frontend
+      if: matrix.service == 'frontend'
+      working-directory: ./frontend
+      run: npm run lint
+
+    # Install and lint websocket-service
+    - name: Install WebSocket Service Dependencies
+      if: matrix.service == 'websocket-service'
+      working-directory: ./websocket-service
+      run: npm install
+
+    - name: Lint WebSocket Service
+      if: matrix.service == 'websocket-service'
+      working-directory: ./websocket-service
+      run: npm run lint
+
   laravel-tests:
-    name: Laravel Tests & Lint
+    name: Laravel Tests
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -46,53 +114,3 @@ jobs:
         DB_CONNECTION: sqlite
         DB_DATABASE: database/database.sqlite
       run: php artisan test
-
-    - name: Execute Linting (Pint)
-      run: ./vendor/bin/pint --test
-
-  react-lint:
-    name: React Lint
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./frontend
-
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-        cache: 'npm'
-        cache-dependency-path: frontend/package-lock.json
-
-    - name: Install Dependencies
-      # Using npm install because package-lock.json might be missing in repo
-      run: npm install
-
-    - name: Run Lint
-      run: npm run lint
-
-  websocket-lint:
-    name: WebSocket Service Lint
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./websocket-service
-
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-        cache: 'npm'
-        cache-dependency-path: websocket-service/package-lock.json
-
-    - name: Install Dependencies
-      run: npm install
-
-    - name: Run Lint
-      run: npm run lint

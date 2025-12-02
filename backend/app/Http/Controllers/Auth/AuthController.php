@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use App\Models\User;
 use Tymon\JWTAuth\Facades\JWTAuth;
 
 class AuthController extends Controller
@@ -37,6 +37,7 @@ class AuthController extends Controller
             // Generate JWT token jika login berhasil
             $user = Auth::user();
             $token = JWTAuth::fromUser($user);
+
             return response()->json(compact('token'));
         }
 
@@ -77,6 +78,7 @@ class AuthController extends Controller
     {
         // Menghapus token JWT
         JWTAuth::invalidate(JWTAuth::getToken());
+
         return response()->json(['message' => 'Logged out successfully']);
     }
 }

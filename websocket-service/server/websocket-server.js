@@ -17,6 +17,17 @@ const server = createServer(app);
 
 app.use(express.static('public'));
 
+// Health check endpoint
+app.get('/health', (req, res) => {
+  const userManager = req.app.get('userManager');
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    service: 'websocket-service',
+    connections: userManager ? userManager.users.size : 0,
+  });
+});
+
 const PORT = process.env.PORT || 8080;
 const JWT_SECRET = process.env.JWT_SECRET;
 
@@ -474,6 +485,9 @@ const interval = setInterval(function ping() {
 wss.on('close', function close() {
   clearInterval(interval);
 });
+
+// Store userManager in app for health check
+app.set('userManager', userManager);
 
 server.listen(PORT, () => {
   console.log(`WebSocket Chat Server running on http://localhost:${PORT}`);

@@ -1,5 +1,4 @@
-import { useState, useEffect } from 'react';
-import { Link as RouterLink } from 'react-router-dom';
+import { useState } from 'react';
 import {
   Alert,
   AlertIcon,
@@ -102,7 +101,7 @@ export default function DailyEntry() {
     try {
       // Combine tags into body or handle separately if backend supports it
       // For now, appending tags to body as hashtags for simplicity
-      const finalBody = tags.length > 0 ? `${body}\n\n${tags.map(t => `#${t}`).join(' ')}` : body;
+      const finalBody = tags.length > 0 ? `${body}\n\n${tags.map((t) => `#${t}`).join(' ')}` : body;
 
       await createNote({
         title: title.trim() || getGreeting(),
@@ -172,8 +171,17 @@ export default function DailyEntry() {
             transition={{ duration: 0.8, ease: [0.2, 0.65, 0.3, 0.9] }}
           >
             <Stack spacing={1}>
-              <Text fontSize="sm" color={THEME.colors.textSecondary} letterSpacing="wide" textTransform="uppercase">
-                {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+              <Text
+                fontSize="sm"
+                color={THEME.colors.textSecondary}
+                letterSpacing="wide"
+                textTransform="uppercase"
+              >
+                {new Date().toLocaleDateString('en-US', {
+                  weekday: 'long',
+                  month: 'long',
+                  day: 'numeric',
+                })}
               </Text>
               <Heading
                 fontSize={{ base: '4xl', md: '5xl' }}
@@ -183,7 +191,13 @@ export default function DailyEntry() {
               >
                 {getGreeting()}, Afif.
               </Heading>
-              <Text fontSize="lg" color={THEME.colors.textSecondary} maxW="2xl" mt={2} lineHeight="tall">
+              <Text
+                fontSize="lg"
+                color={THEME.colors.textSecondary}
+                maxW="2xl"
+                mt={2}
+                lineHeight="tall"
+              >
                 How is your heart feeling today? Take a moment to breathe and reflect.
               </Text>
             </Stack>
@@ -221,8 +235,12 @@ export default function DailyEntry() {
                         _active={{ transform: 'scale(0.98)' }}
                         transition="all 0.2s"
                       >
-                        <Text as="span" fontSize="lg">{mood.emoji}</Text>
-                        <Text as="span" fontSize="sm" fontWeight="500">{mood.label}</Text>
+                        <Text as="span" fontSize="lg">
+                          {mood.emoji}
+                        </Text>
+                        <Text as="span" fontSize="sm" fontWeight="500">
+                          {mood.label}
+                        </Text>
                       </Button>
                     </WrapItem>
                   );
@@ -251,7 +269,7 @@ export default function DailyEntry() {
                   autoComplete="off"
                   spellCheck="false"
                 />
-                
+
                 <Textarea
                   variant="unstyled"
                   placeholder="Start writing here..."
@@ -306,12 +324,10 @@ export default function DailyEntry() {
               </Box>
 
               {/* Quick Prompts - Inline below card */}
-              <HStack
-                spacing={3}
-                justify="center"
-                flexWrap="wrap"
-              >
-                <Text fontSize="xs" color="gray.500">Quick add:</Text>
+              <HStack spacing={3} justify="center" flexWrap="wrap">
+                <Text fontSize="xs" color="gray.500">
+                  Quick add:
+                </Text>
                 {QUICK_PROMPTS.map((prompt) => (
                   <Button
                     key={prompt.id}
@@ -321,7 +337,7 @@ export default function DailyEntry() {
                     color="gray.600"
                     borderRadius="full"
                     fontWeight="medium"
-                    onClick={() => setBody(prev => prev + (prev ? '\n\n' : '') + prompt.text)}
+                    onClick={() => setBody((prev) => prev + (prev ? '\n\n' : '') + prompt.text)}
                     _hover={{ bg: 'purple.100', color: 'purple.700' }}
                   >
                     + {prompt.label}

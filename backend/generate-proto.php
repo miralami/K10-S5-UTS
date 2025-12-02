@@ -9,7 +9,6 @@
  *
  * Run: php generate-proto.php
  */
-
 $protoDir = realpath(__DIR__.'/../shared/proto');
 $outputDir = __DIR__.'/app/Grpc';
 $protoFile = $protoDir.'/ai.proto';

@@ -69,7 +69,6 @@ import {
   ScaleFade,
   useDisclosure,
   useBreakpointValue,
-  Badge,
   Wrap,
   WrapItem,
   Tag,
@@ -207,7 +206,13 @@ function MoodMovieCard({ movie }) {
           </Heading>
           <HStack spacing={1} mt={1}>
             {movie.year && (
-              <Tag size="sm" borderRadius="full" variant="subtle" colorScheme="purple" bg="purple.50">
+              <Tag
+                size="sm"
+                borderRadius="full"
+                variant="subtle"
+                colorScheme="purple"
+                bg="purple.50"
+              >
                 <TagLabel fontSize="2xs">{movie.year}</TagLabel>
               </Tag>
             )}
@@ -578,10 +583,10 @@ export default function Dashboard() {
   // Loading state
   if (weeklyLoading || notesLoading) {
     const quotes = [
-      "Reflection is the bridge between experience and wisdom ✨",
-      "Every note is a step towards self-understanding 🌟",
-      "Your words today are a gift to your future self 💫",
-      "In the stillness of reflection, we find strength 🌙"
+      'Reflection is the bridge between experience and wisdom ✨',
+      'Every note is a step towards self-understanding 🌟',
+      'Your words today are a gift to your future self 💫',
+      'In the stillness of reflection, we find strength 🌙',
     ];
     const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
 
@@ -718,7 +723,12 @@ export default function Dashboard() {
           >
             <Flex justify="space-between" align="flex-start" wrap="wrap" gap={4}>
               <Stack spacing={1}>
-                <Text fontSize="sm" color={THEME.colors.textSecondary} letterSpacing="wide" textTransform="uppercase">
+                <Text
+                  fontSize="sm"
+                  color={THEME.colors.textSecondary}
+                  letterSpacing="wide"
+                  textTransform="uppercase"
+                >
                   {format(selectedDate, 'EEEE, MMMM d, yyyy', { locale: id })}
                 </Text>
                 <Heading
@@ -784,13 +794,13 @@ export default function Dashboard() {
             </Box>
           )}
 
-          <Grid
-            templateColumns={{ base: '1fr', xl: isSidebarOpen ? '340px 1fr' : '1fr' }}
-            gap={8}
-          >
+          <Grid templateColumns={{ base: '1fr', xl: isSidebarOpen ? '340px 1fr' : '1fr' }} gap={8}>
             {/* Left Side - Calendar & Notes */}
             <Box
-              display={{ base: isSidebarOpen ? 'block' : 'none', xl: isSidebarOpen ? 'block' : 'none' }}
+              display={{
+                base: isSidebarOpen ? 'block' : 'none',
+                xl: isSidebarOpen ? 'block' : 'none',
+              }}
             >
               <Stack spacing={6}>
                 {/* Calendar Card */}
@@ -817,9 +827,17 @@ export default function Dashboard() {
                         aria-label="Previous week"
                         _hover={{ bg: 'purple.100', color: 'purple.600' }}
                       />
-                      <Tag size="md" borderRadius="full" variant="subtle" colorScheme="purple" bg="purple.50" px={4}>
+                      <Tag
+                        size="md"
+                        borderRadius="full"
+                        variant="subtle"
+                        colorScheme="purple"
+                        bg="purple.50"
+                        px={4}
+                      >
                         <TagLabel fontWeight="500" color="purple.700">
-                          {format(dateRange.start, 'd MMM', { locale: id })} - {format(dateRange.end, 'd MMM', { locale: id })}
+                          {format(dateRange.start, 'd MMM', { locale: id })} -{' '}
+                          {format(dateRange.end, 'd MMM', { locale: id })}
                         </TagLabel>
                       </Tag>
                       <IconButton
@@ -855,16 +873,24 @@ export default function Dashboard() {
                   >
                     <Flex justify="space-between" align="center" mb={4}>
                       <HStack>
-                        <Heading size="sm" color={THEME.colors.textPrimary}>Notes</Heading>
+                        <Heading size="sm" color={THEME.colors.textPrimary}>
+                          Notes
+                        </Heading>
                         <Text fontSize="lg">📝</Text>
                       </HStack>
                     </Flex>
 
                     {notesForSelectedDate.length === 0 ? (
                       <Box textAlign="center" py={8}>
-                        <Text fontSize="3xl" mb={2}>✨</Text>
-                        <Text fontSize="sm" color={THEME.colors.textSecondary}>No notes for this day</Text>
-                        <Text fontSize="xs" color={THEME.colors.textMuted} mt={1}>Start writing to capture your thoughts</Text>
+                        <Text fontSize="3xl" mb={2}>
+                          ✨
+                        </Text>
+                        <Text fontSize="sm" color={THEME.colors.textSecondary}>
+                          No notes for this day
+                        </Text>
+                        <Text fontSize="xs" color={THEME.colors.textMuted} mt={1}>
+                          Start writing to capture your thoughts
+                        </Text>
                       </Box>
                     ) : (
                       <Stack spacing={3}>
@@ -906,7 +932,9 @@ export default function Dashboard() {
                                       flexShrink={0}
                                     >
                                       {format(
-                                        new Date(note.createdAt || note.note_date || note.updatedAt),
+                                        new Date(
+                                          note.createdAt || note.note_date || note.updatedAt
+                                        ),
                                         'HH:mm'
                                       )}
                                     </Text>
@@ -979,9 +1007,17 @@ export default function Dashboard() {
                         <Text fontSize="xl">🌟</Text>
                       </HStack>
                       <HStack spacing={3}>
-                        <Tag size="md" borderRadius="full" variant="subtle" colorScheme="orange" bg="orange.50" px={4}>
+                        <Tag
+                          size="md"
+                          borderRadius="full"
+                          variant="subtle"
+                          colorScheme="orange"
+                          bg="orange.50"
+                          px={4}
+                        >
                           <TagLabel fontWeight="500" color="orange.700">
-                            {format(dateRange.start, 'd MMM', { locale: id })} - {format(dateRange.end, 'd MMM', { locale: id })}
+                            {format(dateRange.start, 'd MMM', { locale: id })} -{' '}
+                            {format(dateRange.end, 'd MMM', { locale: id })}
                           </TagLabel>
                         </Tag>
                         <Button
@@ -1002,11 +1038,15 @@ export default function Dashboard() {
                     {weeklyLoading ? (
                       <Box textAlign="center" py={12}>
                         <Spinner size="lg" color="purple.400" thickness="3px" />
-                        <Text mt={3} color={THEME.colors.textSecondary}>Loading data...</Text>
+                        <Text mt={3} color={THEME.colors.textSecondary}>
+                          Loading data...
+                        </Text>
                       </Box>
                     ) : weeklyData.status === 'error' ? (
                       <Box textAlign="center" py={12}>
-                        <Text color="red.500" mb={4}>Failed to load: {weeklyData.message}</Text>
+                        <Text color="red.500" mb={4}>
+                          Failed to load: {weeklyData.message}
+                        </Text>
                         <Button
                           size="sm"
                           onClick={fetchWeeklySummaryData}
@@ -1035,7 +1075,9 @@ export default function Dashboard() {
                               gap={3}
                             >
                               <Flex align="center" gap={2}>
-                                <Heading size="sm" color="purple.700">Score</Heading>
+                                <Heading size="sm" color="purple.700">
+                                  Score
+                                </Heading>
                                 <MoodEmoji mood={weeklyData.analysis.dominantMood} size="24px" />
                               </Flex>
                               <CircularProgress
@@ -1048,24 +1090,30 @@ export default function Dashboard() {
                             {/* Mood Details */}
                             <Stack flex="2" spacing={3}>
                               <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
-                                <Box
-                                  bg="teal.50"
-                                  p={5}
-                                  borderRadius="xl"
-                                >
-                                  <Text fontSize="xs" color="teal.600" fontWeight="600" mb={2} textTransform="uppercase" letterSpacing="wide">
+                                <Box bg="teal.50" p={5} borderRadius="xl">
+                                  <Text
+                                    fontSize="xs"
+                                    color="teal.600"
+                                    fontWeight="600"
+                                    mb={2}
+                                    textTransform="uppercase"
+                                    letterSpacing="wide"
+                                  >
                                     🎭 Dominant Mood
                                   </Text>
                                   <Heading size="sm" color="teal.800">
                                     {weeklyData.analysis.dominantMood || 'No data yet'}
                                   </Heading>
                                 </Box>
-                                <Box
-                                  bg="orange.50"
-                                  p={5}
-                                  borderRadius="xl"
-                                >
-                                  <Text fontSize="xs" color="orange.600" fontWeight="600" mb={2} textTransform="uppercase" letterSpacing="wide">
+                                <Box bg="orange.50" p={5} borderRadius="xl">
+                                  <Text
+                                    fontSize="xs"
+                                    color="orange.600"
+                                    fontWeight="600"
+                                    mb={2}
+                                    textTransform="uppercase"
+                                    letterSpacing="wide"
+                                  >
                                     ✨ Affirmation
                                   </Text>
                                   <Text
@@ -1088,17 +1136,22 @@ export default function Dashboard() {
                           <SlideFade in={true} offsetY={20}>
                             <Box>
                               <Flex align="center" mb={3}>
-                                <Heading size="sm" mr={2} color={THEME.colors.textPrimary} fontWeight="500">
+                                <Heading
+                                  size="sm"
+                                  mr={2}
+                                  color={THEME.colors.textPrimary}
+                                  fontWeight="500"
+                                >
                                   Summary
                                 </Heading>
                                 <Text fontSize="lg">📝</Text>
                               </Flex>
-                              <Box
-                                bg="gray.50"
-                                p={5}
-                                borderRadius="xl"
-                              >
-                                <Text lineHeight="tall" color={THEME.colors.textSecondary} fontSize="sm">
+                              <Box bg="gray.50" p={5} borderRadius="xl">
+                                <Text
+                                  lineHeight="tall"
+                                  color={THEME.colors.textSecondary}
+                                  fontSize="sm"
+                                >
                                   {weeklyData.analysis.summary}
                                 </Text>
                               </Box>
@@ -1110,16 +1163,17 @@ export default function Dashboard() {
                         <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
                           <Box>
                             <Flex align="center" mb={3}>
-                              <Heading size="sm" mr={2} color={THEME.colors.textPrimary} fontWeight="500">
+                              <Heading
+                                size="sm"
+                                mr={2}
+                                color={THEME.colors.textPrimary}
+                                fontWeight="500"
+                              >
                                 Highlights
                               </Heading>
                               <Text fontSize="lg">🌟</Text>
                             </Flex>
-                            <Box
-                              bg="yellow.50"
-                              p={5}
-                              borderRadius="xl"
-                            >
+                            <Box bg="yellow.50" p={5} borderRadius="xl">
                               <Stack spacing={2}>
                                 {(weeklyData.analysis.highlights || ['No highlights yet']).map(
                                   (item, idx) => (
@@ -1131,7 +1185,9 @@ export default function Dashboard() {
                                       lineHeight="tall"
                                       fontSize="sm"
                                     >
-                                      <Text as="span" mr={2} color="yellow.600">✦</Text>
+                                      <Text as="span" mr={2} color="yellow.600">
+                                        ✦
+                                      </Text>
                                       {item}
                                     </Text>
                                   )
@@ -1142,16 +1198,17 @@ export default function Dashboard() {
 
                           <Box>
                             <Flex align="center" mb={3}>
-                              <Heading size="sm" mr={2} color={THEME.colors.textPrimary} fontWeight="500">
+                              <Heading
+                                size="sm"
+                                mr={2}
+                                color={THEME.colors.textPrimary}
+                                fontWeight="500"
+                              >
                                 Suggestions
                               </Heading>
                               <Text fontSize="lg">💡</Text>
                             </Flex>
-                            <Box
-                              bg="blue.50"
-                              p={5}
-                              borderRadius="xl"
-                            >
+                            <Box bg="blue.50" p={5} borderRadius="xl">
                               <Stack spacing={2}>
                                 {(weeklyData.analysis.advice || ['No suggestions yet']).map(
                                   (item, idx) => (
@@ -1163,7 +1220,9 @@ export default function Dashboard() {
                                       lineHeight="tall"
                                       fontSize="sm"
                                     >
-                                      <Text as="span" mr={2} color="blue.500">⚡</Text>
+                                      <Text as="span" mr={2} color="blue.500">
+                                        ⚡
+                                      </Text>
                                       {item}
                                     </Text>
                                   )
@@ -1177,13 +1236,19 @@ export default function Dashboard() {
                         {weeklyData.recommendations?.items?.length ? (
                           <Box>
                             <Flex align="center" mb={3}>
-                              <Heading size="sm" mr={2} color={THEME.colors.textPrimary} fontWeight="500">
+                              <Heading
+                                size="sm"
+                                mr={2}
+                                color={THEME.colors.textPrimary}
+                                fontWeight="500"
+                              >
                                 {weeklyData.recommendations.headline || 'Movie Recommendations'}
                               </Heading>
                               <Text fontSize="lg">🎬</Text>
                             </Flex>
                             <Text color={THEME.colors.textSecondary} mb={4} fontSize="sm">
-                              {weeklyData.recommendations.description || 'Films curated for your weekly mood.'}
+                              {weeklyData.recommendations.description ||
+                                'Films curated for your weekly mood.'}
                             </Text>
                             <SimpleGrid columns={{ base: 1, sm: 2, md: 3 }} spacing={4}>
                               {weeklyData.recommendations.items.map((movie, idx) => (
@@ -1195,8 +1260,12 @@ export default function Dashboard() {
                       </Stack>
                     ) : (
                       <Box textAlign="center" py={12}>
-                        <Text fontSize="4xl" mb={3}>📊</Text>
-                        <Text color={THEME.colors.textSecondary} fontSize="md">No reflection data for this week.</Text>
+                        <Text fontSize="4xl" mb={3}>
+                          📊
+                        </Text>
+                        <Text color={THEME.colors.textSecondary} fontSize="md">
+                          No reflection data for this week.
+                        </Text>
                         <Text mt={2} fontSize="sm" color={THEME.colors.textMuted}>
                           Write daily entries to see weekly insights.
                         </Text>

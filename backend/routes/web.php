@@ -24,4 +24,3 @@ Route::post('logout', [AuthController::class, 'logout'])->name('logout');
 Route::get('/home', function () {
     return view('home');
 })->middleware('auth');
-

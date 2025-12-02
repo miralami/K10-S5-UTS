@@ -10,10 +10,13 @@ use Illuminate\Support\Str;
 class WeeklyMovieRecommendationService
 {
     private const MAX_RETRIES = 3;
+
     private const RETRY_DELAY = 2; // seconds
+
     private const MAX_JITTER = 1000; // milliseconds
 
     private string $apiKey;
+
     private string $model;
 
     public function __construct()
@@ -55,8 +58,8 @@ class WeeklyMovieRecommendationService
                               $response->status() === 429 ||
                               $response->status() >= 500;
 
-                if (!$isRetryable || $attempt >= self::MAX_RETRIES) {
-                    throw new \RuntimeException('API request failed: ' . $errorMessage);
+                if (! $isRetryable || $attempt >= self::MAX_RETRIES) {
+                    throw new \RuntimeException('API request failed: '.$errorMessage);
                 }
 
                 Log::warning("Movie recommendation API attempt {$attempt} failed, retrying", [
@@ -72,7 +75,7 @@ class WeeklyMovieRecommendationService
             }
         }
 
-        throw $lastException ?? new \RuntimeException('Failed to complete API request after ' . self::MAX_RETRIES . ' attempts');
+        throw $lastException ?? new \RuntimeException('Failed to complete API request after '.self::MAX_RETRIES.' attempts');
     }
 
     /**
@@ -104,7 +107,7 @@ class WeeklyMovieRecommendationService
                     $affirmation
                 );
 
-                if (!empty($aiRecommendations['items'])) {
+                if (! empty($aiRecommendations['items'])) {
                     return $aiRecommendations;
                 }
             }
@@ -131,7 +134,7 @@ class WeeklyMovieRecommendationService
     ): array {
         $prompt = $this->buildPrompt($mood, $moodScore, $summary, $highlights, $affirmation);
 
-        $url = 'https://generativelanguage.googleapis.com/v1beta/models/' . $this->model . ':generateContent?key=' . $this->apiKey;
+        $url = 'https://generativelanguage.googleapis.com/v1beta/models/'.$this->model.':generateContent?key='.$this->apiKey;
 
         $payload = [
             'contents' => [
@@ -164,12 +167,12 @@ class WeeklyMovieRecommendationService
         $responsePayload = $response->json();
         $text = $responsePayload['candidates'][0]['content']['parts'][0]['text'] ?? null;
 
-        if (!is_string($text) || trim($text) === '') {
+        if (! is_string($text) || trim($text) === '') {
             throw new \RuntimeException('Empty response from Gemini');
         }
 
         $decoded = json_decode($text, true);
-        if (!is_array($decoded)) {
+        if (! is_array($decoded)) {
             throw new \RuntimeException('Invalid JSON response from Gemini');
         }
 
@@ -205,7 +208,7 @@ class WeeklyMovieRecommendationService
         $moodInfo = $mood !== '' ? "Mood dominan: {$mood}" : 'Mood tidak teridentifikasi';
         $scoreInfo = $moodScore !== null ? "Skor mood: {$moodScore}/100" : '';
         $summaryInfo = $summary !== '' ? "Ringkasan minggu: {$summary}" : '';
-        $highlightsInfo = !empty($highlights) ? "Highlights: " . implode(', ', array_slice($highlights, 0, 3)) : '';
+        $highlightsInfo = ! empty($highlights) ? 'Highlights: '.implode(', ', array_slice($highlights, 0, 3)) : '';
         $affirmationInfo = $affirmation !== '' ? "Afirmasi: {$affirmation}" : '';
 
         $context = array_filter([$moodInfo, $scoreInfo, $summaryInfo, $highlightsInfo, $affirmationInfo]);
@@ -348,9 +351,15 @@ PROMPT;
 
         // Score-based fallback
         if ($moodScore !== null) {
-            if ($moodScore >= 70) return 'joyful';
-            if ($moodScore <= 40) return 'comfort';
-            if ($moodScore >= 55) return 'motivational';
+            if ($moodScore >= 70) {
+                return 'joyful';
+            }
+            if ($moodScore <= 40) {
+                return 'comfort';
+            }
+            if ($moodScore >= 55) {
+                return 'motivational';
+            }
         }
 
         return 'balanced';

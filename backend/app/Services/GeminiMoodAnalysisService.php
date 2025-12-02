@@ -93,7 +93,7 @@ class GeminiMoodAnalysisService
         $this->useGrpc = (bool) config('services.ai_grpc.enabled', false);
 
         if ($this->useGrpc) {
-            $this->grpcClient = $grpcClient ?? new AIGrpcClient();
+            $this->grpcClient = $grpcClient ?? new AIGrpcClient;
         }
 
         if (! $this->useGrpc && $this->apiKey === '') {

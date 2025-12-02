@@ -19,10 +19,10 @@ export async function login({ email, password }) {
     });
 
     const data = await response.json();
-    
+
     // Log the full response for debugging
     console.log('Login response:', data);
-    
+
     if (!response.ok || data.status === 'error') {
       console.error('Login error response:', data);
       throw new Error(data.message || 'Login gagal');
@@ -58,10 +58,10 @@ export async function register({ name, email, password, password_confirmation })
     });
 
     const data = await response.json();
-    
+
     // Log the full response for debugging
     console.log('Register response:', data);
-    
+
     if (!response.ok || data.status === 'error') {
       console.error('Register error response:', data);
       throw new Error(data.message || 'Registrasi gagal');

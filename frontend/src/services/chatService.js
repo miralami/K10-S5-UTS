@@ -2,14 +2,14 @@ import { getAuthToken, getAuthUser } from './authService';
 
 /**
  * Chat Service menggunakan WebSocket (lebih sederhana dari gRPC, tidak perlu Envoy proxy)
- * 
+ *
  * Protocol Pesan (JSON):
  * - Client -> Server:
  *   { type: 'auth', userId: string, userName: string, token: string }
  *   { type: 'message', text: string, recipientId?: string }
  *   { type: 'typing', contextId: string, isTyping: boolean }
  *   { type: 'get_users' }
- * 
+ *
  * - Server -> Client:
  *   { type: 'auth_success', users: User[] }
  *   { type: 'global_message', id, sender, text, timestamp }
@@ -105,7 +105,7 @@ export const chatService = {
             console.log(`[${connectionId}] Socket replaced, ignoring onopen`);
             return;
           }
-          
+
           console.log(`[${connectionId}] WebSocket connected, sending auth...`);
           reconnectAttempts = 0;
 
@@ -140,13 +140,17 @@ export const chatService = {
             console.log(`[${connectionId}] Old socket closed, ignoring`);
             return;
           }
-          
+
           console.log(`[${connectionId}] WebSocket closed:`, event.code, event.reason);
           ws = null;
           handlers.onEnd?.();
 
           // Auto-reconnect jika bukan intentional close
-          if (!isIntentionalClose && event.code !== 1000 && reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+          if (
+            !isIntentionalClose &&
+            event.code !== 1000 &&
+            reconnectAttempts < MAX_RECONNECT_ATTEMPTS
+          ) {
             reconnectAttempts++;
             console.log(`Reconnecting in ${RECONNECT_DELAY}ms (attempt ${reconnectAttempts})...`);
             reconnectTimer = setTimeout(() => {
@@ -240,9 +244,9 @@ export const chatService = {
       clearTimeout(reconnectTimer);
       reconnectTimer = null;
     }
-    
+
     isIntentionalClose = true;
-    
+
     if (ws) {
       try {
         ws.close(1000, 'User disconnected');
@@ -294,7 +298,7 @@ export const chatService = {
     }
 
     ws.send(JSON.stringify({ type: 'get_users' }));
-    
+
     // Server akan mengirim user_list sebagai response
     return [];
   },

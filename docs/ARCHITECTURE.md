@@ -2,27 +2,15 @@
 
 This document describes the dual-protocol architecture for real-time features.
 
-## Quick Start
+## Reference & Access
 
-For detailed setup instructions, see [README.md](../README.md).
+Setup, installation, and run commands live in the centralized guide: [docs/README.md](../README.md).
 
-```powershell
-# 1. Install all dependencies
-.\scripts\install-all.ps1
-
-# 2. Configure backend\.env (Database & API Keys)
-
-# 3. Run migrations
-cd backend; php artisan migrate --seed; cd ..
-
-# 4. Start all services
-npm run dev
-```
-
-**Access:**
+Access:
 - Frontend: http://localhost:5173
 - Backend API: http://localhost:8000
-- WebSocket: ws://localhost:8080
+- WebSocket Service: ws://localhost:8080
+- AI Service (gRPC): localhost:50052 (backend ↔ Python only)
 
 ## Overview
 
@@ -56,7 +44,7 @@ npm run dev
 
 ## Services
 
-### 1. WebSocket Chat Server (`grpc-service/server/websocket-server.js`)
+### 1. WebSocket Chat Server (`websocket-service/server/websocket-server.js`)
 
 **Port:** 8080 (configurable via `PORT` env)
 
@@ -97,7 +85,7 @@ ws.send(JSON.stringify({
 
 ### 1. WebSocket Server
 ```bash
-cd grpc-service
+cd websocket-service
 npm install
 npm run server:start
 ```
@@ -166,7 +154,7 @@ npm run dev:no-ai
 ### Running Services Individually
 ```bash
 # Terminal 1: WebSocket
-cd grpc-service && npm run server:dev
+cd websocket-service && npm run server:dev
 
 # Terminal 2: AI Service
 cd ai-service && python server.py

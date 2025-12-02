@@ -125,10 +125,24 @@ class JournalAnalysisController extends Controller
                     ? null
                     : 'Ringkasan mingguan belum tersedia. Cron akan memperbarui setiap Senin 02:00.',
             ]);
-        } catch (\Exception $e) {
-            \Log::error('Error in weeklySummary: '.$e->getMessage(), [
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            throw $e;
+        } catch (\InvalidArgumentException $e) {
+            \Log::warning('Invalid date provided in weeklySummary', [
                 'exception' => $e,
                 'request' => $request->all(),
+            ]);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+            ], 400);
+        } catch (\Throwable $e) {
+            \Log::error('Error in weeklySummary', [
+                'exception' => $e,
+                'request' => $request->all(),
+                'user_id' => $request->user()?->id,
+                'trace' => $e->getTraceAsString(),
             ]);
 
             return response()->json([
@@ -172,10 +186,24 @@ class JournalAnalysisController extends Controller
                     ? null
                     : 'Ringkasan harian belum tersedia untuk tanggal tersebut.',
             ]);
-        } catch (\Exception $e) {
-            \Log::error('Error in dailySummary: '.$e->getMessage(), [
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            throw $e;
+        } catch (\InvalidArgumentException $e) {
+            \Log::warning('Invalid date provided in dailySummary', [
                 'exception' => $e,
                 'request' => $request->all(),
+            ]);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+            ], 400);
+        } catch (\Throwable $e) {
+            \Log::error('Error in dailySummary', [
+                'exception' => $e,
+                'request' => $request->all(),
+                'user_id' => $request->user()?->id,
+                'trace' => $e->getTraceAsString(),
             ]);
 
             return response()->json([
@@ -279,10 +307,15 @@ class JournalAnalysisController extends Controller
                 'week' => ['start' => $weekStart->toDateString(), 'end' => $weekEnding->toDateString()],
                 'analysis' => $analysis,
             ]);
-        } catch (\Exception $e) {
-            \Log::error('Error generating weekly analysis for user: '.$e->getMessage(), [
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            throw $e;
+        } catch (\Throwable $e) {
+            \Log::error('Error generating weekly analysis for user', [
                 'exception' => $e,
-                'user' => $request->user()?->id,
+                'user_id' => $request->user()?->id,
+                'week_start' => $weekStart ?? null,
+                'week_ending' => $weekEnding ?? null,
+                'trace' => $e->getTraceAsString(),
             ]);
 
             return response()->json([
@@ -372,6 +405,7 @@ class JournalAnalysisController extends Controller
                     foreach ($movieQueries as $index => $query) {
                         $requests[$index] = $pool->as((string) $index)->timeout(5)->get($baseUri, $query);
                     }
+
                     return $requests;
                 });
 
@@ -391,7 +425,7 @@ class JournalAnalysisController extends Controller
                 }
             } catch (\Throwable $e) {
                 // If pool fails, set default posters
-                \Log::warning('OMDb pool request failed: ' . $e->getMessage());
+                \Log::warning('OMDb pool request failed: '.$e->getMessage());
                 foreach ($payload['items'] as $index => $item) {
                     if (empty($item['posterUrl'])) {
                         $payload['items'][$index]['posterUrl'] = $defaultPoster;
