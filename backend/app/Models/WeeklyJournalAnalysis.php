@@ -16,12 +16,14 @@ class WeeklyJournalAnalysis extends Model
         'week_start',
         'week_end',
         'analysis',
+        'recommendations',
     ];
 
     protected $casts = [
         'week_start' => 'date',
         'week_end' => 'date',
         'analysis' => 'array',
+        'recommendations' => 'array',
     ];
 
     /**

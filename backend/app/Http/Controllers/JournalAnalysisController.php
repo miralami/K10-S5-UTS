@@ -85,9 +85,20 @@ class JournalAnalysisController extends Controller
             $recommendations = null;
 
             if (is_array($analysisPayload) && ! empty($analysisPayload)) {
-                // Gunakan mood mingguan untuk memetakan rekomendasi film tematik.
-                $recommendations = $this->movieRecommendations->buildRecommendations($analysisPayload);
-                $recommendations = $this->enrichWeeklyRecommendationsWithOmdbPosters($recommendations);
+                // Check if recommendations are already cached in the analysis record
+                $cachedRecommendations = $analysisRecord->recommendations ?? null;
+
+                if (is_array($cachedRecommendations) && ! empty($cachedRecommendations['items'])) {
+                    // Use cached recommendations - no API calls needed!
+                    $recommendations = $cachedRecommendations;
+                } else {
+                    // Generate recommendations and cache them
+                    $recommendations = $this->movieRecommendations->buildRecommendations($analysisPayload);
+                    $recommendations = $this->enrichWeeklyRecommendationsWithOmdbPosters($recommendations);
+
+                    // Cache the recommendations for future requests
+                    $analysisRecord->update(['recommendations' => $recommendations]);
+                }
             }
 
             $dailySummaries = DailyJournalAnalysis::query()
@@ -327,38 +338,74 @@ class JournalAnalysisController extends Controller
             return $payload;
         }
 
-        $payload['items'] = array_map(function (array $item) use ($apiKey, $baseUri) {
+        // Default placeholder poster
+        $defaultPoster = 'https://via.placeholder.com/300x450/E9E7FF/6B21A8?text=No+Poster';
+
+        // Build query params for each movie
+        $movieQueries = [];
+        foreach ($payload['items'] as $index => $item) {
             $imdbId = isset($item['imdbId']) ? (string) $item['imdbId'] : '';
             $title = isset($item['title']) ? (string) $item['title'] : '';
             $year = isset($item['year']) ? (string) $item['year'] : '';
 
-            try {
-                $query = [];
-                if ($imdbId !== '') {
-                    $query['i'] = $imdbId;
-                } elseif ($title !== '') {
-                    $query['t'] = $title;
-                    if ($year !== '') {
-                        $query['y'] = $year;
-                    }
+            $query = [];
+            if ($imdbId !== '') {
+                $query['i'] = $imdbId;
+            } elseif ($title !== '') {
+                $query['t'] = $title;
+                if ($year !== '') {
+                    $query['y'] = $year;
                 }
+            }
 
-                if (! empty($query)) {
-                    $query['apikey'] = $apiKey;
-                    $resp = Http::timeout(10)->get($baseUri, $query);
-                    if ($resp->ok()) {
-                        $poster = (string) ($resp->json('Poster') ?? '');
+            if (! empty($query)) {
+                $query['apikey'] = $apiKey;
+                $movieQueries[$index] = $query;
+            }
+        }
+
+        // Make concurrent requests using Http::pool for much faster execution
+        if (! empty($movieQueries)) {
+            try {
+                $responses = Http::pool(function ($pool) use ($baseUri, $movieQueries) {
+                    $requests = [];
+                    foreach ($movieQueries as $index => $query) {
+                        $requests[$index] = $pool->as((string) $index)->timeout(5)->get($baseUri, $query);
+                    }
+                    return $requests;
+                });
+
+                // Process responses
+                foreach ($movieQueries as $index => $query) {
+                    $key = (string) $index;
+                    if (isset($responses[$key]) && $responses[$key]->ok()) {
+                        $poster = (string) ($responses[$key]->json('Poster') ?? '');
                         if ($poster !== '' && strtoupper($poster) !== 'N/A') {
-                            $item['posterUrl'] = $poster;
+                            $payload['items'][$index]['posterUrl'] = $poster;
+                        } else {
+                            $payload['items'][$index]['posterUrl'] = $defaultPoster;
                         }
+                    } else {
+                        $payload['items'][$index]['posterUrl'] = $defaultPoster;
                     }
                 }
             } catch (\Throwable $e) {
-                // ignore
+                // If pool fails, set default posters
+                \Log::warning('OMDb pool request failed: ' . $e->getMessage());
+                foreach ($payload['items'] as $index => $item) {
+                    if (empty($item['posterUrl'])) {
+                        $payload['items'][$index]['posterUrl'] = $defaultPoster;
+                    }
+                }
             }
+        }
 
-            return $item;
-        }, $payload['items']);
+        // Ensure all items have a posterUrl
+        foreach ($payload['items'] as $index => $item) {
+            if (empty($item['posterUrl'])) {
+                $payload['items'][$index]['posterUrl'] = $defaultPoster;
+            }
+        }
 
         return $payload;
     }
