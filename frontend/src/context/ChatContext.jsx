@@ -290,7 +290,7 @@ export function ChatProvider({ children }) {
       connectionRef.current = false;
       chatService.endChatStream();
     };
-  }, [currentUser?.id, showMessageNotification]);
+  }, [currentUser, showMessageNotification]);
 
   /**
    * Send message helper function

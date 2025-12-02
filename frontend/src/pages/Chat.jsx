@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import {
   Box,
   Button,
@@ -87,7 +87,10 @@ export default function Chat() {
 
   // Get messages for current chat (dari context)
   // Get messages for current chat (from context)
-  const currentMessages = conversations[getConversationId()] || [];
+  const currentMessages = useMemo(
+    () => conversations[getConversationId()] || [],
+    [conversations, getConversationId]
+  );
 
   // Get typing users for current context (dari context)
   // Get typing users for current context (from context)

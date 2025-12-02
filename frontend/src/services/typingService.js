@@ -13,9 +13,8 @@ export const typingService = {
    * @param {string} channelId - Channel or user ID to monitor
    * @param {string} userId - Current user ID (unused but kept for API compatibility)
    * @param {Function} onData - Callback when typing event received
-   * @param {Function} onError - Error callback (unused in WebSocket impl)
    */
-  startStream: (channelId, userId, onData, onError) => {
+  startStream: (channelId, userId, onData) => {
     // Listen to 'typingEvent' dispatched by WebSocket handler
     const handler = (e) => {
       const d = e.detail;
