@@ -1,0 +1,14 @@
+{
+  "php.problems.exclude": {
+    "**/vendor/**": true
+  },
+  "php.validate.enable": true,
+  "php.suggest.basic": true,
+  "intelephense.diagnostics.undefinedProperties": false,
+  "intelephense.diagnostics.undefinedMethods": false,
+  "php.validate.problems": {
+    "PHP0416": "off",
+    "PHP6606": "off",
+    "PHP6613": "off"
+  }
+}

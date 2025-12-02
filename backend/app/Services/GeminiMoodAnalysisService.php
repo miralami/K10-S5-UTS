@@ -249,9 +249,12 @@ class GeminiMoodAnalysisService
             $summariesArray = $dailyAnalyses->map(function ($daily) {
                 if ($daily instanceof DailyJournalAnalysis) {
                     $analysis = $daily->analysis ?? [];
+                    $dateStr = $daily->analysis_date instanceof \DateTimeInterface
+                        ? $daily->analysis_date->format('Y-m-d')
+                        : (string) ($daily->analysis_date ?? '');
 
                     return [
-                        'date' => $daily->analysis_date?->toDateString() ?? '',
+                        'date' => $dateStr,
                         'summary' => $analysis['summary'] ?? '',
                         'dominantMood' => $analysis['dominantMood'] ?? 'unknown',
                         'moodScore' => (int) ($analysis['moodScore'] ?? 0),
@@ -429,8 +432,11 @@ PROMPT,
         $serialized = $dailyAnalyses
             ->map(function ($daily) {
                 if ($daily instanceof DailyJournalAnalysis) {
+                    $dateStr = $daily->analysis_date instanceof \DateTimeInterface
+                        ? $daily->analysis_date->format('Y-m-d')
+                        : (string) ($daily->analysis_date ?? null);
                     $data = [
-                        'analysis_date' => $daily->analysis_date?->toDateString(),
+                        'analysis_date' => $dateStr,
                         'analysis' => $daily->analysis,
                     ];
                 } else {

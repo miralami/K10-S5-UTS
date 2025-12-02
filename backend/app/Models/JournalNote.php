@@ -9,6 +9,32 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property int $id
+ * @property int $user_id
+ * @property string|null $title
+ * @property string|null $body
+ * @property \Illuminate\Support\Carbon|null $note_date
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property string|null $vibe
+ * @property-read \App\Models\User|null $user
+ *
+ * @method static Builder<static>|JournalNote forWeek(\Carbon\CarbonInterface $date, ?\Carbon\CarbonInterface $endDate = null)
+ * @method static Builder<static>|JournalNote newModelQuery()
+ * @method static Builder<static>|JournalNote newQuery()
+ * @method static Builder<static>|JournalNote query()
+ * @method static Builder<static>|JournalNote whereBody($value)
+ * @method static Builder<static>|JournalNote whereCreatedAt($value)
+ * @method static Builder<static>|JournalNote whereId($value)
+ * @method static Builder<static>|JournalNote whereNoteDate($value)
+ * @method static Builder<static>|JournalNote whereTitle($value)
+ * @method static Builder<static>|JournalNote whereUpdatedAt($value)
+ * @method static Builder<static>|JournalNote whereUserId($value)
+ * @method static Builder<static>|JournalNote whereVibe($value)
+ *
+ * @mixin \Eloquent
+ */
 class JournalNote extends Model
 {
     use HasFactory;
