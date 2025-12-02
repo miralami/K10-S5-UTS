@@ -195,6 +195,8 @@ Frontend ──gRPC-web via Envoy──> gRPC Services (typing, chat)
 8. ✅ Updated `docs/ARCHITECTURE.md` to reflect actual architecture
 9. ✅ Updated `docs/COMMANDS.md` with corrected folder name
 10. ✅ Updated `docs/README.md` service listing
+11. ✅ Implemented Laravel Policies for authorization and documented their usage
+12. ✅ Added health check endpoints to backend and websocket-service and documented them
 
 ---
 

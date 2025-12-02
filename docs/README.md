@@ -38,6 +38,15 @@ Access:
 - WebSocket Service (Node): 8080
 - AI Service (Python gRPC): 50052
 
+## Health Checks
+
+Each service exposes a lightweight health endpoint for monitoring and quick checks:
+
+- Backend API: `GET /api/health` (e.g. `http://localhost:8000/api/health`)
+- WebSocket Service: `GET /health` (e.g. `http://localhost:8080/health`)
+
+Use these endpoints with your load balancer or monitoring system to verify availability.
+
 ## Environment Variables
 
 Backend `.env` essentials:

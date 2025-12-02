@@ -33,7 +33,7 @@ jobs:
         extensions: mbstring, dom, fileinfo
         coverage: none
 
-    # Node setup for frontend and grpc-service
+    # Node setup for frontend and websocket-service
     - name: Setup Node.js
       if: matrix.setup == 'node'
       uses: actions/setup-node@v4

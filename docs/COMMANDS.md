@@ -71,6 +71,10 @@ php artisan db:seed
 ```powershell
 php artisan serve
 ```
+ - Health check (quick):
+ ```powershell
+ curl http://localhost:8000/api/health
+ ```
 - Clear caches:
 ```powershell
 php artisan cache:clear; php artisan config:clear; php artisan route:clear; php artisan view:clear
@@ -78,6 +82,13 @@ php artisan cache:clear; php artisan config:clear; php artisan route:clear; php 
 - Run tests (Pest/PHPUnit):
 ```powershell
 php artisan test
+```
+
+## Authorization (Policies)
+
+- Generate a policy for `JournalNote` (example):
+```powershell
+php artisan make:policy JournalNotePolicy --model=JournalNote
 ```
 
 ## AI Service (Python)
@@ -115,6 +126,10 @@ npm run server:start
 ```powershell
 npm run server:dev
 ```
+ - Health check (quick):
+ ```powershell
+ curl http://localhost:8080/health
+ ```
 
 ## Proto Generation (AI Service Only)
 - Generate Python gRPC stubs from ai.proto:

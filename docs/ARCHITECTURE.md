@@ -53,6 +53,8 @@ Access:
 - Typing indicators
 - Presence (online/offline) tracking
 - JWT token verification
+ - Health endpoint: `GET /health` returns service status and active connection count
+ - Authorization: backend uses Laravel Policies for resource authorization; WebSocket validates JWT on connect
 
 **Connection:**
 ```javascript
@@ -74,6 +76,7 @@ ws.send(JSON.stringify({
 - `AnalyzeWeekly`: Aggregate daily summaries into weekly report
 
 **Proto:** `shared/proto/ai.proto`
+**Note:** The canonical proto file is stored under `ai-service/proto/ai.proto` (the `shared/` folder was removed during cleanup).
 
 ## Setup
 

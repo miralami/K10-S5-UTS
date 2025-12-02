@@ -1,13 +1,12 @@
 {
-  "name": "grpc-service",
+  "name": "websocket-service",
   "version": "1.0.0",
-  "description": "Workspace scripts for running the gRPC server for Mood Journal",
+  "description": "WebSocket service for real-time chat, typing and presence",
   "type": "module",
   "main": "server/websocket-server.js",
   "scripts": {
     "server:start": "node server/websocket-server.js",
     "server:dev": "nodemon --watch server --ext js --exec node server/websocket-server.js",
-    "grpc:start": "node grpc-server.js",
     "lint": "eslint . --report-unused-disable-directives --max-warnings 0",
     "lint:fix": "eslint . --fix --report-unused-disable-directives || true",
     "format": "prettier --write ."
