@@ -46,6 +46,65 @@ message AnalysisResult {
   string affirmation = 6;
 }
 
+// Request to analyze writing style
+message WritingStyleRequest {
+  string user_id = 1;
+  repeated string texts = 2; // Array of journal entry texts
+}
+
+// Author match info
+message AuthorMatch {
+  string name = 1;
+  string nationality = 2;
+  float score = 3; // 0-100 percentage match
+  string description = 4;
+  string fun_fact = 5;
+}
+
+// Writing style analysis result
+message WritingStyleResult {
+  int32 total_words = 1;
+  int32 total_sentences = 2;
+  float avg_sentence_length = 3;
+  float vocabulary_richness = 4; // 0-1 ratio
+  float punctuation_density = 5; // per 100 words
+  float avg_word_length = 6;
+  string detected_language = 7;
+  repeated string top_words = 8;
+  AuthorMatch top_match = 9;
+  repeated AuthorMatch other_matches = 10;
+}
+
+// Request for movie recommendations based on mood analysis
+message MovieRecommendationRequest {
+  string user_id = 1;
+  string dominant_mood = 2;
+  int32 mood_score = 3; // 0-100
+  string summary = 4;
+  repeated string highlights = 5;
+  string affirmation = 6;
+}
+
+// A single movie recommendation
+message MovieItem {
+  string title = 1;
+  int32 year = 2;
+  string tagline = 3;
+  string imdb_id = 4;
+  repeated string genres = 5;
+  string reason = 6;
+  string poster_url = 7;
+}
+
+// Movie recommendations result
+message MovieRecommendationResult {
+  string category = 1; // joyful, comfort, grounding, reflective, motivational, balanced
+  string mood_label = 2;
+  string headline = 3;
+  string description = 4;
+  repeated MovieItem items = 5;
+}
+
 // AI Analysis Service
 service AIAnalysisService {
   // Analyze a single day's journal notes
@@ -53,4 +112,10 @@ service AIAnalysisService {
 
   // Analyze a week based on daily summaries
   rpc AnalyzeWeekly (WeeklyAnalysisRequest) returns (AnalysisResult);
+
+  // Analyze writing style and find author doppelgänger
+  rpc AnalyzeWritingStyle (WritingStyleRequest) returns (WritingStyleResult);
+
+  // Get movie recommendations based on mood analysis
+  rpc GetMovieRecommendations (MovieRecommendationRequest) returns (MovieRecommendationResult);
 }

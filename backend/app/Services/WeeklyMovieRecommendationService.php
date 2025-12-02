@@ -3,83 +3,27 @@
 namespace App\Services;
 
 use Illuminate\Support\Arr;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
+/**
+ * WeeklyMovieRecommendationService
+ *
+ * This service provides movie recommendations based on weekly mood analysis.
+ * It communicates with the Python AI service via gRPC for AI-powered recommendations,
+ * with fallback to curated lists when gRPC is unavailable.
+ */
 class WeeklyMovieRecommendationService
 {
-    private const MAX_RETRIES = 3;
+    private AIGrpcClient $grpcClient;
 
-    private const RETRY_DELAY = 2; // seconds
-
-    private const MAX_JITTER = 1000; // milliseconds
-
-    private string $apiKey;
-
-    private string $model;
-
-    public function __construct()
+    public function __construct(AIGrpcClient $grpcClient)
     {
-        $this->apiKey = (string) config('services.google_genai.api_key', '');
-        $this->model = (string) config('services.google_genai.model', 'gemini-2.5-flash');
+        $this->grpcClient = $grpcClient;
     }
 
     /**
-     * Execute HTTP request with retry mechanism and exponential backoff.
-     */
-    private function httpRequestWithRetry(string $url, array $data, array $headers = [])
-    {
-        $lastException = null;
-
-        for ($attempt = 1; $attempt <= self::MAX_RETRIES; $attempt++) {
-            try {
-                $jitter = rand(0, self::MAX_JITTER) / 1000;
-                $delay = (self::RETRY_DELAY * $attempt) + $jitter;
-
-                if ($attempt > 1) {
-                    usleep((int) ($delay * 1000000));
-                    Log::info("Movie recommendation API retry attempt {$attempt}", ['delay' => $delay]);
-                }
-
-                $response = Http::timeout(30 + ($attempt * 5))
-                    ->withHeaders($headers)
-                    ->post($url, $data);
-
-                if ($response->successful()) {
-                    return $response;
-                }
-
-                $errorMessage = strtolower($response->json('error.message') ?? $response->body());
-
-                $isRetryable = str_contains($errorMessage, 'overloaded') ||
-                              str_contains($errorMessage, 'try again') ||
-                              str_contains($errorMessage, 'quota') ||
-                              $response->status() === 429 ||
-                              $response->status() >= 500;
-
-                if (! $isRetryable || $attempt >= self::MAX_RETRIES) {
-                    throw new \RuntimeException('API request failed: '.$errorMessage);
-                }
-
-                Log::warning("Movie recommendation API attempt {$attempt} failed, retrying", [
-                    'error' => $errorMessage,
-                    'status' => $response->status(),
-                ]);
-
-            } catch (\Exception $e) {
-                $lastException = $e;
-                if ($attempt >= self::MAX_RETRIES) {
-                    throw $e;
-                }
-            }
-        }
-
-        throw $lastException ?? new \RuntimeException('Failed to complete API request after '.self::MAX_RETRIES.' attempts');
-    }
-
-    /**
-     * Build movie recommendations based on weekly analysis using AI.
+     * Build movie recommendations based on weekly analysis using AI via gRPC.
      *
      * @param  array<string, mixed>|null  $analysis
      * @return array<string, mixed>
@@ -96,170 +40,43 @@ class WeeklyMovieRecommendationService
         $normalizedMood = $this->normalizeMood($rawMood);
         $moodLabel = $normalizedMood !== '' ? $normalizedMood : 'kondisi kamu';
 
-        // Try AI-generated recommendations first
+        // Try gRPC-based AI recommendations
         try {
-            if ($this->apiKey !== '') {
-                $aiRecommendations = $this->getAIRecommendations(
+            if ($this->grpcClient->isAvailable()) {
+                $recommendations = $this->grpcClient->getMovieRecommendations(
+                    (string) Arr::get($analysis, 'userId', '0'),
                     $normalizedMood,
                     $moodScore,
                     $summary,
-                    $highlights,
+                    is_array($highlights) ? $highlights : [],
                     $affirmation
                 );
 
-                if (! empty($aiRecommendations['items'])) {
-                    return $aiRecommendations;
+                if (! empty($recommendations['items'])) {
+                    Log::info('Movie recommendations fetched via gRPC', [
+                        'category' => $recommendations['category'],
+                        'itemCount' => count($recommendations['items']),
+                    ]);
+
+                    return $recommendations;
                 }
             }
         } catch (\Exception $e) {
-            Log::warning('AI movie recommendations failed, using fallback', [
+            Log::warning('gRPC movie recommendations failed, using fallback', [
                 'error' => $e->getMessage(),
                 'mood' => $normalizedMood,
             ]);
         }
 
-        // Fallback to basic recommendations if AI fails
+        // Fallback to basic recommendations if gRPC fails
         return $this->getFallbackRecommendations($normalizedMood, $moodScore, $moodLabel);
     }
 
     /**
-     * Get AI-generated movie recommendations from Gemini.
-     */
-    private function getAIRecommendations(
-        string $mood,
-        ?int $moodScore,
-        string $summary,
-        array $highlights,
-        string $affirmation
-    ): array {
-        $prompt = $this->buildPrompt($mood, $moodScore, $summary, $highlights, $affirmation);
-
-        $url = 'https://generativelanguage.googleapis.com/v1beta/models/'.$this->model.':generateContent?key='.$this->apiKey;
-
-        $payload = [
-            'contents' => [
-                [
-                    'role' => 'user',
-                    'parts' => [
-                        ['text' => $prompt],
-                    ],
-                ],
-            ],
-            'generationConfig' => [
-                'response_mime_type' => 'application/json',
-                'temperature' => 0.7,
-                'top_p' => 0.95,
-                'top_k' => 40,
-                'max_output_tokens' => 2048,
-            ],
-            'safetySettings' => [
-                ['category' => 'HARM_CATEGORY_HARASSMENT', 'threshold' => 'BLOCK_NONE'],
-                ['category' => 'HARM_CATEGORY_HATE_SPEECH', 'threshold' => 'BLOCK_NONE'],
-                ['category' => 'HARM_CATEGORY_SEXUALLY_EXPLICIT', 'threshold' => 'BLOCK_NONE'],
-                ['category' => 'HARM_CATEGORY_DANGEROUS_CONTENT', 'threshold' => 'BLOCK_NONE'],
-            ],
-        ];
-
-        $response = $this->httpRequestWithRetry($url, $payload, [
-            'Content-Type' => 'application/json',
-        ]);
-
-        $responsePayload = $response->json();
-        $text = $responsePayload['candidates'][0]['content']['parts'][0]['text'] ?? null;
-
-        if (! is_string($text) || trim($text) === '') {
-            throw new \RuntimeException('Empty response from Gemini');
-        }
-
-        $decoded = json_decode($text, true);
-        if (! is_array($decoded)) {
-            throw new \RuntimeException('Invalid JSON response from Gemini');
-        }
-
-        return [
-            'category' => $decoded['category'] ?? 'ai-generated',
-            'moodLabel' => $mood !== '' ? $mood : null,
-            'headline' => $decoded['headline'] ?? 'Rekomendasi Film untuk Minggu Ini',
-            'description' => $decoded['description'] ?? 'Film-film yang dipilih khusus berdasarkan mood mingguan kamu.',
-            'items' => array_map(function (array $movie) {
-                return [
-                    'title' => $movie['title'] ?? 'Unknown',
-                    'year' => $movie['year'] ?? null,
-                    'tagline' => $movie['tagline'] ?? null,
-                    'posterUrl' => $movie['posterUrl'] ?? null,
-                    'imdbId' => $movie['imdbId'] ?? null,
-                    'genres' => $movie['genres'] ?? [],
-                    'reason' => $movie['reason'] ?? 'Film yang cocok untuk mood kamu.',
-                ];
-            }, $decoded['movies'] ?? []),
-        ];
-    }
-
-    /**
-     * Build the prompt for Gemini AI.
-     */
-    private function buildPrompt(
-        string $mood,
-        ?int $moodScore,
-        string $summary,
-        array $highlights,
-        string $affirmation
-    ): string {
-        $moodInfo = $mood !== '' ? "Mood dominan: {$mood}" : 'Mood tidak teridentifikasi';
-        $scoreInfo = $moodScore !== null ? "Skor mood: {$moodScore}/100" : '';
-        $summaryInfo = $summary !== '' ? "Ringkasan minggu: {$summary}" : '';
-        $highlightsInfo = ! empty($highlights) ? 'Highlights: '.implode(', ', array_slice($highlights, 0, 3)) : '';
-        $affirmationInfo = $affirmation !== '' ? "Afirmasi: {$affirmation}" : '';
-
-        $context = array_filter([$moodInfo, $scoreInfo, $summaryInfo, $highlightsInfo, $affirmationInfo]);
-        $contextStr = implode("\n", $context);
-
-        return <<<PROMPT
-Kamu adalah asisten rekomendasi film yang ahli. Berdasarkan analisis mood mingguan pengguna berikut:
-
-{$contextStr}
-
-Berikan 3 rekomendasi film yang SANGAT SESUAI dengan kondisi emosional pengguna.
-
-KRITERIA PEMILIHAN FILM:
-- Jika mood positif (bahagia, senang, optimis): pilih film yang mempertahankan energi positif
-- Jika mood sedih/lelah: pilih film yang menghangatkan hati dan memberi kenyamanan
-- Jika mood cemas/stres: pilih film yang menenangkan dan grounding
-- Jika mood reflektif/nostalgia: pilih film yang bermakna dan kontemplatif
-- Jika mood termotivasi: pilih film yang inspiratif dan membangun semangat
-
-Kembalikan dalam format JSON EXACT berikut:
-{
-  "category": "string (joyful/comfort/grounding/reflective/motivational/balanced)",
-  "headline": "string (judul bagian dalam bahasa Indonesia, personal dan hangat)",
-  "description": "string (deskripsi singkat mengapa film-film ini cocok, dalam bahasa Indonesia)",
-  "movies": [
-    {
-      "title": "string (judul film dalam bahasa Inggris)",
-      "year": number (tahun rilis),
-      "tagline": "string (tagline singkat dalam bahasa Indonesia)",
-      "imdbId": "string atau null (format: tt1234567)",
-      "genres": ["string"] (maksimal 3 genre),
-      "reason": "string (alasan personal mengapa film ini cocok untuk mood pengguna, dalam bahasa Indonesia, gunakan 'kamu' bukan '%s')"
-    }
-  ]
-}
-
-PENTING:
-- Pilih film-film yang BERAGAM (berbeda genre, tahun, style)
-- Film harus NYATA dan TERKENAL (bukan fiksi)
-- Alasan harus PERSONAL dan terkait langsung dengan kondisi mood pengguna
-- Gunakan bahasa Indonesia yang hangat dan empatik
-- Jangan gunakan placeholder seperti %s dalam reason
-PROMPT;
-    }
-
-    /**
-     * Fallback recommendations when AI is unavailable.
+     * Fallback recommendations when gRPC is unavailable.
      */
     private function getFallbackRecommendations(string $mood, ?int $moodScore, string $moodLabel): array
     {
-        // Simple category resolution based on mood keywords
         $category = $this->resolveCategory($mood, $moodScore);
 
         $fallbackMovies = [

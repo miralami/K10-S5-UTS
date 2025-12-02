@@ -45,6 +45,16 @@ class AIAnalysisServiceStub(object):
                 request_serializer=ai__pb2.WeeklyAnalysisRequest.SerializeToString,
                 response_deserializer=ai__pb2.AnalysisResult.FromString,
                 _registered_method=True)
+        self.AnalyzeWritingStyle = channel.unary_unary(
+                '/ai.AIAnalysisService/AnalyzeWritingStyle',
+                request_serializer=ai__pb2.WritingStyleRequest.SerializeToString,
+                response_deserializer=ai__pb2.WritingStyleResult.FromString,
+                _registered_method=True)
+        self.GetMovieRecommendations = channel.unary_unary(
+                '/ai.AIAnalysisService/GetMovieRecommendations',
+                request_serializer=ai__pb2.MovieRecommendationRequest.SerializeToString,
+                response_deserializer=ai__pb2.MovieRecommendationResult.FromString,
+                _registered_method=True)
 
 
 class AIAnalysisServiceServicer(object):
@@ -65,6 +75,20 @@ class AIAnalysisServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def AnalyzeWritingStyle(self, request, context):
+        """Analyze writing style and find author doppelgänger
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetMovieRecommendations(self, request, context):
+        """Get movie recommendations based on mood analysis
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_AIAnalysisServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -77,6 +101,16 @@ def add_AIAnalysisServiceServicer_to_server(servicer, server):
                     servicer.AnalyzeWeekly,
                     request_deserializer=ai__pb2.WeeklyAnalysisRequest.FromString,
                     response_serializer=ai__pb2.AnalysisResult.SerializeToString,
+            ),
+            'AnalyzeWritingStyle': grpc.unary_unary_rpc_method_handler(
+                    servicer.AnalyzeWritingStyle,
+                    request_deserializer=ai__pb2.WritingStyleRequest.FromString,
+                    response_serializer=ai__pb2.WritingStyleResult.SerializeToString,
+            ),
+            'GetMovieRecommendations': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetMovieRecommendations,
+                    request_deserializer=ai__pb2.MovieRecommendationRequest.FromString,
+                    response_serializer=ai__pb2.MovieRecommendationResult.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -134,6 +168,60 @@ class AIAnalysisService(object):
             '/ai.AIAnalysisService/AnalyzeWeekly',
             ai__pb2.WeeklyAnalysisRequest.SerializeToString,
             ai__pb2.AnalysisResult.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def AnalyzeWritingStyle(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/ai.AIAnalysisService/AnalyzeWritingStyle',
+            ai__pb2.WritingStyleRequest.SerializeToString,
+            ai__pb2.WritingStyleResult.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetMovieRecommendations(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/ai.AIAnalysisService/GetMovieRecommendations',
+            ai__pb2.MovieRecommendationRequest.SerializeToString,
+            ai__pb2.MovieRecommendationResult.FromString,
             options,
             channel_credentials,
             insecure,

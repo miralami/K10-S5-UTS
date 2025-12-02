@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Services\GeminiMovieRecommendationService;
+use App\Services\AIGrpcClient;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Log;
 class RecommendationController extends Controller
 {
     public function __construct(
-        private readonly GeminiMovieRecommendationService $gemini
+        private readonly AIGrpcClient $aiGrpcClient
     ) {}
 
     public function create(Request $request): JsonResponse
@@ -20,43 +20,56 @@ class RecommendationController extends Controller
             'mood' => ['required', 'string', 'min:3'],
         ]);
 
-        $geminiKey = (string) (config('services.google_genai.api_key') ?? '');
-        if ($geminiKey !== '') {
-            try {
-                $recommendations = $this->gemini->recommend($validated['mood']);
-                if (! empty($recommendations)) {
-                    $recommendations = $this->enrichWithOmdbPosters($recommendations);
+        try {
+            // Use 'guest' as userId since this is a public endpoint
+            // Pass empty values for optional parameters as we only have the mood
+            $result = $this->aiGrpcClient->getMovieRecommendations(
+                userId: 'guest',
+                mood: $validated['mood']
+            );
 
-                    return response()->json([
-                        'recommendations' => $recommendations,
-                        'source' => 'gemini',
-                    ])->header('X-Recommendation-Source', 'gemini');
-                }
-                Log::warning('Gemini returned empty recommendations', ['mood' => $validated['mood']]);
-            } catch (\Throwable $e) {
-                Log::error('Gemini movie recommendations failed', [
-                    'error' => $e->getMessage(),
-                    'trace' => $e->getTraceAsString(),
-                    'mood' => $validated['mood'],
-                ]);
-                // Fallback to OMDb if Gemini fails
-                $recommendations = $this->buildOmdbRecommendationsFromMood($validated['mood']);
+            $recommendations = $result['items'] ?? [];
+
+            if (! empty($recommendations)) {
+                $recommendations = $this->enrichWithOmdbPosters($recommendations);
 
                 return response()->json([
                     'recommendations' => $recommendations,
-                    'source' => 'omdb',
-                    'error' => 'Gemini error: '.$e->getMessage(),
-                ]);
+                    'source' => 'gemini', // Keep 'gemini' as source for frontend compatibility
+                    'context' => [
+                        'category' => $result['category'] ?? null,
+                        'headline' => $result['headline'] ?? null,
+                        'description' => $result['description'] ?? null,
+                    ]
+                ])->header('X-Recommendation-Source', 'gemini');
             }
+
+            Log::warning('AI service returned empty recommendations', ['mood' => $validated['mood']]);
+        } catch (\Throwable $e) {
+            Log::error('AI movie recommendations failed', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'mood' => $validated['mood'],
+            ]);
+
+            // Fallback to OMDb if AI service fails
+            $recommendations = $this->buildOmdbRecommendationsFromMood($validated['mood']);
+
+            return response()->json([
+                'recommendations' => $recommendations,
+                'source' => 'omdb',
+                'error' => 'AI service error: '.$e->getMessage(),
+            ]);
         }
 
-        // If no Gemini key is provided, use OMDb directly
+        // If we got here without returning, something unexpected happened (empty recommendations but no error)
+        // Fallback to OMDb
         $recommendations = $this->buildOmdbRecommendationsFromMood($validated['mood']);
 
         return response()->json([
             'recommendations' => $recommendations,
             'source' => 'omdb',
-            'warning' => 'Gemini API key not configured',
+            'warning' => 'AI service returned no results',
         ]);
     }
 

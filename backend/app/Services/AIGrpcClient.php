@@ -2,6 +2,9 @@
 
 namespace App\Services;
 
+use Ai\AuthorMatch;
+use Ai\WritingStyleRequest;
+use Ai\WritingStyleResult;
 use RuntimeException;
 
 /**
@@ -149,6 +152,31 @@ class AIGrpcClient
     }
 
     /**
+     * Analyze writing style and find author doppelgänger.
+     *
+     * @param  string  $userId  The user ID
+     * @param  array<int, string>  $texts  Array of text entries to analyze
+     * @return array{totalWords: int, totalSentences: int, avgSentenceLength: float, vocabularyRichness: float, punctuationDensity: float, avgWordLength: float, detectedLanguage: string, topWords: array, topMatch: array|null, otherMatches: array}
+     */
+    public function analyzeWritingStyle(string $userId, array $texts): array
+    {
+        $request = new \Ai\WritingStyleRequest;
+        $request->setUserId($userId);
+        $request->setTexts($texts);
+
+        /** @var \Ai\WritingStyleResult $response */
+        [$response, $status] = $this->getClient()->AnalyzeWritingStyle($request)->wait();
+
+        if ($status->code !== \Grpc\STATUS_OK) {
+            throw new RuntimeException(
+                "gRPC AnalyzeWritingStyle failed: {$status->details} (code: {$status->code})"
+            );
+        }
+
+        return $this->transformWritingStyleResponse($response);
+    }
+
+    /**
      * Transform gRPC response to array.
      */
     private function transformResponse(\Ai\AnalysisResult $response): array
@@ -160,6 +188,111 @@ class AIGrpcClient
             'highlights' => iterator_to_array($response->getHighlights()) ?: [],
             'advice' => iterator_to_array($response->getAdvice()) ?: [],
             'affirmation' => $response->getAffirmation() ?: null,
+        ];
+    }
+
+    /**
+     * Transform WritingStyleResult gRPC response to array.
+     */
+    private function transformWritingStyleResponse(\Ai\WritingStyleResult $response): array
+    {
+        $topMatch = $response->getTopMatch();
+        $otherMatches = [];
+
+        foreach ($response->getOtherMatches() as $match) {
+            $otherMatches[] = [
+                'name' => $match->getName(),
+                'nationality' => $match->getNationality(),
+                'score' => round($match->getScore(), 1),
+                'description' => $match->getDescription(),
+                'funFact' => $match->getFunFact(),
+            ];
+        }
+
+        return [
+            'totalWords' => $response->getTotalWords(),
+            'totalSentences' => $response->getTotalSentences(),
+            'avgSentenceLength' => round($response->getAvgSentenceLength(), 1),
+            'vocabularyRichness' => round($response->getVocabularyRichness() * 100, 1),
+            'punctuationDensity' => round($response->getPunctuationDensity(), 1),
+            'avgWordLength' => round($response->getAvgWordLength(), 1),
+            'detectedLanguage' => $response->getDetectedLanguage(),
+            'topWords' => iterator_to_array($response->getTopWords()) ?: [],
+            'topMatch' => $topMatch ? [
+                'name' => $topMatch->getName(),
+                'nationality' => $topMatch->getNationality(),
+                'score' => round($topMatch->getScore(), 1),
+                'description' => $topMatch->getDescription(),
+                'funFact' => $topMatch->getFunFact(),
+            ] : null,
+            'otherMatches' => $otherMatches,
+        ];
+    }
+
+    /**
+     * Get movie recommendations based on mood analysis.
+     *
+     * @param  string  $userId  The user ID
+     * @param  string  $mood  The dominant mood
+     * @param  int|null  $moodScore  The mood score (0-100)
+     * @param  string  $summary  The weekly summary
+     * @param  array  $highlights  The highlights from the week
+     * @param  string  $affirmation  The affirmation
+     * @return array{category: string, moodLabel: string, headline: string, description: string, items: array}
+     */
+    public function getMovieRecommendations(
+        string $userId,
+        string $mood,
+        ?int $moodScore = null,
+        string $summary = '',
+        array $highlights = [],
+        string $affirmation = ''
+    ): array {
+        $request = new \Ai\MovieRecommendationRequest;
+        $request->setUserId($userId);
+        $request->setDominantMood($mood);
+        $request->setMoodScore($moodScore ?? 0);
+        $request->setSummary($summary);
+        $request->setHighlights($highlights);
+        $request->setAffirmation($affirmation);
+
+        /** @var \Ai\MovieRecommendationResult $response */
+        [$response, $status] = $this->getClient()->GetMovieRecommendations($request)->wait();
+
+        if ($status->code !== \Grpc\STATUS_OK) {
+            throw new RuntimeException(
+                "gRPC GetMovieRecommendations failed: {$status->details} (code: {$status->code})"
+            );
+        }
+
+        return $this->transformMovieRecommendationsResponse($response);
+    }
+
+    /**
+     * Transform MovieRecommendationResult gRPC response to array.
+     */
+    private function transformMovieRecommendationsResponse(\Ai\MovieRecommendationResult $response): array
+    {
+        $items = [];
+
+        foreach ($response->getItems() as $item) {
+            $items[] = [
+                'title' => $item->getTitle(),
+                'year' => $item->getYear(),
+                'tagline' => $item->getTagline(),
+                'imdbId' => $item->getImdbId(),
+                'genres' => iterator_to_array($item->getGenres()) ?: [],
+                'reason' => $item->getReason(),
+                'posterUrl' => $item->getPosterUrl(),
+            ];
+        }
+
+        return [
+            'category' => $response->getCategory(),
+            'moodLabel' => $response->getMoodLabel(),
+            'headline' => $response->getHeadline(),
+            'description' => $response->getDescription(),
+            'items' => $items,
         ];
     }
 }

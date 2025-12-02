@@ -6,6 +6,7 @@ use App\Models\DailyJournalAnalysis;
 use App\Models\JournalNote;
 use App\Models\User;
 use App\Models\WeeklyJournalAnalysis;
+use App\Services\AIGrpcClient;
 use App\Services\DailyJournalAnalysisService;
 use App\Services\GeminiMoodAnalysisService;
 use App\Services\WeeklyMovieRecommendationService;
@@ -17,7 +18,10 @@ use Tymon\JWTAuth\Facades\JWTAuth;
 
 class JournalAnalysisController extends Controller
 {
-    public function __construct(private readonly WeeklyMovieRecommendationService $movieRecommendations) {}
+    public function __construct(
+        private readonly WeeklyMovieRecommendationService $movieRecommendations,
+        private readonly AIGrpcClient $grpcClient,
+    ) {}
 
     public function weeklySummary(Request $request): JsonResponse
     {
@@ -321,6 +325,114 @@ class JournalAnalysisController extends Controller
             return response()->json([
                 'status' => 'error',
                 'message' => 'Gagal menghasilkan ringkasan mingguan. Cek log untuk detail.',
+                'error' => config('app.debug') ? $e->getMessage() : null,
+            ], 500);
+        }
+    }
+
+    /**
+     * Analyze user's writing style and find their literary doppelgänger.
+     * Uses gRPC to communicate with the Python AI service.
+     */
+    public function writingStyle(Request $request): JsonResponse
+    {
+        try {
+            // Get authenticated user
+            $user = null;
+            try {
+                if ($request->header('Authorization')) {
+                    $userFromToken = JWTAuth::parseToken()->authenticate();
+                    if ($userFromToken instanceof User) {
+                        $user = $userFromToken;
+                    }
+                }
+            } catch (\Exception $e) {
+                \Log::info('JWT parseToken failed in writingStyle: '.$e->getMessage());
+            }
+
+            if (! $user) {
+                $user = $request->user();
+            }
+
+            if (! $user || ! ($user instanceof User)) {
+                return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 401);
+            }
+
+            // Check if we have a cached result in the latest weekly analysis
+            $latestWeekly = WeeklyJournalAnalysis::where('user_id', $user->id)
+                ->orderByDesc('week_start')
+                ->first();
+
+            $cachedWritingStyle = $latestWeekly?->analysis['writingStyle'] ?? null;
+
+            // Return cached result if available and not explicitly requesting fresh analysis
+            if ($cachedWritingStyle && ! $request->boolean('refresh')) {
+                return response()->json([
+                    'status' => 'ready',
+                    'cached' => true,
+                    'writingStyle' => $cachedWritingStyle,
+                ]);
+            }
+
+            // Fetch user's journal entries
+            $notes = JournalNote::where('user_id', $user->id)
+                ->whereNotNull('body')
+                ->where('body', '!=', '')
+                ->orderByDesc('created_at')
+                ->limit(100)
+                ->get(['title', 'body']);
+
+            if ($notes->isEmpty()) {
+                return response()->json([
+                    'status' => 'pending',
+                    'message' => 'Tidak ada catatan jurnal untuk dianalisis. Tulis beberapa catatan dulu!',
+                ], 200);
+            }
+
+            // Prepare texts for analysis
+            $texts = [];
+            foreach ($notes as $note) {
+                if ($note->title) {
+                    $texts[] = $note->title;
+                }
+                if ($note->body) {
+                    $texts[] = $note->body;
+                }
+            }
+
+            // Check if gRPC is available
+            if (! $this->grpcClient->isAvailable()) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'AI service tidak tersedia. Pastikan gRPC server berjalan.',
+                ], 503);
+            }
+
+            // Call the gRPC service
+            $writingStyle = $this->grpcClient->analyzeWritingStyle((string) $user->id, $texts);
+
+            // Cache the result in the latest weekly analysis
+            if ($latestWeekly) {
+                $analysis = $latestWeekly->analysis ?? [];
+                $analysis['writingStyle'] = $writingStyle;
+                $latestWeekly->update(['analysis' => $analysis]);
+            }
+
+            return response()->json([
+                'status' => 'ready',
+                'cached' => false,
+                'writingStyle' => $writingStyle,
+            ]);
+        } catch (\Throwable $e) {
+            \Log::error('Error in writingStyle analysis', [
+                'exception' => $e,
+                'user_id' => $request->user()?->id,
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Gagal menganalisis gaya menulis. Cek log untuk detail.',
                 'error' => config('app.debug') ? $e->getMessage() : null,
             ], 500);
         }

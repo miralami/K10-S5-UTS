@@ -30,6 +30,8 @@ Route::middleware('auth:api')->group(function () {
     Route::get('journal/weekly-summary', [JournalAnalysisController::class, 'weeklySummary']);
     // Manual trigger for generating weekly analysis for the authenticated user
     Route::post('journal/generate-weekly', [JournalAnalysisController::class, 'generateWeeklyForUser']);
+    // Writing style analysis - find your literary doppelgänger
+    Route::get('journal/writing-style', [JournalAnalysisController::class, 'writingStyle']);
     Route::apiResource('journal/notes', JournalNoteController::class)->parameters([
         'notes' => 'note',
     ]);
