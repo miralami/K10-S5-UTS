@@ -8,9 +8,9 @@
     "dev:no-ai": "concurrently -n \"BACKEND,FRONTEND,WEBSOCKET\" -c \"blue,green,yellow\" \"npm run dev:backend\" \"npm run dev:frontend\" \"npm run dev:websocket\"",
     "dev:backend": "cd backend && php artisan serve --host=127.0.0.1 --port=8000",
     "dev:frontend": "cd frontend && npm run dev",
-    "dev:websocket": "cd websocket-service && npm run server:start",
+    "dev:websocket": "cd chat-service && npm run server:start",
     "dev:ai": "cd ai-service && .\\venv\\Scripts\\python.exe server.py",
-    "install-all": "npm install && cd backend && composer install && cd ../frontend && npm install && cd ../websocket-service && npm install",
+    "install-all": "npm install && cd backend && composer install && cd ../frontend && npm install && cd ../chat-service && npm install",
     "gen:proto": "node ./scripts/gen-proto.js"
   },
   "devDependencies": {

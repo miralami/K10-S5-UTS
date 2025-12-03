@@ -19,7 +19,7 @@ jobs:
             setup: php
           - service: frontend
             setup: node
-          - service: websocket-service
+          - service: chat-service
             setup: node
     steps:
     - uses: actions/checkout@v4
@@ -65,14 +65,14 @@ jobs:
       run: npm run lint
 
     # Install and lint websocket-service
-    - name: Install WebSocket Service Dependencies
-      if: matrix.service == 'websocket-service'
-      working-directory: ./websocket-service
+    - name: Install Chat Service Dependencies
+      if: matrix.service == 'chat-service'
+      working-directory: ./chat-service
       run: npm install
 
-    - name: Lint WebSocket Service
-      if: matrix.service == 'websocket-service'
-      working-directory: ./websocket-service
+    - name: Lint Chat Service
+      if: matrix.service == 'chat-service'
+      working-directory: ./chat-service
       run: npm run lint
 
   laravel-tests:
