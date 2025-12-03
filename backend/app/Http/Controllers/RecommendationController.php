@@ -40,7 +40,7 @@ class RecommendationController extends Controller
                         'category' => $result['category'] ?? null,
                         'headline' => $result['headline'] ?? null,
                         'description' => $result['description'] ?? null,
-                    ]
+                    ],
                 ])->header('X-Recommendation-Source', 'gemini');
             }
 

@@ -82,7 +82,7 @@ class GeminiMoodAnalysisService
                 'date' => $dayStart->toDateString(),
             ]);
 
-            throw new RuntimeException('Failed to analyze daily notes: ' . $e->getMessage());
+            throw new RuntimeException('Failed to analyze daily notes: '.$e->getMessage());
         }
     }
 
@@ -122,7 +122,7 @@ class GeminiMoodAnalysisService
             ->map(function ($dayNotes, $date) {
                 return [
                     'date' => $date,
-                    'summary' => 'Catatan hari ini: ' . $dayNotes->count() . ' entri.',
+                    'summary' => 'Catatan hari ini: '.$dayNotes->count().' entri.',
                     'dominantMood' => 'unknown',
                     'moodScore' => 50,
                     'highlights' => [],
@@ -148,10 +148,10 @@ class GeminiMoodAnalysisService
         } catch (\Exception $e) {
             Log::error('gRPC AnalyzeWeekly failed', [
                 'error' => $e->getMessage(),
-                'week' => $weekStart->toDateString() . ' - ' . $weekEnd->toDateString(),
+                'week' => $weekStart->toDateString().' - '.$weekEnd->toDateString(),
             ]);
 
-            throw new RuntimeException('Failed to analyze weekly notes: ' . $e->getMessage());
+            throw new RuntimeException('Failed to analyze weekly notes: '.$e->getMessage());
         }
     }
 
@@ -231,10 +231,10 @@ class GeminiMoodAnalysisService
         } catch (\Exception $e) {
             Log::error('gRPC AnalyzeWeeklyFromDaily failed', [
                 'error' => $e->getMessage(),
-                'week' => $weekStart->toDateString() . ' - ' . $weekEnd->toDateString(),
+                'week' => $weekStart->toDateString().' - '.$weekEnd->toDateString(),
             ]);
 
-            throw new RuntimeException('Failed to analyze weekly from daily: ' . $e->getMessage());
+            throw new RuntimeException('Failed to analyze weekly from daily: '.$e->getMessage());
         }
     }
 }

@@ -8,11 +8,17 @@ namespace Ai;
 class MovieItem
 {
     protected string $title = '';
+
     protected int $year = 0;
+
     protected string $tagline = '';
+
     protected string $imdb_id = '';
+
     protected array $genres = [];
+
     protected string $reason = '';
+
     protected string $poster_url = '';
 
     public function getTitle(): string
@@ -23,6 +29,7 @@ class MovieItem
     public function setTitle(string $value): self
     {
         $this->title = $value;
+
         return $this;
     }
 
@@ -34,6 +41,7 @@ class MovieItem
     public function setYear(int $value): self
     {
         $this->year = $value;
+
         return $this;
     }
 
@@ -45,6 +53,7 @@ class MovieItem
     public function setTagline(string $value): self
     {
         $this->tagline = $value;
+
         return $this;
     }
 
@@ -56,6 +65,7 @@ class MovieItem
     public function setImdbId(string $value): self
     {
         $this->imdb_id = $value;
+
         return $this;
     }
 
@@ -67,6 +77,7 @@ class MovieItem
     public function setGenres(array $value): self
     {
         $this->genres = $value;
+
         return $this;
     }
 
@@ -78,6 +89,7 @@ class MovieItem
     public function setReason(string $value): self
     {
         $this->reason = $value;
+
         return $this;
     }
 
@@ -89,6 +101,7 @@ class MovieItem
     public function setPosterUrl(string $value): self
     {
         $this->poster_url = $value;
+
         return $this;
     }
 

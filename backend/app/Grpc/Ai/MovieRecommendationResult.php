@@ -10,9 +10,13 @@ use Google\Protobuf\Internal\RepeatedField;
 class MovieRecommendationResult
 {
     protected string $category = '';
+
     protected string $mood_label = '';
+
     protected string $headline = '';
+
     protected string $description = '';
+
     protected array $items = [];
 
     public function getCategory(): string
@@ -23,6 +27,7 @@ class MovieRecommendationResult
     public function setCategory(string $value): self
     {
         $this->category = $value;
+
         return $this;
     }
 
@@ -34,6 +39,7 @@ class MovieRecommendationResult
     public function setMoodLabel(string $value): self
     {
         $this->mood_label = $value;
+
         return $this;
     }
 
@@ -45,6 +51,7 @@ class MovieRecommendationResult
     public function setHeadline(string $value): self
     {
         $this->headline = $value;
+
         return $this;
     }
 
@@ -56,6 +63,7 @@ class MovieRecommendationResult
     public function setDescription(string $value): self
     {
         $this->description = $value;
+
         return $this;
     }
 
@@ -67,6 +75,7 @@ class MovieRecommendationResult
     public function setItems(array|RepeatedField $value): self
     {
         $this->items = $value instanceof RepeatedField ? iterator_to_array($value) : $value;
+
         return $this;
     }
 

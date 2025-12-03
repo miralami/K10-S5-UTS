@@ -3,7 +3,6 @@
 namespace Ai;
 
 use Google\Protobuf\Internal\RepeatedField;
-use Google\Protobuf\Internal\GPBType;
 
 /**
  * Writing style analysis result
@@ -11,14 +10,23 @@ use Google\Protobuf\Internal\GPBType;
 class WritingStyleResult
 {
     protected int $total_words = 0;
+
     protected int $total_sentences = 0;
+
     protected float $avg_sentence_length = 0.0;
+
     protected float $vocabulary_richness = 0.0;
+
     protected float $punctuation_density = 0.0;
+
     protected float $avg_word_length = 0.0;
+
     protected string $detected_language = '';
+
     protected array $top_words = [];
+
     protected ?AuthorMatch $top_match = null;
+
     protected array $other_matches = [];
 
     public function getTotalWords(): int
@@ -29,6 +37,7 @@ class WritingStyleResult
     public function setTotalWords(int $value): self
     {
         $this->total_words = $value;
+
         return $this;
     }
 
@@ -40,6 +49,7 @@ class WritingStyleResult
     public function setTotalSentences(int $value): self
     {
         $this->total_sentences = $value;
+
         return $this;
     }
 
@@ -51,6 +61,7 @@ class WritingStyleResult
     public function setAvgSentenceLength(float $value): self
     {
         $this->avg_sentence_length = $value;
+
         return $this;
     }
 
@@ -62,6 +73,7 @@ class WritingStyleResult
     public function setVocabularyRichness(float $value): self
     {
         $this->vocabulary_richness = $value;
+
         return $this;
     }
 
@@ -73,6 +85,7 @@ class WritingStyleResult
     public function setPunctuationDensity(float $value): self
     {
         $this->punctuation_density = $value;
+
         return $this;
     }
 
@@ -84,6 +97,7 @@ class WritingStyleResult
     public function setAvgWordLength(float $value): self
     {
         $this->avg_word_length = $value;
+
         return $this;
     }
 
@@ -95,6 +109,7 @@ class WritingStyleResult
     public function setDetectedLanguage(string $value): self
     {
         $this->detected_language = $value;
+
         return $this;
     }
 
@@ -106,6 +121,7 @@ class WritingStyleResult
     public function setTopWords(array|RepeatedField $value): self
     {
         $this->top_words = $value instanceof RepeatedField ? iterator_to_array($value) : $value;
+
         return $this;
     }
 
@@ -117,6 +133,7 @@ class WritingStyleResult
     public function setTopMatch(?AuthorMatch $value): self
     {
         $this->top_match = $value;
+
         return $this;
     }
 
@@ -128,6 +145,7 @@ class WritingStyleResult
     public function setOtherMatches(array|RepeatedField $value): self
     {
         $this->other_matches = $value instanceof RepeatedField ? iterator_to_array($value) : $value;
+
         return $this;
     }
 

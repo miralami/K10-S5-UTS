@@ -43,6 +43,7 @@ class WritingStyleRequest extends Message
     public function setUserId(string $value): self
     {
         $this->user_id = $value;
+
         return $this;
     }
 
@@ -61,6 +62,7 @@ class WritingStyleRequest extends Message
                 $this->texts[] = $value;
             }
         }
+
         return $this;
     }
 
@@ -94,6 +96,7 @@ class WritingStyleRequest extends Message
             $value >>= 7;
         }
         $result .= chr($value);
+
         return $result;
     }
 }

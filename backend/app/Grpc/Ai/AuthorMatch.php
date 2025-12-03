@@ -8,9 +8,13 @@ namespace Ai;
 class AuthorMatch
 {
     protected string $name = '';
+
     protected string $nationality = '';
+
     protected float $score = 0.0;
+
     protected string $description = '';
+
     protected string $fun_fact = '';
 
     public function getName(): string
@@ -21,6 +25,7 @@ class AuthorMatch
     public function setName(string $value): self
     {
         $this->name = $value;
+
         return $this;
     }
 
@@ -32,6 +37,7 @@ class AuthorMatch
     public function setNationality(string $value): self
     {
         $this->nationality = $value;
+
         return $this;
     }
 
@@ -43,6 +49,7 @@ class AuthorMatch
     public function setScore(float $value): self
     {
         $this->score = $value;
+
         return $this;
     }
 
@@ -54,6 +61,7 @@ class AuthorMatch
     public function setDescription(string $value): self
     {
         $this->description = $value;
+
         return $this;
     }
 
@@ -65,6 +73,7 @@ class AuthorMatch
     public function setFunFact(string $value): self
     {
         $this->fun_fact = $value;
+
         return $this;
     }
 
@@ -81,7 +90,7 @@ class AuthorMatch
 
     public static function fromProtobuf(mixed $data): self
     {
-        $instance = new self();
+        $instance = new self;
 
         if (is_object($data)) {
             if (method_exists($data, 'getName')) {

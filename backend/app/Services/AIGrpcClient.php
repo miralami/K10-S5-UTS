@@ -2,8 +2,6 @@
 
 namespace App\Services;
 
-use Ai\AuthorMatch;
-use Ai\WritingStyleRequest;
 use Ai\WritingStyleResult;
 use RuntimeException;
 
