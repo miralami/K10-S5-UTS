@@ -472,13 +472,23 @@ wss.on('connection', function connection(ws, request) {
 // Ping clients periodically untuk deteksi koneksi mati
 const interval = setInterval(function ping() {
   wss.clients.forEach(function each(ws) {
+    // Skip clients yang sudah tidak authenticated
+    if (!userManager.getUserBySocket(ws)) {
+      return;
+    }
+
     if (ws.isAlive === false) {
       userManager.removeUser(ws);
       return ws.terminate();
     }
 
     ws.isAlive = false;
-    ws.ping();
+    try {
+      ws.ping();
+    } catch (e) {
+      // Ignore ping errors
+      console.debug('Ping error:', e.message);
+    }
   });
 }, 30000);
 

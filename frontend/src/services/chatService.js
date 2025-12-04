@@ -29,6 +29,8 @@ let reconnectTimer = null;
 let isIntentionalClose = false;
 const MAX_RECONNECT_ATTEMPTS = 5;
 const RECONNECT_DELAY = 3000;
+let lastConnectAttempt = 0;
+const MIN_CONNECT_INTERVAL = 1000; // Minimum 1 second between connection attempts
 
 // Event handlers storage
 let eventHandlers = {};
@@ -57,15 +59,23 @@ export const chatService = {
    * @returns {Promise<Object>} Stream control object with cancel method
    */
   async startChatStream(handlers = {}) {
+    // Debounce connection attempts - jangan membuat connection terlalu sering
+    const now = Date.now();
+    if (now - lastConnectAttempt < MIN_CONNECT_INTERVAL) {
+      console.log('[chatService] Connection attempt too frequent, skipping');
+      return { cancel: () => {} };
+    }
+    lastConnectAttempt = now;
+
     // Cancel any pending reconnect
     if (reconnectTimer) {
       clearTimeout(reconnectTimer);
       reconnectTimer = null;
     }
 
-    // Debounce connection: if connected recently, wait
-    if (ws && ws.readyState === WebSocket.CONNECTING) {
-      console.log('Connection already in progress...');
+    // Jika sudah connected atau connecting, return
+    if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
+      console.log('[chatService] Already connected or connecting');
       return { cancel: () => {} };
     }
 
@@ -145,18 +155,26 @@ export const chatService = {
           ws = null;
           handlers.onEnd?.();
 
-          // Auto-reconnect jika bukan intentional close
+          // Auto-reconnect hanya untuk error tertentu (bukan intentional close atau 1000)
+          // Jangan reconnect jika sudah mencapai max attempts
           if (
             !isIntentionalClose &&
             event.code !== 1000 &&
+            event.code !== 1001 && // Going Away
             reconnectAttempts < MAX_RECONNECT_ATTEMPTS
           ) {
             reconnectAttempts++;
-            console.log(`Reconnecting in ${RECONNECT_DELAY}ms (attempt ${reconnectAttempts})...`);
+            const delay = Math.min(RECONNECT_DELAY * Math.pow(2, reconnectAttempts - 1), 30000); // Exponential backoff, max 30s
+            console.log(`Reconnecting in ${delay}ms (attempt ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})...`);
             reconnectTimer = setTimeout(() => {
               reconnectTimer = null;
-              chatService.startChatStream(handlers);
-            }, RECONNECT_DELAY);
+              if (ws === null) { // Only reconnect if not already connecting
+                chatService.startChatStream(handlers);
+              }
+            }, delay);
+          } else if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+            console.log(`Max reconnection attempts (${MAX_RECONNECT_ATTEMPTS}) reached`);
+            handlers.onError?.(new Error('Failed to reconnect after multiple attempts'));
           }
         };
 

@@ -287,10 +287,12 @@ export function ChatProvider({ children }) {
 
     return () => {
       mounted = false;
-      connectionRef.current = false;
+      // Jangan reset connectionRef di sini agar React HMR tidak trigger reconnect
+      // Don't reset connectionRef here to avoid React HMR triggering reconnect
+      // connectionRef.current = false;
       chatService.endChatStream();
     };
-  }, [currentUser, showMessageNotification]);
+  }, [currentUser?.id]); // Hanya depend pada currentUser.id untuk menghindari re-connection
 
   /**
    * Send message helper function
