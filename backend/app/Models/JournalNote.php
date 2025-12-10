@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\DailyJournalAnalysis;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
@@ -74,5 +75,13 @@ class JournalNote extends Model
             ->whereDate('note_date', '<=', $end->endOfDay())
             ->orderBy('note_date', 'desc')
             ->orderBy('created_at', 'desc');
+    }
+    /**
+     * @return BelongsTo<DailyJournalAnalysis, JournalNote>
+     */
+    public function dailyAnalysis(): BelongsTo
+    {
+        return $this->belongsTo(DailyJournalAnalysis::class, 'note_date', 'analysis_date')
+            ->where('user_id', $this->user_id);
     }
 }

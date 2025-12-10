@@ -23,6 +23,7 @@ class JournalNoteController extends Controller
 
         // order by updated_at so frontend that relies on `updatedAt` sees the latest items first
         $notes = $notesQuery
+            ->with(['dailyAnalysis'])
             ->orderByDesc('updated_at')
             ->get(['id', 'user_id', 'title', 'body', 'note_date', 'created_at', 'updated_at']);
 
@@ -208,6 +209,18 @@ class JournalNoteController extends Controller
                 }
             }
         }
+
+        // Helper to safely extract mood score from analysis array
+        $moodScore = null;
+        $dominantMood = null;
+        if ($note->dailyAnalysis && is_array($note->dailyAnalysis->analysis)) {
+            $analysis = $note->dailyAnalysis->analysis;
+            $moodScore = $analysis['moodScore'] ?? null;
+            $dominantMood = $analysis['dominantMood'] ?? null;
+        }
+
+        $data['moodScore'] = $moodScore;
+        $data['dominantMood'] = $dominantMood;
 
         return $data;
     }

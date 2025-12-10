@@ -38,6 +38,7 @@ import {
   ModalFooter,
   ModalCloseButton,
   Input,
+
   Textarea,
   SimpleGrid,
   Spinner,
@@ -64,7 +65,13 @@ import {
   EditIcon,
   RepeatIcon,
   HamburgerIcon,
+  SearchIcon,
+  TriangleDownIcon,
+  TriangleUpIcon,
+  TimeIcon,
+  StarIcon,
 } from '@chakra-ui/icons';
+import { FilterBar } from '../components/FilterBar';
 import JournalCalendar from '../components/JournalCalendar';
 import {
   getWeeklySummary,
@@ -93,9 +100,9 @@ const POSTER_FALLBACK =
   'data:image/svg+xml;utf8,' +
   encodeURIComponent(
     "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 600 900'>" +
-      "<rect width='100%' height='100%' fill='%23101720'/>" +
-      "<text x='50%' y='50%' fill='%23a3a3a3' font-size='22' text-anchor='middle' dominant-baseline='middle'>No Image</text>" +
-      '</svg>'
+    "<rect width='100%' height='100%' fill='%23101720'/>" +
+    "<text x='50%' y='50%' fill='%23a3a3a3' font-size='22' text-anchor='middle' dominant-baseline='middle'>No Image</text>" +
+    '</svg>'
   );
 
 function getOmdbHref(movie) {
@@ -200,6 +207,13 @@ export default function Dashboard() {
   const { isOpen: isEditOpen, onOpen: onEditOpen, onClose: onEditClose } = useDisclosure();
   const showSidebarToggle = useBreakpointValue({ base: true, xl: false });
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Sort & Filter State
+  const [sortOption, setSortOption] = useState('newest'); // newest, oldest, mood_high, mood_low, length_long
+  const [filterPeriod, setFilterPeriod] = useState('all'); // all, week, month, year
+  const [filterMood, setFilterMood] = useState('all'); // all, positive, negative
+
   const [greeting, setGreeting] = useState({ greeting: '', message: '' });
   const [dateRange, setDateRange] = useState(() => {
     const today = new Date();
@@ -265,6 +279,71 @@ export default function Dashboard() {
     );
     return filtered;
   }, [allNotes, selectedDate]);
+
+  // Filter notes for search and advanced filters
+  const searchResults = useMemo(() => {
+    let results = [...allNotes];
+
+    // 1. Search Query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      results = results.filter(note =>
+        (note.title && note.title.toLowerCase().includes(query)) ||
+        (note.body && note.body.toLowerCase().includes(query))
+      );
+    }
+
+    // 2. Period Filter
+    if (filterPeriod !== 'all') {
+      const now = new Date();
+      results = results.filter(note => {
+        const noteDate = new Date(note.note_date || note.createdAt);
+        if (filterPeriod === 'week') {
+          const oneWeekAgo = new Date(now);
+          oneWeekAgo.setDate(now.getDate() - 7);
+          return noteDate >= oneWeekAgo && noteDate <= now;
+        } else if (filterPeriod === 'month') {
+          return noteDate.getMonth() === now.getMonth() && noteDate.getFullYear() === now.getFullYear();
+        } else if (filterPeriod === 'year') {
+          return noteDate.getFullYear() === now.getFullYear();
+        }
+        return true;
+      });
+    }
+
+    // 3. Mood Filter
+    if (filterMood !== 'all') {
+      results = results.filter(note => {
+        const score = note.moodScore ?? null;
+        if (score === null) return filterMood === 'unknown'; // Optional: if you want to see unscored notes
+        if (filterMood === 'positive') return score >= 60;
+        if (filterMood === 'negative') return score < 60;
+        return true;
+      });
+    }
+
+    // 4. Sorting
+    results.sort((a, b) => {
+      const dateA = new Date(a.note_date || a.createdAt);
+      const dateB = new Date(b.note_date || b.createdAt);
+      const scoreA = a.moodScore ?? 0;
+      const scoreB = b.moodScore ?? 0;
+      const lenA = (a.body || '').length;
+      const lenB = (b.body || '').length;
+
+      switch (sortOption) {
+        case 'oldest': return dateA - dateB;
+        case 'mood_high': return scoreB - scoreA;
+        case 'mood_low': return scoreA - scoreB;
+        case 'length_long': return lenB - lenA;
+        case 'newest':
+        default: return dateB - dateA;
+      }
+    });
+
+    return results;
+  }, [allNotes, searchQuery, sortOption, filterPeriod, filterMood]);
+
 
   // Fetch notes for the current date range
   const fetchAllNotes = useCallback(async () => {
@@ -620,6 +699,18 @@ export default function Dashboard() {
                     </Text>
                   </Box>
                 </HStack>
+
+
+                {/* Search & Filter Controls */}
+                <FilterBar
+                  searchQuery={searchQuery}
+                  setSearchQuery={setSearchQuery}
+                  sortOption={sortOption}
+                  setSortOption={setSortOption}
+                  filterPeriod={filterPeriod}
+                  setFilterPeriod={setFilterPeriod}
+                />
+
                 <HStack spacing={2}>
                   <IconButton
                     icon={<RepeatIcon />}
@@ -761,94 +852,157 @@ export default function Dashboard() {
                       </HStack>
                     </Flex>
 
-                    {notesForSelectedDate.length === 0 ? (
-                      <Box textAlign="center" py={4} color="whiteAlpha.600">
-                        <Text fontSize="2xl" mb={1}>
-                          ✨
-                        </Text>
-                        <Text fontSize="sm">Belum ada catatan</Text>
-                      </Box>
-                    ) : (
-                      <Stack spacing={2}>
-                        {notesForSelectedDate.map((note, idx) => (
-                          <motion.div
-                            key={note.id}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.3, delay: idx * 0.05 }}
-                          >
-                            <Box
-                              p={2}
-                              bg="whiteAlpha.50"
-                              borderRadius="lg"
-                              border="1px solid"
-                              borderColor="whiteAlpha.100"
-                              _hover={{
-                                bg: 'whiteAlpha.100',
-                                borderColor: 'pink.300',
-                              }}
-                              transition="all 0.2s"
+                    {searchQuery || sortOption !== 'newest' || filterPeriod !== 'all' || filterMood !== 'all' ? (
+                      // Search Results View
+                      searchResults.length === 0 ? (
+                        <Box textAlign="center" py={4} color="whiteAlpha.600">
+                          <Text fontSize="2xl" mb={1}>🔍</Text>
+                          <Text fontSize="sm">Tidak ditemukan catatan yang sesuai filter</Text>
+                        </Box>
+                      ) : (
+                        <Stack spacing={2}>
+                          {searchResults.map((note, idx) => (
+                            <motion.div
+                              key={note.id}
+                              initial={{ opacity: 0, y: 20 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ duration: 0.3, delay: idx * 0.05 }}
                             >
-                              <Flex justify="space-between" align="start" gap={2}>
-                                <Box flex="1" minW="0">
-                                  <Flex align="center" mb={1}>
-                                    <Text
-                                      fontWeight="semibold"
-                                      fontSize="xs"
-                                      color="orange.200"
-                                      noOfLines={1}
-                                    >
-                                      {note.title || 'Tanpa Judul'}
+                              <Box
+                                p={2}
+                                bg="whiteAlpha.50"
+                                borderRadius="lg"
+                                border="1px solid"
+                                borderColor="whiteAlpha.100"
+                                _hover={{ bg: 'whiteAlpha.100', borderColor: 'pink.300' }}
+                                transition="all 0.2s"
+                                cursor="pointer"
+                                onClick={() => handleStartEdit(note)}
+                              >
+                                <Flex justify="space-between" align="start" gap={2}>
+                                  <Box flex="1" minW="0">
+                                    <Flex align="center" mb={1} justify="space-between">
+                                      <HStack spacing={2}>
+                                        <Text fontWeight="semibold" fontSize="xs" color="orange.200" noOfLines={1}>
+                                          {note.title || 'Tanpa Judul'}
+                                        </Text>
+                                        {note.moodScore !== null && note.moodScore !== undefined && (
+                                          <Badge
+                                            colorScheme={note.moodScore >= 60 ? 'green' : (note.moodScore < 40 ? 'red' : 'orange')}
+                                            fontSize="2xs"
+                                            variant="solid"
+                                            borderRadius="full"
+                                            px={1.5}
+                                          >
+                                            {note.moodScore}
+                                          </Badge>
+                                        )}
+                                      </HStack>
+                                      <Text fontSize="2xs" color="whiteAlpha.500">
+                                        {format(new Date(note.note_date || note.createdAt), 'd MMM yyyy', { locale: id })}
+                                      </Text>
+                                    </Flex>
+                                    <Text fontSize="sm" color="whiteAlpha.900" noOfLines={3}>
+                                      {note.body}
                                     </Text>
+                                  </Box>
+                                </Flex>
+                              </Box>
+                            </motion.div>
+                          ))}
+                        </Stack>
+                      )
+                    ) : (
+                      // Original Daily Notes View
+                      notesForSelectedDate.length === 0 ? (
+                        <Box textAlign="center" py={4} color="whiteAlpha.600">
+                          <Text fontSize="2xl" mb={1}>
+                            ✨
+                          </Text>
+                          <Text fontSize="sm">Belum ada catatan</Text>
+                        </Box>
+                      ) : (
+                        <Stack spacing={2}>
+                          {notesForSelectedDate.map((note, idx) => (
+                            <motion.div
+                              key={note.id}
+                              initial={{ opacity: 0, y: 20 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ duration: 0.3, delay: idx * 0.05 }}
+                            >
+                              <Box
+                                p={2}
+                                bg="whiteAlpha.50"
+                                borderRadius="lg"
+                                border="1px solid"
+                                borderColor="whiteAlpha.100"
+                                _hover={{
+                                  bg: 'whiteAlpha.100',
+                                  borderColor: 'pink.300',
+                                }}
+                                transition="all 0.2s"
+                                cursor="pointer"
+                              >
+                                <Flex justify="space-between" align="start" gap={2}>
+                                  <Box flex="1" minW="0">
+                                    <Flex align="center" mb={1}>
+                                      <Text
+                                        fontWeight="semibold"
+                                        fontSize="xs"
+                                        color="orange.200"
+                                        noOfLines={1}
+                                      >
+                                        {note.title || 'Tanpa Judul'}
+                                      </Text>
+                                      <Text
+                                        fontSize="xs"
+                                        color="whiteAlpha.600"
+                                        ml={2}
+                                        flexShrink={0}
+                                      >
+                                        {format(
+                                          new Date(
+                                            note.createdAt || note.note_date || note.updatedAt
+                                          ),
+                                          'HH:mm'
+                                        )}
+                                      </Text>
+                                    </Flex>
                                     <Text
                                       fontSize="xs"
-                                      color="whiteAlpha.600"
-                                      ml={2}
-                                      flexShrink={0}
+                                      color="whiteAlpha.800"
+                                      noOfLines={2}
+                                      lineHeight="short"
                                     >
-                                      {format(
-                                        new Date(
-                                          note.createdAt || note.note_date || note.updatedAt
-                                        ),
-                                        'HH:mm'
-                                      )}
+                                      {note.body}
                                     </Text>
-                                  </Flex>
-                                  <Text
-                                    fontSize="xs"
-                                    color="whiteAlpha.800"
-                                    noOfLines={2}
-                                    lineHeight="short"
-                                  >
-                                    {note.body}
-                                  </Text>
-                                </Box>
-                                <HStack spacing={0.5}>
-                                  <IconButton
-                                    icon={<EditIcon />}
-                                    size="xs"
-                                    variant="ghost"
-                                    aria-label="Edit"
-                                    colorScheme="purple"
-                                    isDisabled={!canEdit(note)}
-                                    onClick={() => handleStartEdit(note)}
-                                  />
-                                  <IconButton
-                                    icon={<DeleteIcon />}
-                                    size="xs"
-                                    variant="ghost"
-                                    colorScheme="red"
-                                    aria-label="Hapus"
-                                    onClick={() => handleDeleteNote(note)}
-                                    isLoading={isDeleting}
-                                  />
-                                </HStack>
-                              </Flex>
-                            </Box>
-                          </motion.div>
-                        ))}
-                      </Stack>
-                    )}
+                                  </Box>
+                                  <HStack spacing={0.5}>
+                                    <IconButton
+                                      icon={<EditIcon />}
+                                      size="xs"
+                                      variant="ghost"
+                                      aria-label="Edit"
+                                      colorScheme="purple"
+                                      isDisabled={!canEdit(note)}
+                                      onClick={() => handleStartEdit(note)}
+                                    />
+                                    <IconButton
+                                      icon={<DeleteIcon />}
+                                      size="xs"
+                                      variant="ghost"
+                                      colorScheme="red"
+                                      aria-label="Hapus"
+                                      onClick={() => handleDeleteNote(note)}
+                                      isLoading={isDeleting}
+                                    />
+                                  </HStack>
+                                </Flex>
+                              </Box>
+                            </motion.div>
+                          ))}
+                        </Stack>
+                      ))}
                   </Box>
                 </motion.div>
               </Stack>
