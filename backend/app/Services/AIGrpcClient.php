@@ -36,7 +36,9 @@ class AIGrpcClient
             if (! extension_loaded('grpc')) {
                 throw new RuntimeException(
                     'The gRPC PHP extension is not installed. '.
-                    'Please install it: https://grpc.io/docs/languages/php/quickstart/'
+                    'Install it via PECL: pecl install grpc, or enable it in php.ini. '.
+                    'See: https://grpc.io/docs/languages/php/quickstart/ '.
+                    'Current workaround: The service will use direct Gemini API fallback.'
                 );
             }
 

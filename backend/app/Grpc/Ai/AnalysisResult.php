@@ -9,34 +9,34 @@ use Google\Protobuf\Internal\RepeatedField;
 use Google\Protobuf\Internal\GPBUtil;
 
 /**
- * Request for movie recommendations based on mood analysis
+ * Analysis result returned by both daily and weekly RPCs
  *
- * Generated from protobuf message <code>ai.MovieRecommendationRequest</code>
+ * Generated from protobuf message <code>ai.AnalysisResult</code>
  */
-class MovieRecommendationRequest extends \Google\Protobuf\Internal\Message
+class AnalysisResult extends \Google\Protobuf\Internal\Message
 {
     /**
-     * Generated from protobuf field <code>string user_id = 1;</code>
+     * Generated from protobuf field <code>string summary = 1;</code>
      */
-    protected $user_id = '';
+    protected $summary = '';
     /**
      * Generated from protobuf field <code>string dominant_mood = 2;</code>
      */
     protected $dominant_mood = '';
     /**
-     * 0-100
+     * 0-100, 0 if unknown
      *
      * Generated from protobuf field <code>int32 mood_score = 3;</code>
      */
     protected $mood_score = 0;
     /**
-     * Generated from protobuf field <code>string summary = 4;</code>
-     */
-    protected $summary = '';
-    /**
-     * Generated from protobuf field <code>repeated string highlights = 5;</code>
+     * Generated from protobuf field <code>repeated string highlights = 4;</code>
      */
     private $highlights;
+    /**
+     * Generated from protobuf field <code>repeated string advice = 5;</code>
+     */
+    private $advice;
     /**
      * Generated from protobuf field <code>string affirmation = 6;</code>
      */
@@ -48,12 +48,12 @@ class MovieRecommendationRequest extends \Google\Protobuf\Internal\Message
      * @param array $data {
      *     Optional. Data for populating the Message object.
      *
-     *     @type string $user_id
+     *     @type string $summary
      *     @type string $dominant_mood
      *     @type int $mood_score
-     *           0-100
-     *     @type string $summary
+     *           0-100, 0 if unknown
      *     @type array<string>|\Google\Protobuf\Internal\RepeatedField $highlights
+     *     @type array<string>|\Google\Protobuf\Internal\RepeatedField $advice
      *     @type string $affirmation
      * }
      */
@@ -63,23 +63,23 @@ class MovieRecommendationRequest extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Generated from protobuf field <code>string user_id = 1;</code>
+     * Generated from protobuf field <code>string summary = 1;</code>
      * @return string
      */
-    public function getUserId()
+    public function getSummary()
     {
-        return $this->user_id;
+        return $this->summary;
     }
 
     /**
-     * Generated from protobuf field <code>string user_id = 1;</code>
+     * Generated from protobuf field <code>string summary = 1;</code>
      * @param string $var
      * @return $this
      */
-    public function setUserId($var)
+    public function setSummary($var)
     {
         GPBUtil::checkString($var, True);
-        $this->user_id = $var;
+        $this->summary = $var;
 
         return $this;
     }
@@ -107,7 +107,7 @@ class MovieRecommendationRequest extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * 0-100
+     * 0-100, 0 if unknown
      *
      * Generated from protobuf field <code>int32 mood_score = 3;</code>
      * @return int
@@ -118,7 +118,7 @@ class MovieRecommendationRequest extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * 0-100
+     * 0-100, 0 if unknown
      *
      * Generated from protobuf field <code>int32 mood_score = 3;</code>
      * @param int $var
@@ -133,29 +133,7 @@ class MovieRecommendationRequest extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Generated from protobuf field <code>string summary = 4;</code>
-     * @return string
-     */
-    public function getSummary()
-    {
-        return $this->summary;
-    }
-
-    /**
-     * Generated from protobuf field <code>string summary = 4;</code>
-     * @param string $var
-     * @return $this
-     */
-    public function setSummary($var)
-    {
-        GPBUtil::checkString($var, True);
-        $this->summary = $var;
-
-        return $this;
-    }
-
-    /**
-     * Generated from protobuf field <code>repeated string highlights = 5;</code>
+     * Generated from protobuf field <code>repeated string highlights = 4;</code>
      * @return \Google\Protobuf\Internal\RepeatedField
      */
     public function getHighlights()
@@ -164,7 +142,7 @@ class MovieRecommendationRequest extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Generated from protobuf field <code>repeated string highlights = 5;</code>
+     * Generated from protobuf field <code>repeated string highlights = 4;</code>
      * @param array<string>|\Google\Protobuf\Internal\RepeatedField $var
      * @return $this
      */
@@ -172,6 +150,28 @@ class MovieRecommendationRequest extends \Google\Protobuf\Internal\Message
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->highlights = $arr;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>repeated string advice = 5;</code>
+     * @return \Google\Protobuf\Internal\RepeatedField
+     */
+    public function getAdvice()
+    {
+        return $this->advice;
+    }
+
+    /**
+     * Generated from protobuf field <code>repeated string advice = 5;</code>
+     * @param array<string>|\Google\Protobuf\Internal\RepeatedField $var
+     * @return $this
+     */
+    public function setAdvice($var)
+    {
+        $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
+        $this->advice = $arr;
 
         return $this;
     }
