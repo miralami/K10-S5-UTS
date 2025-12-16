@@ -12,7 +12,7 @@ import {
   Text,
   Tooltip,
 } from '@chakra-ui/react';
-import { AtSignIcon, CalendarIcon, ChatIcon, HamburgerIcon, CloseIcon } from '@chakra-ui/icons';
+import { AtSignIcon, CalendarIcon, ChatIcon, HamburgerIcon, CloseIcon, SearchIcon } from '@chakra-ui/icons';
 import { logout } from '../services/authService';
 
 // Theme configuration
@@ -39,6 +39,12 @@ const navItems = [
     description: 'Ringkasan mingguan & semua catatan',
     to: '/dashboard',
     icon: CalendarIcon,
+  },
+  {
+    label: 'Cari Catatan',
+    description: 'Pencarian catatan harianmu',
+    to: '/search',
+    icon: SearchIcon,
   },
   {
     label: 'Chat Langsung',

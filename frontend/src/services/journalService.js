@@ -376,3 +376,24 @@ export async function generateWeeklyForCurrentUser({ startDate, endDate, weekEnd
     throw error;
   }
 }
+
+export async function searchNotes({ query = '', dateFrom = '', dateTo = '', limit = 50 } = {}) {
+  try {
+    const params = new URLSearchParams();
+    if (query) params.append('q', query);
+    if (dateFrom) params.append('dateFrom', dateFrom);
+    if (dateTo) params.append('dateTo', dateTo);
+    if (limit) params.append('limit', limit);
+
+    const response = await fetch(
+      `${API_BASE_URL}/journal/notes/search?${params.toString()}`,
+      buildRequestOptions({ method: 'GET' })
+    );
+
+    const payload = await handleResponse(response);
+    return payload?.data || [];
+  } catch (error) {
+    console.error('Error in searchNotes:', error);
+    throw error;
+  }
+}

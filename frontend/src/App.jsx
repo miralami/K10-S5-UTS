@@ -2,6 +2,7 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import Layout from './components/SidebarLayout.jsx';
 import Home from './pages/Home.jsx';
 import Dashboard from './pages/Dashboard.jsx';
+import Search from './pages/Search.jsx';
 import Login from './pages/Login.jsx';
 import Register from './pages/Register.jsx';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -33,6 +34,16 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <Dashboard />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/search"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <Search />
                 </Layout>
               </ProtectedRoute>
             }
