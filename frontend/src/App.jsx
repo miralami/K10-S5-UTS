@@ -12,8 +12,6 @@ import { ChatProvider } from './context/ChatContext.jsx';
 function App() {
   return (
     <BrowserRouter>
-      {/* ChatProvider membungkus seluruh aplikasi agar koneksi chat global */}
-      {/* ChatProvider wraps the entire app for global chat connection */}
       <ChatProvider>
         <Routes>
           <Route path="/login" element={<Login />} />
@@ -38,6 +36,11 @@ function App() {
               </ProtectedRoute>
             }
           />
+          
+          {/* ============================================ */}
+          {/* TAMBAH ROUTE BARU DI SINI (2) */}
+          {/* ============================================ */}
+          
           <Route
             path="/search"
             element={

@@ -26,14 +26,20 @@ Route::get('health', fn () => response()->json([
 Route::post('recommendations', [RecommendationController::class, 'create']);
 
 Route::middleware('auth:api')->group(function () {
+    // Journal Analysis
     Route::get('journal/daily-summary', [JournalAnalysisController::class, 'dailySummary']);
     Route::get('journal/weekly-summary', [JournalAnalysisController::class, 'weeklySummary']);
-    // Manual trigger for generating weekly analysis for the authenticated user
     Route::post('journal/generate-weekly', [JournalAnalysisController::class, 'generateWeeklyForUser']);
-    // Writing style analysis - find your literary doppelgänger
     Route::get('journal/writing-style', [JournalAnalysisController::class, 'writingStyle']);
-    // Search notes
+    
+    // Journal Notes with Gratitude Features
     Route::get('journal/notes/search', [JournalNoteController::class, 'search']);
+    Route::get('journal/gratitude/stats', [JournalNoteController::class, 'gratitudeStats']);
+    Route::get('journal/gratitude/distribution', [JournalNoteController::class, 'gratitudeDistribution']);
+    Route::get('journal/gratitude/insights', [JournalNoteController::class, 'gratitudeInsights']);
+    Route::get('journal/gratitude/random', [JournalNoteController::class, 'randomGratitude']);
+    Route::get('journal/gratitude/prompts', [JournalNoteController::class, 'gratitudePrompts']);
+    
     Route::apiResource('journal/notes', JournalNoteController::class)->parameters([
         'notes' => 'note',
     ]);

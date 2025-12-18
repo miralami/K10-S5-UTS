@@ -1,76 +1,118 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
-  Alert,
-  AlertIcon,
   Box,
   Button,
   Container,
   Heading,
   HStack,
-  Icon,
   Stack,
   Text,
   Textarea,
   useToast,
-  Wrap,
-  WrapItem,
   Input,
-  Tag,
-  TagLabel,
-  TagCloseButton,
-  Tooltip,
+  Grid,
+  SimpleGrid,
+  Flex,
+  VStack,
+  Badge,
+  Divider,
+  Tabs,
+  TabList,
+  TabPanels,
+  Tab,
+  TabPanel,
 } from '@chakra-ui/react';
-import { LockIcon } from '@chakra-ui/icons';
+import { StarIcon, RepeatIcon } from '@chakra-ui/icons';
 import { motion } from 'framer-motion';
-import { createNote } from '../services/journalService';
+import { format } from 'date-fns';
+import { 
+  createNote, 
+  getGratitudeStats, 
+  getGratitudeDistribution,
+  getGratitudePrompts,
+  getRandomGratitude 
+} from '../services/journalService';
 
-// Framer Motion wrapper
 const MotionBox = motion(Box);
 
-// --- THEME CONFIGURATION (Warm Organic & Minimal Sans) ---
 const THEME = {
   colors: {
-    bg: '#FDFCF8', // Warm off-white
+    bg: '#FDFCF8',
+    cardBg: '#FFFFFF',
     textPrimary: '#2D3748',
     textSecondary: '#718096',
-    accent: '#D6BCFA', // Soft Purple
+    textMuted: '#A0AEC0',
+    accent: '#D6BCFA',
     accentHover: '#B794F4',
-    warmHighlight: '#F6E05E', // Soft Yellow
+    warmHighlight: '#F6E05E',
+    success: '#68D391',
+    border: '#E2E8F0',
   },
   fonts: {
     sans: '"Inter", sans-serif',
-    serif: '"Merriweather", serif', // Or any warm serif available
+    serif: '"Merriweather", serif',
   },
 };
 
-// Moods - Soft & Empathic
-const MOOD_OPTIONS = [
-  { id: 'calm', label: 'Calm', emoji: '🌿', color: 'green.100', textColor: 'green.800' },
-  { id: 'happy', label: 'Happy', emoji: '☀️', color: 'yellow.100', textColor: 'yellow.800' },
-  { id: 'anxious', label: 'Anxious', emoji: '☁️', color: 'gray.100', textColor: 'gray.800' },
-  { id: 'tired', label: 'Tired', emoji: '🌙', color: 'purple.100', textColor: 'purple.800' },
-  { id: 'inspired', label: 'Inspired', emoji: '✨', color: 'orange.100', textColor: 'orange.800' },
-];
+const categoryEmojis = {
+  Friends: '👥',
+  Family: '👨‍👩‍👧‍👦',
+  Health: '💪',
+  Work: '💼',
+  Nature: '🌿',
+  Food: '🍽️',
+  Love: '❤️',
+  Learning: '📚',
+  Peace: '🧘',
+  Success: '🏆',
+  General: '✨',
+};
 
-// Quick Prompts - Contextual
-const QUICK_PROMPTS = [
-  { id: 'gratitude', label: 'Gratitude', text: 'I am grateful for...' },
-  { id: 'intention', label: 'Intention', text: 'Today, I intend to...' },
-  { id: 'reflection', label: 'Reflection', text: 'One thing I learned...' },
-];
-
-export default function DailyEntry() {
+export default function Home() {
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
-  const [activeMood, setActiveMood] = useState(null);
-  const [tags, setTags] = useState([]);
-  const [newTag, setNewTag] = useState('');
+  const [gratitude1, setGratitude1] = useState('');
+  const [gratitude2, setGratitude2] = useState('');
+  const [gratitude3, setGratitude3] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState('');
+  
+  // Gratitude stats
+  const [stats, setStats] = useState(null);
+  const [distribution, setDistribution] = useState([]);
+  const [prompt, setPrompt] = useState('');
+  const [randomGratitude, setRandomGratitude] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   const toast = useToast();
 
-  // Dynamic Greeting
+  useEffect(() => {
+    loadGratitudeData();
+  }, []);
+
+  const loadGratitudeData = async () => {
+    try {
+      setLoading(true);
+      const [statsData, distData, promptsData, randomData] = await Promise.all([
+        getGratitudeStats(),
+        getGratitudeDistribution(),
+        getGratitudePrompts(),
+        getRandomGratitude(),
+      ]);
+      
+      setStats(statsData);
+      setDistribution(distData);
+      
+      const allPrompts = Object.values(promptsData).flat();
+      const randomPrompt = allPrompts[Math.floor(Math.random() * allPrompts.length)];
+      setPrompt(randomPrompt);
+      setRandomGratitude(randomData);
+    } catch (error) {
+      console.error('Error loading gratitude data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const getGreeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return 'Good Morning';
@@ -78,67 +120,63 @@ export default function DailyEntry() {
     return 'Good Evening';
   };
 
-  const handleAddTag = (e) => {
-    if (e.key === 'Enter' && newTag.trim()) {
-      e.preventDefault();
-      if (!tags.includes(newTag.trim())) {
-        setTags([...tags, newTag.trim()]);
-      }
-      setNewTag('');
-    }
-  };
-
-  const removeTag = (tagToRemove) => {
-    setTags(tags.filter((tag) => tag !== tagToRemove));
-  };
-
   const handleSubmit = async () => {
-    if (!body.trim()) {
-      setSubmitError('Journal content cannot be empty.');
+    if (!body.trim() && !gratitude1.trim()) {
+      toast({
+        title: 'Error',
+        description: 'Please write something in your journal or add at least one gratitude.',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
       return;
     }
+
     setIsSubmitting(true);
     try {
-      // Combine tags into body or handle separately if backend supports it
-      // For now, appending tags to body as hashtags for simplicity
-      const finalBody = tags.length > 0 ? `${body}\n\n${tags.map((t) => `#${t}`).join(' ')}` : body;
-
       await createNote({
         title: title.trim() || getGreeting(),
-        body: finalBody,
-        // mood: activeMood?.id // If backend supports mood field
+        body: body.trim() || null,
+        noteDate: format(new Date(), 'yyyy-MM-dd'),
+        gratitude1: gratitude1.trim() || null,
+        gratitude2: gratitude2.trim() || null,
+        gratitude3: gratitude3.trim() || null,
       });
 
       toast({
-        title: 'Saved',
-        description: 'Your thought has been captured safely.',
+        title: 'Saved! ✨',
+        description: 'Your journal entry has been saved.',
         status: 'success',
         duration: 3000,
         isClosable: true,
-        position: 'bottom-right',
       });
 
       setTitle('');
       setBody('');
-      setActiveMood(null);
-      setTags([]);
+      setGratitude1('');
+      setGratitude2('');
+      setGratitude3('');
+      
+      // Reload stats
+      loadGratitudeData();
     } catch (error) {
-      setSubmitError(error.message || 'Failed to save.');
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to save entry.',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  const gratitudeCount = [gratitude1, gratitude2, gratitude3].filter(g => g).length;
+
   return (
-    <Box
-      minH="100vh"
-      bg={THEME.colors.bg}
-      color={THEME.colors.textPrimary}
-      fontFamily={THEME.fonts.sans}
-      position="relative"
-      overflowX="hidden"
-    >
-      {/* Floating Background Elements - Subtle & Organic */}
+    <Box minH="100vh" bg={THEME.colors.bg} color={THEME.colors.textPrimary} fontFamily={THEME.fonts.sans}>
+      {/* Background Elements */}
       <Box
         position="absolute"
         top="-10%"
@@ -149,240 +187,289 @@ export default function DailyEntry() {
         borderRadius="full"
         filter="blur(60px)"
         zIndex={0}
-      />
-      <Box
-        position="absolute"
-        bottom="10%"
-        left="-10%"
-        w="400px"
-        h="400px"
-        bg="radial-gradient(circle, rgba(246, 224, 94, 0.15) 0%, rgba(255,255,255,0) 70%)"
-        borderRadius="full"
-        filter="blur(50px)"
-        zIndex={0}
+        pointerEvents="none"
       />
 
-      <Container maxW="4xl" pt={{ base: 12, md: 20 }} pb={20} position="relative" zIndex={1}>
-        <Stack spacing={12}>
-          {/* Header Section - Minimal & Welcoming */}
-          <MotionBox
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, ease: [0.2, 0.65, 0.3, 0.9] }}
-          >
-            <Stack spacing={1}>
-              <Text
-                fontSize="sm"
-                color={THEME.colors.textSecondary}
-                letterSpacing="wide"
-                textTransform="uppercase"
-              >
-                {new Date().toLocaleDateString('en-US', {
-                  weekday: 'long',
-                  month: 'long',
-                  day: 'numeric',
-                })}
-              </Text>
-              <Heading
-                fontSize={{ base: '4xl', md: '5xl' }}
-                fontWeight="300" // Light font weight for elegance
-                fontFamily={THEME.fonts.serif}
-                letterSpacing="-0.02em"
-              >
-                {getGreeting()}, Afif.
-              </Heading>
-              <Text
-                fontSize="lg"
-                color={THEME.colors.textSecondary}
-                maxW="2xl"
-                mt={2}
-                lineHeight="tall"
-              >
-                How is your heart feeling today? Take a moment to breathe and reflect.
-              </Text>
-            </Stack>
-          </MotionBox>
-
-          {/* Main Editor Canvas - Edge-free & Breathable */}
-          <MotionBox
-            initial={{ opacity: 0, scale: 0.98 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-          >
-            <Stack spacing={6}>
-              {/* Mood Selector - Chips */}
-              <Wrap spacing={3} justify="center">
-                {MOOD_OPTIONS.map((mood) => {
-                  const isActive = activeMood?.id === mood.id;
-                  return (
-                    <WrapItem key={mood.id}>
-                      <Button
-                        size="md"
-                        borderRadius="full"
-                        variant="unstyled"
-                        bg={isActive ? mood.color : 'white'}
-                        color={isActive ? mood.textColor : 'gray.500'}
-                        border="1px solid"
-                        borderColor={isActive ? 'transparent' : 'gray.200'}
-                        px={5}
-                        h="40px"
-                        display="flex"
-                        alignItems="center"
-                        gap={2}
-                        onClick={() => setActiveMood(isActive ? null : mood)}
-                        boxShadow={isActive ? 'md' : 'sm'}
-                        _hover={{ boxShadow: 'md', transform: 'translateY(-1px)' }}
-                        _active={{ transform: 'scale(0.98)' }}
-                        transition="all 0.2s"
-                      >
-                        <Text as="span" fontSize="lg">
-                          {mood.emoji}
-                        </Text>
-                        <Text as="span" fontSize="sm" fontWeight="500">
-                          {mood.label}
-                        </Text>
-                      </Button>
-                    </WrapItem>
-                  );
-                })}
-              </Wrap>
-
-              {/* The Editor - Card Container */}
-              <Box
-                bg="white"
-                borderRadius="2xl"
-                p={{ base: 6, md: 8 }}
-                boxShadow="0 4px 20px rgba(0, 0, 0, 0.04)"
-                border="1px solid"
-                borderColor="gray.100"
-              >
-                <Input
-                  variant="unstyled"
-                  placeholder="Title your day..."
-                  fontSize="xl"
-                  fontWeight="600"
-                  color={THEME.colors.textPrimary}
-                  mb={6}
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  _placeholder={{ color: 'gray.300' }}
-                  autoComplete="off"
-                  spellCheck="false"
-                />
-
-                <Textarea
-                  variant="unstyled"
-                  placeholder="Start writing here..."
-                  fontSize="md"
-                  lineHeight="1.9"
-                  minH="200px"
-                  resize="none"
-                  color={THEME.colors.textPrimary}
-                  value={body}
-                  onChange={(e) => setBody(e.target.value)}
-                  _placeholder={{ color: 'gray.300' }}
-                  autoComplete="off"
-                  spellCheck="false"
-                />
-
-                {/* Tagging System - Inside the card */}
-                {(tags.length > 0 || true) && (
-                  <>
-                    <Box borderTop="1px solid" borderColor="gray.100" mt={6} mb={4} />
-                    <Wrap spacing={2} align="center">
-                      {tags.map((tag) => (
-                        <WrapItem key={tag}>
-                          <Tag
-                            size="md"
-                            borderRadius="full"
-                            variant="subtle"
-                            colorScheme="purple"
-                            bg="purple.50"
-                          >
-                            <TagLabel color="purple.600">#{tag}</TagLabel>
-                            <TagCloseButton onClick={() => removeTag(tag)} />
-                          </Tag>
-                        </WrapItem>
-                      ))}
-                      <WrapItem>
-                        <Input
-                          placeholder="+ Add tag"
-                          value={newTag}
-                          onChange={(e) => setNewTag(e.target.value)}
-                          onKeyDown={handleAddTag}
-                          variant="unstyled"
-                          w="80px"
-                          fontSize="sm"
-                          color="gray.500"
-                          _placeholder={{ color: 'gray.400' }}
-                          autoComplete="off"
-                        />
-                      </WrapItem>
-                    </Wrap>
-                  </>
-                )}
-              </Box>
-
-              {/* Quick Prompts - Inline below card */}
-              <HStack spacing={3} justify="center" flexWrap="wrap">
-                <Text fontSize="xs" color="gray.500">
-                  Quick add:
+      <Container maxW="7xl" pt={{ base: 8, md: 12 }} pb={20} position="relative" zIndex={1}>
+        <Grid templateColumns={{ base: '1fr', lg: '2fr 1fr' }} gap={8}>
+          {/* Left Column - Journal Entry */}
+          <Stack spacing={6}>
+            {/* Header */}
+            <MotionBox
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+            >
+              <Stack spacing={1}>
+                <Text fontSize="sm" color={THEME.colors.textSecondary} letterSpacing="wide" textTransform="uppercase">
+                  {format(new Date(), 'EEEE, MMMM d, yyyy')}
                 </Text>
-                {QUICK_PROMPTS.map((prompt) => (
+                <Heading fontSize={{ base: '3xl', md: '4xl' }} fontWeight="300" fontFamily={THEME.fonts.serif} letterSpacing="-0.02em">
+                  {getGreeting()}
+                </Heading>
+                <Text fontSize="md" color={THEME.colors.textSecondary} maxW="xl" mt={1}>
+                  Capture your thoughts and gratitude for today
+                </Text>
+              </Stack>
+            </MotionBox>
+
+            {/* Editor Card */}
+            <MotionBox
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.6, delay: 0.1 }}
+            >
+              <Box bg="white" borderRadius="2xl" p={6} boxShadow="0 4px 20px rgba(0, 0, 0, 0.05)" border="1px solid" borderColor={THEME.colors.border}>
+                <Tabs colorScheme="purple" variant="soft-rounded">
+                  <TabList mb={4}>
+                    <Tab>📝 Journal</Tab>
+                    <Tab>
+                      ✨ Gratitude
+                      {gratitudeCount > 0 && (
+                        <Badge ml={2} colorScheme="purple" borderRadius="full">
+                          {gratitudeCount}
+                        </Badge>
+                      )}
+                    </Tab>
+                  </TabList>
+
+                  <TabPanels>
+                    <TabPanel px={0}>
+                      <VStack spacing={4} align="stretch">
+                        <Input
+                          variant="unstyled"
+                          placeholder="Title your day..."
+                          fontSize="xl"
+                          fontWeight="600"
+                          value={title}
+                          onChange={(e) => setTitle(e.target.value)}
+                          _placeholder={{ color: 'gray.300' }}
+                        />
+                        <Textarea
+                          variant="unstyled"
+                          placeholder="Write your thoughts here..."
+                          fontSize="md"
+                          lineHeight="1.8"
+                          minH="300px"
+                          resize="none"
+                          value={body}
+                          onChange={(e) => setBody(e.target.value)}
+                          _placeholder={{ color: 'gray.300' }}
+                        />
+                      </VStack>
+                    </TabPanel>
+
+                    <TabPanel px={0}>
+                      <VStack spacing={4} align="stretch">
+                        {prompt && (
+                          <Box bg="purple.50" p={4} borderRadius="lg" mb={2}>
+                            <Flex justify="space-between" align="center">
+                              <Text fontSize="sm" color="purple.700" fontStyle="italic">
+                                💡 {prompt}
+                              </Text>
+                              <Button size="xs" variant="ghost" colorScheme="purple" onClick={loadGratitudeData}>
+                                🎲
+                              </Button>
+                            </Flex>
+                          </Box>
+                        )}
+
+                        <Box>
+                          <Text fontWeight="semibold" color={THEME.colors.textPrimary} mb={2}>
+                            1. I'm grateful for...
+                          </Text>
+                          <Textarea
+                            value={gratitude1}
+                            onChange={(e) => setGratitude1(e.target.value)}
+                            placeholder="e.g., Morning coffee with my best friend..."
+                            rows={2}
+                            maxLength={500}
+                            borderColor="purple.200"
+                            _focus={{ borderColor: 'purple.500' }}
+                          />
+                          <Text fontSize="xs" color="gray.500" mt={1}>
+                            {gratitude1.length}/500
+                          </Text>
+                        </Box>
+
+                        <Box>
+                          <Text fontWeight="semibold" color={THEME.colors.textPrimary} mb={2}>
+                            2. I'm grateful for... <Text as="span" color="gray.400" fontSize="sm">(optional)</Text>
+                          </Text>
+                          <Textarea
+                            value={gratitude2}
+                            onChange={(e) => setGratitude2(e.target.value)}
+                            placeholder="e.g., A good night's sleep..."
+                            rows={2}
+                            maxLength={500}
+                            borderColor="purple.200"
+                            _focus={{ borderColor: 'purple.500' }}
+                          />
+                          <Text fontSize="xs" color="gray.500" mt={1}>
+                            {gratitude2.length}/500
+                          </Text>
+                        </Box>
+
+                        <Box>
+                          <Text fontWeight="semibold" color={THEME.colors.textPrimary} mb={2}>
+                            3. I'm grateful for... <Text as="span" color="gray.400" fontSize="sm">(optional)</Text>
+                          </Text>
+                          <Textarea
+                            value={gratitude3}
+                            onChange={(e) => setGratitude3(e.target.value)}
+                            placeholder="e.g., Sunny weather today..."
+                            rows={2}
+                            maxLength={500}
+                            borderColor="purple.200"
+                            _focus={{ borderColor: 'purple.500' }}
+                          />
+                          <Text fontSize="xs" color="gray.500" mt={1}>
+                            {gratitude3.length}/500
+                          </Text>
+                        </Box>
+                      </VStack>
+                    </TabPanel>
+                  </TabPanels>
+                </Tabs>
+
+                <Divider my={6} />
+
+                <Flex justify="flex-end">
                   <Button
-                    key={prompt.id}
-                    size="sm"
-                    variant="solid"
-                    bg="gray.100"
-                    color="gray.600"
+                    onClick={handleSubmit}
+                    isLoading={isSubmitting}
+                    size="lg"
+                    bg="purple.500"
+                    color="white"
                     borderRadius="full"
-                    fontWeight="medium"
-                    onClick={() => setBody((prev) => prev + (prev ? '\n\n' : '') + prompt.text)}
-                    _hover={{ bg: 'purple.100', color: 'purple.700' }}
+                    px={8}
+                    _hover={{ bg: 'purple.600', transform: 'translateY(-2px)' }}
+                    _active={{ transform: 'scale(0.98)' }}
+                    boxShadow="lg"
                   >
-                    + {prompt.label}
+                    Save Entry
                   </Button>
-                ))}
-              </HStack>
+                </Flex>
+              </Box>
+            </MotionBox>
+          </Stack>
 
-              {/* Action Area */}
-              <HStack justify="space-between" pt={2}>
-                <HStack spacing={4} color="gray.400">
-                  <Tooltip label="Private & Encrypted" hasArrow placement="top">
-                    <Box as="span" display="flex" alignItems="center">
-                      <Icon as={LockIcon} boxSize={4} />
-                    </Box>
-                  </Tooltip>
-                  <Text fontSize="xs">Auto-saved</Text>
-                </HStack>
+          {/* Right Column - Gratitude Stats & Insights */}
+          <Stack spacing={6}>
+            {/* Stats Cards */}
+            <MotionBox
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+            >
+              <VStack spacing={4} align="stretch">
+                <Heading size="md" fontFamily={THEME.fonts.serif} fontWeight="400">
+                  Your Gratitude Journey ✨
+                </Heading>
 
-                <Button
-                  onClick={handleSubmit}
-                  isLoading={isSubmitting}
-                  size="lg"
-                  bg="gray.900"
-                  color="white"
-                  borderRadius="full"
-                  px={8}
-                  fontWeight="500"
-                  _hover={{ bg: 'gray.700', transform: 'translateY(-2px)' }}
-                  _active={{ transform: 'scale(0.98)' }}
-                  transition="all 0.2s"
-                  boxShadow="lg"
-                >
-                  Save Entry
-                </Button>
-              </HStack>
+                <SimpleGrid columns={2} spacing={3}>
+                  <Box bg="linear-gradient(135deg, #667eea 0%, #764ba2 100%)" p={4} borderRadius="xl" color="white">
+                    <Text fontSize="xs" opacity={0.9} mb={1}>
+                      Streak
+                    </Text>
+                    <Flex align="baseline" gap={1}>
+                      <Heading size="xl">{stats?.current_streak || 0}</Heading>
+                      <Text fontSize="lg">🔥</Text>
+                    </Flex>
+                  </Box>
 
-              {submitError && (
-                <Alert status="error" variant="subtle" borderRadius="md">
-                  <AlertIcon />
-                  {submitError}
-                </Alert>
-              )}
-            </Stack>
-          </MotionBox>
-        </Stack>
+                  <Box bg="linear-gradient(135deg, #f093fb 0%, #f5576c 100%)" p={4} borderRadius="xl" color="white">
+                    <Text fontSize="xs" opacity={0.9} mb={1}>
+                      This Week
+                    </Text>
+                    <Flex align="baseline" gap={1}>
+                      <Heading size="xl">{stats?.week_count || 0}</Heading>
+                      <Text fontSize="lg">📝</Text>
+                    </Flex>
+                  </Box>
+
+                  <Box bg="linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)" p={4} borderRadius="xl" color="white">
+                    <Text fontSize="xs" opacity={0.9} mb={1}>
+                      Total
+                    </Text>
+                    <Flex align="baseline" gap={1}>
+                      <Heading size="xl">{stats?.total_gratitudes || 0}</Heading>
+                      <Text fontSize="lg">✨</Text>
+                    </Flex>
+                  </Box>
+
+                  <Box bg="linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)" p={4} borderRadius="xl" color="white">
+                    <Text fontSize="xs" opacity={0.9} mb={1}>
+                      Today
+                    </Text>
+                    <Flex align="baseline" gap={1}>
+                      <Heading size="xl">{stats?.today_gratitude?.gratitude_count || 0}</Heading>
+                      <Text fontSize="lg">🌟</Text>
+                    </Flex>
+                  </Box>
+                </SimpleGrid>
+              </VStack>
+            </MotionBox>
+
+            {/* Category Distribution */}
+            {distribution && distribution.length > 0 && (
+              <MotionBox
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.6, delay: 0.3 }}
+              >
+                <Box bg="white" p={5} borderRadius="xl" border="1px solid" borderColor={THEME.colors.border}>
+                  <Heading size="sm" mb={4}>
+                    Top Categories
+                  </Heading>
+                  <VStack spacing={3} align="stretch">
+                    {distribution.slice(0, 5).map((cat) => (
+                      <Flex key={cat.category} justify="space-between" align="center">
+                        <HStack spacing={2}>
+                          <Text fontSize="xl">{categoryEmojis[cat.category] || '✨'}</Text>
+                          <Text fontSize="sm" fontWeight="500">
+                            {cat.category}
+                          </Text>
+                        </HStack>
+                        <Badge colorScheme="purple" borderRadius="full" px={2}>
+                          {cat.percentage?.toFixed(0)}%
+                        </Badge>
+                      </Flex>
+                    ))}
+                  </VStack>
+                </Box>
+              </MotionBox>
+            )}
+
+            {/* Random Past Gratitude */}
+            {randomGratitude && (
+              <MotionBox
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.6, delay: 0.4 }}
+              >
+                <Box bg="linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)" p={5} borderRadius="xl">
+                  <Flex justify="space-between" align="start" mb={3}>
+                    <Text fontSize="sm" fontWeight="600" color={THEME.colors.textPrimary}>
+                      🌟 Memory Lane
+                    </Text>
+                    <Button size="xs" variant="ghost" onClick={loadGratitudeData} leftIcon={<RepeatIcon />}>
+                      New
+                    </Button>
+                  </Flex>
+                  <Text fontSize="sm" color={THEME.colors.textPrimary} mb={2}>
+                    {randomGratitude.item}
+                  </Text>
+                  {randomGratitude.date && (
+                    <Text fontSize="xs" color={THEME.colors.textSecondary}>
+                      {format(new Date(randomGratitude.date), 'MMMM d, yyyy')}
+                    </Text>
+                  )}
+                </Box>
+              </MotionBox>
+            )}
+          </Stack>
+        </Grid>
       </Container>
     </Box>
   );

@@ -288,21 +288,27 @@ export async function listNotes({ userId, startDate, endDate } = {}) {
   }
 }
 
-export async function createNote({ userId, title, body }) {
+export async function createNote({ userId, title, body, noteDate, gratitude1, gratitude2, gratitude3 }) {
   try {
     const now = new Date();
+    const requestBody = {
+      user_id: userId || null,
+      title: title || null,
+      body: body || null,
+      note_date: noteDate || format(now, 'yyyy-MM-dd'),
+      created_at: now.toISOString(),
+      updated_at: now.toISOString(),
+    };
+
+    if (gratitude1) requestBody.gratitude_1 = gratitude1;
+    if (gratitude2) requestBody.gratitude_2 = gratitude2;
+    if (gratitude3) requestBody.gratitude_3 = gratitude3;
+
     const response = await fetch(
       `${API_BASE_URL}/journal/notes`,
       buildRequestOptions({
         method: 'POST',
-        body: JSON.stringify({
-          user_id: userId || null,
-          title: title || null,
-          body,
-          // Add server-side timestamps if needed
-          created_at: now.toISOString(),
-          updated_at: now.toISOString(),
-        }),
+        body: JSON.stringify(requestBody),
       })
     );
 
@@ -316,19 +322,25 @@ export async function createNote({ userId, title, body }) {
   }
 }
 
-export async function updateNote(id, { userId, title, body }) {
+export async function updateNote(id, { userId, title, body, noteDate, gratitude1, gratitude2, gratitude3 }) {
   try {
+    const requestBody = {
+      updated_at: new Date().toISOString(),
+    };
+
+    if (userId !== undefined) requestBody.user_id = userId;
+    if (title !== undefined) requestBody.title = title;
+    if (body !== undefined) requestBody.body = body;
+    if (noteDate !== undefined) requestBody.note_date = noteDate;
+    if (gratitude1 !== undefined) requestBody.gratitude_1 = gratitude1;
+    if (gratitude2 !== undefined) requestBody.gratitude_2 = gratitude2;
+    if (gratitude3 !== undefined) requestBody.gratitude_3 = gratitude3;
+
     const response = await fetch(
       `${API_BASE_URL}/journal/notes/${id}`,
       buildRequestOptions({
         method: 'PATCH',
-        body: JSON.stringify({
-          user_id: userId,
-          title,
-          body,
-          // Add server-side timestamp if needed
-          updated_at: new Date().toISOString(),
-        }),
+        body: JSON.stringify(requestBody),
       })
     );
 
@@ -394,6 +406,71 @@ export async function searchNotes({ query = '', dateFrom = '', dateTo = '', limi
     return payload?.data || [];
   } catch (error) {
     console.error('Error in searchNotes:', error);
+    throw error;
+  }
+}
+
+export async function getGratitudeStats() {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/journal/gratitude/stats`,
+      buildRequestOptions({ method: 'GET' })
+    );
+    return await handleResponse(response);
+  } catch (error) {
+    console.error('Error in getGratitudeStats:', error);
+    throw error;
+  }
+}
+
+export async function getGratitudeDistribution() {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/journal/gratitude/distribution`,
+      buildRequestOptions({ method: 'GET' })
+    );
+    return await handleResponse(response);
+  } catch (error) {
+    console.error('Error in getGratitudeDistribution:', error);
+    throw error;
+  }
+}
+
+export async function getGratitudeInsights() {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/journal/gratitude/insights`,
+      buildRequestOptions({ method: 'GET' })
+    );
+    return await handleResponse(response);
+  } catch (error) {
+    console.error('Error in getGratitudeInsights:', error);
+    throw error;
+  }
+}
+
+export async function getRandomGratitude() {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/journal/gratitude/random`,
+      buildRequestOptions({ method: 'GET' })
+    );
+    return await handleResponse(response);
+  } catch (error) {
+    console.error('Error in getRandomGratitude:', error);
+    throw error;
+  }
+}
+
+export async function getGratitudePrompts() {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/journal/gratitude/prompts`,
+      buildRequestOptions({ method: 'GET' })
+    );
+    return await handleResponse(response);
+  } catch (error) {
+    console.error('Error in getGratitudePrompts:', error);
     throw error;
   }
 }

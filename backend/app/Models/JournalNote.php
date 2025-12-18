@@ -44,6 +44,12 @@ class JournalNote extends Model
         'title',
         'body',
         'note_date',
+        'gratitude_1',
+        'gratitude_2',
+        'gratitude_3',
+        'gratitude_category_1',
+        'gratitude_category_2',
+        'gratitude_category_3',
     ];
 
     protected $casts = [
@@ -100,5 +106,56 @@ class JournalNote extends Model
             ->whereDate('note_date', '<=', $end->endOfDay())
             ->orderBy('note_date', 'desc')
             ->orderBy('created_at', 'desc');
+    }
+
+    public function getGratitudesAttribute()
+    {
+        return array_filter([
+            $this->gratitude_1,
+            $this->gratitude_2,
+            $this->gratitude_3,
+        ]);
+    }
+
+    public function getGratitudeCategoriesAttribute()
+    {
+        return array_filter([
+            $this->gratitude_category_1,
+            $this->gratitude_category_2,
+            $this->gratitude_category_3,
+        ]);
+    }
+
+    public function getGratitudeCountAttribute()
+    {
+        return count($this->gratitudes);
+    }
+
+    public static function detectGratitudeCategory($text)
+    {
+        $text = strtolower($text);
+        
+        $categoryKeywords = [
+            'Friends' => ['friend', 'friends', 'buddy', 'pal', 'companion', 'hangout', 'chat', 'conversation'],
+            'Family' => ['family', 'mom', 'dad', 'mother', 'father', 'sister', 'brother', 'parent', 'child', 'kids'],
+            'Health' => ['health', 'healthy', 'exercise', 'workout', 'gym', 'run', 'walk', 'sleep', 'energy', 'strong'],
+            'Work' => ['work', 'job', 'career', 'project', 'meeting', 'colleague', 'team', 'success', 'achievement'],
+            'Nature' => ['nature', 'weather', 'sunshine', 'rain', 'sky', 'tree', 'flower', 'outdoor', 'walk', 'park'],
+            'Food' => ['food', 'meal', 'breakfast', 'lunch', 'dinner', 'coffee', 'tea', 'eat', 'delicious', 'cook'],
+            'Love' => ['love', 'partner', 'spouse', 'boyfriend', 'girlfriend', 'husband', 'wife', 'relationship', 'date'],
+            'Learning' => ['learn', 'read', 'book', 'study', 'knowledge', 'skill', 'course', 'education', 'discover'],
+            'Peace' => ['peace', 'calm', 'quiet', 'meditation', 'relax', 'rest', 'tranquil', 'serene', 'mindful'],
+            'Success' => ['success', 'win', 'accomplish', 'achieve', 'goal', 'milestone', 'progress', 'complete'],
+        ];
+
+        foreach ($categoryKeywords as $category => $keywords) {
+            foreach ($keywords as $keyword) {
+                if (strpos($text, $keyword) !== false) {
+                    return $category;
+                }
+            }
+        }
+
+        return 'General';
     }
 }

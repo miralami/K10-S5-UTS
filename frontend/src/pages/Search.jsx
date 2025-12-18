@@ -22,8 +22,16 @@ import {
   PopoverContent,
   PopoverBody,
   Grid,
+  Badge,
+  VStack,
+  HStack,
+  Wrap,
+  WrapItem,
+  Tag,
+  TagLabel,
+  TagCloseButton,
 } from '@chakra-ui/react';
-import { SearchIcon, CalendarIcon } from '@chakra-ui/icons';
+import { SearchIcon, CalendarIcon, StarIcon } from '@chakra-ui/icons';
 import { motion } from 'framer-motion';
 import { format, parse, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay, addMonths, subMonths } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
@@ -187,7 +195,15 @@ export default function Search() {
   const [results, setResults] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
+  const [selectedTags, setSelectedTags] = useState([]);
   const toast = useToast();
+
+  // Extract unique tags from results
+  const availableTags = [...new Set(
+    results.flatMap(note => [
+      ...(note.gratitudeCategories || []),
+    ]).filter(Boolean)
+  )];
 
   // Debounced search function
   const performSearch = useCallback(async (q, from, to) => {
@@ -233,7 +249,23 @@ export default function Search() {
     setQuery('');
     setDateFrom('');
     setDateTo('');
+    setSelectedTags([]);
   };
+
+  const toggleTag = (tag) => {
+    setSelectedTags(prev => 
+      prev.includes(tag) 
+        ? prev.filter(t => t !== tag)
+        : [...prev, tag]
+    );
+  };
+
+  // Filter results by selected tags
+  const filteredResults = selectedTags.length > 0
+    ? results.filter(note => 
+        note.gratitudeCategories?.some(cat => selectedTags.includes(cat))
+      )
+    : results;
 
   return (
     <Box minH="100vh" bg={THEME.colors.bg} color={THEME.colors.textPrimary} fontFamily={THEME.fonts.sans}>
@@ -341,18 +373,56 @@ export default function Search() {
             </Flex>
 
             {/* Clear button */}
-            {(query || dateFrom || dateTo) && (
+            {(query || dateFrom || dateTo || selectedTags.length > 0) && (
               <Button
                 size="sm"
                 variant="ghost"
                 colorScheme="purple"
                 onClick={handleClearSearch}
               >
-                Hapus Filter
+                Hapus Semua Filter
               </Button>
             )}
           </Stack>
         </MotionBox>
+
+        {/* Tag Filter */}
+        {availableTags.length > 0 && (
+          <MotionBox
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            bg={THEME.colors.cardBg}
+            p={4}
+            borderRadius="2xl"
+            border={`1px solid ${THEME.colors.borderLight}`}
+            boxShadow="0 4px 20px rgba(0, 0, 0, 0.05)"
+            mb={6}
+          >
+            <Text fontSize="sm" fontWeight="600" color={THEME.colors.textSecondary} mb={3}>
+              🏷️ Filter by Gratitude Category
+            </Text>
+            <Wrap spacing={2}>
+              {availableTags.map(tag => (
+                <WrapItem key={tag}>
+                  <Tag
+                    size="md"
+                    borderRadius="full"
+                    variant={selectedTags.includes(tag) ? 'solid' : 'outline'}
+                    colorScheme="purple"
+                    cursor="pointer"
+                    onClick={() => toggleTag(tag)}
+                    _hover={{ transform: 'scale(1.05)' }}
+                    transition="all 0.2s"
+                  >
+                    <TagLabel>{tag}</TagLabel>
+                    {selectedTags.includes(tag) && <TagCloseButton />}
+                  </Tag>
+                </WrapItem>
+              ))}
+            </Wrap>
+          </MotionBox>
+        )}
 
         {/* Loading State */}
         {isLoading && (
@@ -367,11 +437,18 @@ export default function Search() {
         {/* Results */}
         {!isLoading && hasSearched && (
           <Box>
-            <Heading size="md" mb={4} color={THEME.colors.textPrimary}>
-              Hasil Pencarian ({results.length})
-            </Heading>
+            <Flex justify="space-between" align="center" mb={4}>
+              <Heading size="md" color={THEME.colors.textPrimary}>
+                Hasil Pencarian ({filteredResults.length})
+              </Heading>
+              {selectedTags.length > 0 && (
+                <Badge colorScheme="purple" fontSize="sm" px={3} py={1} borderRadius="full">
+                  {selectedTags.length} tag dipilih
+                </Badge>
+              )}
+            </Flex>
 
-            {results.length === 0 ? (
+            {filteredResults.length === 0 ? (
               <MotionBox
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -390,7 +467,7 @@ export default function Search() {
               </MotionBox>
             ) : (
               <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={6}>
-                {results.map((note, idx) => (
+                {filteredResults.map((note, idx) => (
                   <MotionBox
                     key={note.id}
                     initial={{ opacity: 0, y: 20 }}
@@ -432,16 +509,61 @@ export default function Search() {
                       <Text
                         fontSize="sm"
                         color={THEME.colors.textSecondary}
-                        mb={4}
+                        mb={3}
                         flex={1}
-                        noOfLines={6}
+                        noOfLines={4}
                         whiteSpace="pre-wrap"
                         wordBreak="break-word"
                       >
                         {note.body}
                       </Text>
 
-                      {/* No Action Buttons - Read Only View */}
+                      {/* Gratitude Items */}
+                      {note.gratitudes && note.gratitudes.length > 0 && (
+                        <VStack align="stretch" spacing={2} mb={3}>
+                          <Flex align="center" gap={2}>
+                            <Icon as={StarIcon} color="yellow.400" boxSize={3} />
+                            <Text fontSize="xs" fontWeight="600" color={THEME.colors.textSecondary}>
+                              Gratitude
+                            </Text>
+                          </Flex>
+                          {note.gratitudes.slice(0, 2).map((item, i) => (
+                            <Text
+                              key={i}
+                              fontSize="xs"
+                              color={THEME.colors.textSecondary}
+                              pl={4}
+                              borderLeft="2px solid"
+                              borderColor="yellow.200"
+                            >
+                              {item}
+                            </Text>
+                          ))}
+                          {note.gratitudes.length > 2 && (
+                            <Text fontSize="xs" color={THEME.colors.textMuted} pl={4}>
+                              +{note.gratitudes.length - 2} more
+                            </Text>
+                          )}
+                        </VStack>
+                      )}
+
+                      {/* Gratitude Categories */}
+                      {note.gratitudeCategories && note.gratitudeCategories.length > 0 && (
+                        <Wrap spacing={1}>
+                          {note.gratitudeCategories.map((cat, i) => (
+                            <WrapItem key={i}>
+                              <Badge
+                                colorScheme="purple"
+                                fontSize="xs"
+                                borderRadius="full"
+                                px={2}
+                              >
+                                {cat}
+                              </Badge>
+                            </WrapItem>
+                          ))}
+                        </Wrap>
+                      )}
                     </Box>
                   </MotionBox>
                 ))}

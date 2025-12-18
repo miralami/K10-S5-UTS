@@ -23,7 +23,11 @@ class StoreJournalRequest extends FormRequest
     {
         return [
             'title' => ['nullable', 'string', 'max:255'],
-            'body' => ['required', 'string'],
+            'body' => ['nullable', 'string'],
+            'note_date' => ['nullable', 'date'],
+            'gratitude_1' => ['nullable', 'string', 'max:500'],
+            'gratitude_2' => ['nullable', 'string', 'max:500'],
+            'gratitude_3' => ['nullable', 'string', 'max:500'],
         ];
     }
 }
