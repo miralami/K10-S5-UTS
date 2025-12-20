@@ -41,6 +41,12 @@ const navItems = [
     icon: CalendarIcon,
   },
   {
+    label: 'Riwayat Jurnal',
+    description: 'Lihat catatan & gambar per hari',
+    to: '/history',
+    icon: CalendarIcon,
+  },
+  {
     label: 'Cari Catatan',
     description: 'Pencarian catatan harianmu',
     to: '/search',

@@ -33,6 +33,7 @@
         "psr-4": {
             "App\\": "app/",
             "Ai\\": "app/Grpc/Ai/",
+            "GPBMetadata\\": "app/Grpc/GPBMetadata/",
             "Database\\Factories\\": "database/factories/",
             "Database\\Seeders\\": "database/seeders/"
         }

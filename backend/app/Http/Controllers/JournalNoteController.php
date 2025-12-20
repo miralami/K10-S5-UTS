@@ -10,6 +10,7 @@ use Carbon\Carbon;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class JournalNoteController extends Controller
 {
@@ -26,7 +27,7 @@ class JournalNoteController extends Controller
         // order by updated_at so frontend that relies on `updatedAt` sees the latest items first
         $notes = $notesQuery
             ->orderByDesc('updated_at')
-            ->get(['id', 'user_id', 'title', 'body', 'note_date', 'created_at', 'updated_at']);
+            ->get();
 
         return response()->json([
             'data' => $notes->map(fn (JournalNote $note) => $this->transformNote($note)),
@@ -46,6 +47,12 @@ class JournalNoteController extends Controller
         }
         if (!empty($validated['gratitude_3'])) {
             $validated['gratitude_category_3'] = JournalNote::detectGratitudeCategory($validated['gratitude_3']);
+        }
+
+        if ($request->hasFile('image')) {
+            $image = $request->file('image');
+            $path = $image->store('journal-images', 'public');
+            $validated['image_path'] = $path;
         }
 
         $note = JournalNote::create($validated);
@@ -94,6 +101,15 @@ class JournalNoteController extends Controller
                 : null;
         }
 
+        if ($request->hasFile('image')) {
+            if ($note->image_path && Storage::disk('public')->exists($note->image_path)) {
+                Storage::disk('public')->delete($note->image_path);
+            }
+            $image = $request->file('image');
+            $path = $image->store('journal-images', 'public');
+            $validated['image_path'] = $path;
+        }
+
         $tz = new \DateTimeZone('Asia/Jakarta');
         $todayStart = Carbon::now($tz)->startOfDay();
 
@@ -140,6 +156,10 @@ class JournalNoteController extends Controller
     public function destroy(JournalNote $note): JsonResponse
     {
         $this->authorize('delete', $note);
+
+        if ($note->image_path && Storage::disk('public')->exists($note->image_path)) {
+            Storage::disk('public')->delete($note->image_path);
+        }
 
         $note->delete();
 
@@ -197,7 +217,7 @@ class JournalNoteController extends Controller
             ->orderByDesc('note_date')
             ->orderByDesc('updated_at')
             ->limit($limit)
-            ->get(['id', 'user_id', 'title', 'body', 'note_date', 'created_at', 'updated_at']);
+            ->get();
 
         return response()->json([
             'data' => $notes->map(fn (JournalNote $note) => $this->transformNote($note)),
@@ -406,7 +426,7 @@ class JournalNoteController extends Controller
     private function calculateGratitudeStreak($userId): int
     {
         $notes = JournalNote::where('user_id', $userId)
-            ->whereNotNull('gratitude_1')
+            ->whereNotNull('note_date')
             ->orderBy('note_date', 'desc')
             ->get();
 
@@ -416,12 +436,26 @@ class JournalNoteController extends Controller
 
         $streak = 0;
         $currentDate = now()->startOfDay();
+        
+        // Check if there's an entry today or yesterday to start streak
+        $hasToday = $notes->first()->note_date->isSameDay($currentDate);
+        $hasYesterday = $notes->first()->note_date->isSameDay($currentDate->copy()->subDay());
+        
+        if (!$hasToday && !$hasYesterday) {
+            return 0;
+        }
+        
+        // Start from today or yesterday
+        if (!$hasToday) {
+            $currentDate->subDay();
+        }
 
         foreach ($notes as $note) {
             if ($note->note_date && $note->note_date->isSameDay($currentDate)) {
                 $streak++;
                 $currentDate->subDay();
-            } else {
+            } elseif ($note->note_date->lt($currentDate)) {
+                // If there's a gap, break the streak
                 break;
             }
         }
@@ -446,6 +480,8 @@ class JournalNoteController extends Controller
             'gratitudeCategory2' => $note->gratitude_category_2 ?? null,
             'gratitudeCategory3' => $note->gratitude_category_3 ?? null,
             'gratitudeCount' => $note->gratitude_count ?? 0,
+            'imagePath' => $note->image_path ?? null,
+            'imageUrl' => $note->image_path ? asset('storage/' . $note->image_path) : null,
         ];
     }
 

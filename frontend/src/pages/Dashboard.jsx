@@ -63,6 +63,7 @@ import {
   SimpleGrid,
   Spinner,
   Stack,
+  VStack,
   Text,
   useToast,
   SlideFade,
@@ -914,67 +915,94 @@ export default function Dashboard() {
                               }}
                               transition="all 0.2s"
                             >
-                              <Flex justify="space-between" align="start" gap={3}>
-                                <Box flex="1" minW="0">
-                                  <Flex align="center" mb={2}>
-                                    <Text
-                                      fontWeight="600"
-                                      fontSize="sm"
-                                      color={THEME.colors.textPrimary}
-                                      noOfLines={1}
-                                    >
-                                      {note.title || 'Untitled'}
-                                    </Text>
-                                    <Text
-                                      fontSize="xs"
-                                      color={THEME.colors.textMuted}
-                                      ml={2}
-                                      flexShrink={0}
-                                    >
-                                      {format(
-                                        new Date(
-                                          note.createdAt || note.note_date || note.updatedAt
-                                        ),
-                                        'HH:mm'
-                                      )}
-                                    </Text>
-                                  </Flex>
-                                  <Text
-                                    fontSize="sm"
-                                    color={THEME.colors.textSecondary}
-                                    noOfLines={2}
-                                    lineHeight="tall"
+                              <VStack spacing={3} align="stretch">
+                                {note.imageUrl && (
+                                  <Box
+                                    borderRadius="lg"
+                                    overflow="hidden"
+                                    maxH="200px"
+                                    position="relative"
                                   >
-                                    {note.body}
-                                  </Text>
-                                </Box>
-                                <HStack spacing={1}>
-                                  <IconButton
-                                    icon={<EditIcon />}
-                                    size="sm"
-                                    variant="solid"
-                                    aria-label="Edit"
-                                    borderRadius="full"
-                                    isDisabled={!canEdit(note)}
-                                    onClick={() => handleStartEdit(note)}
-                                    bg="gray.100"
-                                    color="gray.500"
-                                    _hover={{ bg: 'purple.100', color: 'purple.600' }}
-                                  />
-                                  <IconButton
-                                    icon={<DeleteIcon />}
-                                    size="sm"
-                                    variant="solid"
-                                    aria-label="Delete"
-                                    borderRadius="full"
-                                    onClick={() => handleDeleteNote(note)}
-                                    isLoading={isDeleting}
-                                    bg="gray.100"
-                                    color="gray.500"
-                                    _hover={{ bg: 'red.100', color: 'red.500' }}
-                                  />
-                                </HStack>
-                              </Flex>
+                                    <Image
+                                      src={note.imageUrl}
+                                      alt={note.title || 'Journal image'}
+                                      objectFit="cover"
+                                      w="100%"
+                                      h="100%"
+                                      fallbackSrc="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 300'%3E%3Crect fill='%23f7fafc' width='400' height='300'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' fill='%23a0aec0' font-size='16'%3EImage%3C/text%3E%3C/svg%3E"
+                                    />
+                                  </Box>
+                                )}
+                                <Flex justify="space-between" align="start" gap={3}>
+                                  <Box flex="1" minW="0">
+                                    <Flex align="center" mb={2}>
+                                      <Text
+                                        fontWeight="600"
+                                        fontSize="sm"
+                                        color={THEME.colors.textPrimary}
+                                        noOfLines={1}
+                                      >
+                                        {note.title || 'Untitled'}
+                                      </Text>
+                                      <Text
+                                        fontSize="xs"
+                                        color={THEME.colors.textMuted}
+                                        ml={2}
+                                        flexShrink={0}
+                                      >
+                                        {format(
+                                          new Date(
+                                            note.createdAt || note.note_date || note.updatedAt
+                                          ),
+                                          'HH:mm'
+                                        )}
+                                      </Text>
+                                    </Flex>
+                                    <Text
+                                      fontSize="sm"
+                                      color={THEME.colors.textSecondary}
+                                      noOfLines={2}
+                                      lineHeight="tall"
+                                    >
+                                      {note.body}
+                                    </Text>
+                                    {(note.gratitude1 || note.gratitude2 || note.gratitude3) && (
+                                      <HStack mt={2} spacing={1}>
+                                        <Text fontSize="xs" color="purple.500">✨</Text>
+                                        <Text fontSize="xs" color="purple.600" fontWeight="medium">
+                                          {[note.gratitude1, note.gratitude2, note.gratitude3].filter(Boolean).length} gratitude{[note.gratitude1, note.gratitude2, note.gratitude3].filter(Boolean).length > 1 ? 's' : ''}
+                                        </Text>
+                                      </HStack>
+                                    )}
+                                  </Box>
+                                  <HStack spacing={1}>
+                                    <IconButton
+                                      icon={<EditIcon />}
+                                      size="sm"
+                                      variant="solid"
+                                      aria-label="Edit"
+                                      borderRadius="full"
+                                      isDisabled={!canEdit(note)}
+                                      onClick={() => handleStartEdit(note)}
+                                      bg="gray.100"
+                                      color="gray.500"
+                                      _hover={{ bg: 'purple.100', color: 'purple.600' }}
+                                    />
+                                    <IconButton
+                                      icon={<DeleteIcon />}
+                                      size="sm"
+                                      variant="solid"
+                                      aria-label="Delete"
+                                      borderRadius="full"
+                                      onClick={() => handleDeleteNote(note)}
+                                      isLoading={isDeleting}
+                                      bg="gray.100"
+                                      color="gray.500"
+                                      _hover={{ bg: 'red.100', color: 'red.500' }}
+                                    />
+                                  </HStack>
+                                </Flex>
+                              </VStack>
                             </Box>
                           </MotionBox>
                         ))}

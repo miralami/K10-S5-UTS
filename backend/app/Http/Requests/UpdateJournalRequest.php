@@ -31,6 +31,7 @@ class UpdateJournalRequest extends FormRequest
             'gratitude_1' => ['sometimes', 'nullable', 'string', 'max:500'],
             'gratitude_2' => ['sometimes', 'nullable', 'string', 'max:500'],
             'gratitude_3' => ['sometimes', 'nullable', 'string', 'max:500'],
+            'image' => ['sometimes', 'nullable', 'image', 'mimes:jpeg,jpg,png,gif,webp', 'max:5120'],
         ];
     }
 }

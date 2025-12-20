@@ -28,6 +28,7 @@ class StoreJournalRequest extends FormRequest
             'gratitude_1' => ['nullable', 'string', 'max:500'],
             'gratitude_2' => ['nullable', 'string', 'max:500'],
             'gratitude_3' => ['nullable', 'string', 'max:500'],
+            'image' => ['nullable', 'image', 'mimes:jpeg,jpg,png,gif,webp', 'max:5120'],
         ];
     }
 }

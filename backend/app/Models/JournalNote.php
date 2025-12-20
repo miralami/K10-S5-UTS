@@ -50,6 +50,7 @@ class JournalNote extends Model
         'gratitude_category_1',
         'gratitude_category_2',
         'gratitude_category_3',
+        'image_path',
     ];
 
     protected $casts = [

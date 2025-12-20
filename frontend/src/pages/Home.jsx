@@ -7,31 +7,23 @@ import {
   HStack,
   Stack,
   Text,
-  Textarea,
   useToast,
-  Input,
   Grid,
   SimpleGrid,
   Flex,
   VStack,
   Badge,
   Divider,
-  Tabs,
-  TabList,
-  TabPanels,
-  Tab,
-  TabPanel,
 } from '@chakra-ui/react';
 import { StarIcon, RepeatIcon } from '@chakra-ui/icons';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { 
-  createNote, 
   getGratitudeStats, 
   getGratitudeDistribution,
-  getGratitudePrompts,
   getRandomGratitude 
 } from '../services/journalService';
+import BeautifulJournalNote from '../components/BeautifulJournalNote';
 
 const MotionBox = motion(Box);
 
@@ -69,17 +61,9 @@ const categoryEmojis = {
 };
 
 export default function Home() {
-  const [title, setTitle] = useState('');
-  const [body, setBody] = useState('');
-  const [gratitude1, setGratitude1] = useState('');
-  const [gratitude2, setGratitude2] = useState('');
-  const [gratitude3, setGratitude3] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  
   // Gratitude stats
   const [stats, setStats] = useState(null);
   const [distribution, setDistribution] = useState([]);
-  const [prompt, setPrompt] = useState('');
   const [randomGratitude, setRandomGratitude] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -92,19 +76,14 @@ export default function Home() {
   const loadGratitudeData = async () => {
     try {
       setLoading(true);
-      const [statsData, distData, promptsData, randomData] = await Promise.all([
+      const [statsData, distData, randomData] = await Promise.all([
         getGratitudeStats(),
         getGratitudeDistribution(),
-        getGratitudePrompts(),
         getRandomGratitude(),
       ]);
       
       setStats(statsData);
       setDistribution(distData);
-      
-      const allPrompts = Object.values(promptsData).flat();
-      const randomPrompt = allPrompts[Math.floor(Math.random() * allPrompts.length)];
-      setPrompt(randomPrompt);
       setRandomGratitude(randomData);
     } catch (error) {
       console.error('Error loading gratitude data:', error);
@@ -120,59 +99,18 @@ export default function Home() {
     return 'Good Evening';
   };
 
-  const handleSubmit = async () => {
-    if (!body.trim() && !gratitude1.trim()) {
-      toast({
-        title: 'Error',
-        description: 'Please write something in your journal or add at least one gratitude.',
-        status: 'error',
-        duration: 3000,
-        isClosable: true,
-      });
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      await createNote({
-        title: title.trim() || getGreeting(),
-        body: body.trim() || null,
-        noteDate: format(new Date(), 'yyyy-MM-dd'),
-        gratitude1: gratitude1.trim() || null,
-        gratitude2: gratitude2.trim() || null,
-        gratitude3: gratitude3.trim() || null,
-      });
-
-      toast({
-        title: 'Saved! ✨',
-        description: 'Your journal entry has been saved.',
-        status: 'success',
-        duration: 3000,
-        isClosable: true,
-      });
-
-      setTitle('');
-      setBody('');
-      setGratitude1('');
-      setGratitude2('');
-      setGratitude3('');
-      
-      // Reload stats
-      loadGratitudeData();
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to save entry.',
-        status: 'error',
-        duration: 3000,
-        isClosable: true,
-      });
-    } finally {
-      setIsSubmitting(false);
+  const handleSave = (result) => {
+    // Reload stats after saving
+    loadGratitudeData();
+    
+    // Log saved note for debugging
+    if (result?.data) {
+      console.log('📝 Note saved:', result.data);
+      if (result.data.imageUrl) {
+        console.log('📸 Image URL:', result.data.imageUrl);
+      }
     }
   };
-
-  const gratitudeCount = [gratitude1, gratitude2, gratitude3].filter(g => g).length;
 
   return (
     <Box minH="100vh" bg={THEME.colors.bg} color={THEME.colors.textPrimary} fontFamily={THEME.fonts.sans}>
@@ -192,9 +130,8 @@ export default function Home() {
 
       <Container maxW="7xl" pt={{ base: 8, md: 12 }} pb={20} position="relative" zIndex={1}>
         <Grid templateColumns={{ base: '1fr', lg: '2fr 1fr' }} gap={8}>
-          {/* Left Column - Journal Entry */}
+          {/* Left Column - Journal Editor */}
           <Stack spacing={6}>
-            {/* Header */}
             <MotionBox
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -213,144 +150,128 @@ export default function Home() {
               </Stack>
             </MotionBox>
 
-            {/* Editor Card */}
+            {/* Writing Suggestions - Clickable */}
+            <MotionBox
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.15 }}
+            >
+              <Box 
+                bg="white" 
+                p={5} 
+                borderRadius="xl" 
+                border="1px solid"
+                borderColor="purple.100"
+                boxShadow="sm"
+              >
+                <HStack mb={3}>
+                  <Text fontSize="xl">✍️</Text>
+                  <Text fontSize="sm" fontWeight="bold" color="purple.700">
+                    Quick Start - Click to insert
+                  </Text>
+                </HStack>
+                <Text fontSize="xs" color="gray.500" mb={3}>
+                  Click any suggestion below to insert it into your journal
+                </Text>
+                <Grid templateColumns={{ base: '1fr', md: 'repeat(2, 1fr)' }} gap={2}>
+                  <Box 
+                    as="button"
+                    p={3} 
+                    bg="purple.50" 
+                    borderRadius="lg"
+                    border="1px solid"
+                    borderColor="purple.200"
+                    _hover={{ bg: 'purple.100', borderColor: 'purple.300' }}
+                    transition="all 0.2s"
+                    textAlign="left"
+                    onClick={() => {
+                      const event = new CustomEvent('insertJournalText', { 
+                        detail: 'Today I felt grateful for... \n\n' 
+                      });
+                      window.dispatchEvent(event);
+                    }}
+                  >
+                    <Text fontSize="sm" color="purple.700" fontWeight="medium">
+                      🙏 Today I felt grateful for...
+                    </Text>
+                  </Box>
+                  <Box 
+                    as="button"
+                    p={3} 
+                    bg="purple.50" 
+                    borderRadius="lg"
+                    border="1px solid"
+                    borderColor="purple.200"
+                    _hover={{ bg: 'purple.100', borderColor: 'purple.300' }}
+                    transition="all 0.2s"
+                    textAlign="left"
+                    onClick={() => {
+                      const event = new CustomEvent('insertJournalText', { 
+                        detail: 'Something interesting that happened today... \n\n' 
+                      });
+                      window.dispatchEvent(event);
+                    }}
+                  >
+                    <Text fontSize="sm" color="purple.700" fontWeight="medium">
+                      ✨ Something interesting that happened...
+                    </Text>
+                  </Box>
+                  <Box 
+                    as="button"
+                    p={3} 
+                    bg="purple.50" 
+                    borderRadius="lg"
+                    border="1px solid"
+                    borderColor="purple.200"
+                    _hover={{ bg: 'purple.100', borderColor: 'purple.300' }}
+                    transition="all 0.2s"
+                    textAlign="left"
+                    onClick={() => {
+                      const event = new CustomEvent('insertJournalText', { 
+                        detail: 'Today I learned that... \n\n' 
+                      });
+                      window.dispatchEvent(event);
+                    }}
+                  >
+                    <Text fontSize="sm" color="purple.700" fontWeight="medium">
+                      📚 Today I learned that...
+                    </Text>
+                  </Box>
+                  <Box 
+                    as="button"
+                    p={3} 
+                    bg="purple.50" 
+                    borderRadius="lg"
+                    border="1px solid"
+                    borderColor="purple.200"
+                    _hover={{ bg: 'purple.100', borderColor: 'purple.300' }}
+                    transition="all 0.2s"
+                    textAlign="left"
+                    onClick={() => {
+                      const event = new CustomEvent('insertJournalText', { 
+                        detail: 'Tomorrow I want to... \n\n' 
+                      });
+                      window.dispatchEvent(event);
+                    }}
+                  >
+                    <Text fontSize="sm" color="purple.700" fontWeight="medium">
+                      🌟 Tomorrow I want to...
+                    </Text>
+                  </Box>
+                </Grid>
+              </Box>
+            </MotionBox>
+
+            {/* Beautiful Journal Note Component */}
             <MotionBox
               initial={{ opacity: 0, scale: 0.98 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.6, delay: 0.1 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
             >
-              <Box bg="white" borderRadius="2xl" p={6} boxShadow="0 4px 20px rgba(0, 0, 0, 0.05)" border="1px solid" borderColor={THEME.colors.border}>
-                <Tabs colorScheme="purple" variant="soft-rounded">
-                  <TabList mb={4}>
-                    <Tab>📝 Journal</Tab>
-                    <Tab>
-                      ✨ Gratitude
-                      {gratitudeCount > 0 && (
-                        <Badge ml={2} colorScheme="purple" borderRadius="full">
-                          {gratitudeCount}
-                        </Badge>
-                      )}
-                    </Tab>
-                  </TabList>
-
-                  <TabPanels>
-                    <TabPanel px={0}>
-                      <VStack spacing={4} align="stretch">
-                        <Input
-                          variant="unstyled"
-                          placeholder="Title your day..."
-                          fontSize="xl"
-                          fontWeight="600"
-                          value={title}
-                          onChange={(e) => setTitle(e.target.value)}
-                          _placeholder={{ color: 'gray.300' }}
-                        />
-                        <Textarea
-                          variant="unstyled"
-                          placeholder="Write your thoughts here..."
-                          fontSize="md"
-                          lineHeight="1.8"
-                          minH="300px"
-                          resize="none"
-                          value={body}
-                          onChange={(e) => setBody(e.target.value)}
-                          _placeholder={{ color: 'gray.300' }}
-                        />
-                      </VStack>
-                    </TabPanel>
-
-                    <TabPanel px={0}>
-                      <VStack spacing={4} align="stretch">
-                        {prompt && (
-                          <Box bg="purple.50" p={4} borderRadius="lg" mb={2}>
-                            <Flex justify="space-between" align="center">
-                              <Text fontSize="sm" color="purple.700" fontStyle="italic">
-                                💡 {prompt}
-                              </Text>
-                              <Button size="xs" variant="ghost" colorScheme="purple" onClick={loadGratitudeData}>
-                                🎲
-                              </Button>
-                            </Flex>
-                          </Box>
-                        )}
-
-                        <Box>
-                          <Text fontWeight="semibold" color={THEME.colors.textPrimary} mb={2}>
-                            1. I'm grateful for...
-                          </Text>
-                          <Textarea
-                            value={gratitude1}
-                            onChange={(e) => setGratitude1(e.target.value)}
-                            placeholder="e.g., Morning coffee with my best friend..."
-                            rows={2}
-                            maxLength={500}
-                            borderColor="purple.200"
-                            _focus={{ borderColor: 'purple.500' }}
-                          />
-                          <Text fontSize="xs" color="gray.500" mt={1}>
-                            {gratitude1.length}/500
-                          </Text>
-                        </Box>
-
-                        <Box>
-                          <Text fontWeight="semibold" color={THEME.colors.textPrimary} mb={2}>
-                            2. I'm grateful for... <Text as="span" color="gray.400" fontSize="sm">(optional)</Text>
-                          </Text>
-                          <Textarea
-                            value={gratitude2}
-                            onChange={(e) => setGratitude2(e.target.value)}
-                            placeholder="e.g., A good night's sleep..."
-                            rows={2}
-                            maxLength={500}
-                            borderColor="purple.200"
-                            _focus={{ borderColor: 'purple.500' }}
-                          />
-                          <Text fontSize="xs" color="gray.500" mt={1}>
-                            {gratitude2.length}/500
-                          </Text>
-                        </Box>
-
-                        <Box>
-                          <Text fontWeight="semibold" color={THEME.colors.textPrimary} mb={2}>
-                            3. I'm grateful for... <Text as="span" color="gray.400" fontSize="sm">(optional)</Text>
-                          </Text>
-                          <Textarea
-                            value={gratitude3}
-                            onChange={(e) => setGratitude3(e.target.value)}
-                            placeholder="e.g., Sunny weather today..."
-                            rows={2}
-                            maxLength={500}
-                            borderColor="purple.200"
-                            _focus={{ borderColor: 'purple.500' }}
-                          />
-                          <Text fontSize="xs" color="gray.500" mt={1}>
-                            {gratitude3.length}/500
-                          </Text>
-                        </Box>
-                      </VStack>
-                    </TabPanel>
-                  </TabPanels>
-                </Tabs>
-
-                <Divider my={6} />
-
-                <Flex justify="flex-end">
-                  <Button
-                    onClick={handleSubmit}
-                    isLoading={isSubmitting}
-                    size="lg"
-                    bg="purple.500"
-                    color="white"
-                    borderRadius="full"
-                    px={8}
-                    _hover={{ bg: 'purple.600', transform: 'translateY(-2px)' }}
-                    _active={{ transform: 'scale(0.98)' }}
-                    boxShadow="lg"
-                  >
-                    Save Entry
-                  </Button>
-                </Flex>
-              </Box>
+              <BeautifulJournalNote 
+                selectedDate={new Date()} 
+                onSave={handleSave}
+              />
             </MotionBox>
           </Stack>
 

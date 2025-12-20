@@ -288,69 +288,115 @@ export async function listNotes({ userId, startDate, endDate } = {}) {
   }
 }
 
-export async function createNote({ userId, title, body, noteDate, gratitude1, gratitude2, gratitude3 }) {
+export async function createNote(data) {
   try {
     const now = new Date();
-    const requestBody = {
-      user_id: userId || null,
-      title: title || null,
-      body: body || null,
-      note_date: noteDate || format(now, 'yyyy-MM-dd'),
-      created_at: now.toISOString(),
-      updated_at: now.toISOString(),
+    let requestBody;
+    let isFormData = data instanceof FormData;
+
+    if (isFormData) {
+      requestBody = data;
+      // Ensure note_date is set
+      if (!requestBody.has('note_date')) {
+        requestBody.append('note_date', format(now, 'yyyy-MM-dd'));
+      }
+      // Ensure timestamps are set
+      if (!requestBody.has('created_at')) {
+        requestBody.append('created_at', now.toISOString());
+      }
+      if (!requestBody.has('updated_at')) {
+        requestBody.append('updated_at', now.toISOString());
+      }
+    } else {
+      const { userId, title, body, noteDate, gratitude1, gratitude2, gratitude3 } = data;
+      requestBody = {
+        user_id: userId || null,
+        title: title || null,
+        body: body || null,
+        note_date: noteDate || format(now, 'yyyy-MM-dd'),
+        created_at: now.toISOString(),
+        updated_at: now.toISOString(),
+      };
+
+      if (gratitude1) requestBody.gratitude_1 = gratitude1;
+      if (gratitude2) requestBody.gratitude_2 = gratitude2;
+      if (gratitude3) requestBody.gratitude_3 = gratitude3;
+    }
+
+    const options = {
+      method: 'POST',
+      body: isFormData ? requestBody : JSON.stringify(requestBody),
     };
 
-    if (gratitude1) requestBody.gratitude_1 = gratitude1;
-    if (gratitude2) requestBody.gratitude_2 = gratitude2;
-    if (gratitude3) requestBody.gratitude_3 = gratitude3;
+    if (!isFormData) {
+      options.headers = {
+        'Content-Type': 'application/json',
+      };
+    }
 
-    const response = await fetch(
-      `${API_BASE_URL}/journal/notes`,
-      buildRequestOptions({
-        method: 'POST',
-        body: JSON.stringify(requestBody),
-      })
-    );
+    const token = getAuthToken();
+    const fetchOptions = {
+      ...requestDefaults,
+      ...options,
+      headers: {
+        ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
+        Accept: 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    };
 
+    const response = await fetch(`${API_BASE_URL}/journal/notes`, fetchOptions);
     const payload = await handleResponse(response);
-
-    // The response is already processed by handleResponse
     return payload?.data || payload;
   } catch (error) {
     console.error('Error in createNote:', error);
-    throw error; // Re-throw the error to be handled by the caller
+    throw error;
   }
 }
 
-export async function updateNote(id, { userId, title, body, noteDate, gratitude1, gratitude2, gratitude3 }) {
+export async function updateNote(id, data) {
   try {
-    const requestBody = {
-      updated_at: new Date().toISOString(),
+    let requestBody;
+    let isFormData = data instanceof FormData;
+
+    if (isFormData) {
+      requestBody = data;
+      requestBody.append('_method', 'PATCH');
+    } else {
+      const { userId, title, body, noteDate, gratitude1, gratitude2, gratitude3 } = data;
+      requestBody = {
+        updated_at: new Date().toISOString(),
+      };
+
+      if (userId !== undefined) requestBody.user_id = userId;
+      if (title !== undefined) requestBody.title = title;
+      if (body !== undefined) requestBody.body = body;
+      if (noteDate !== undefined) requestBody.note_date = noteDate;
+      if (gratitude1 !== undefined) requestBody.gratitude_1 = gratitude1;
+      if (gratitude2 !== undefined) requestBody.gratitude_2 = gratitude2;
+      if (gratitude3 !== undefined) requestBody.gratitude_3 = gratitude3;
+    }
+
+    const token = getAuthToken();
+    const fetchOptions = {
+      ...requestDefaults,
+      method: isFormData ? 'POST' : 'PATCH',
+      body: isFormData ? requestBody : JSON.stringify(requestBody),
+      headers: {
+        ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
+        Accept: 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
     };
 
-    if (userId !== undefined) requestBody.user_id = userId;
-    if (title !== undefined) requestBody.title = title;
-    if (body !== undefined) requestBody.body = body;
-    if (noteDate !== undefined) requestBody.note_date = noteDate;
-    if (gratitude1 !== undefined) requestBody.gratitude_1 = gratitude1;
-    if (gratitude2 !== undefined) requestBody.gratitude_2 = gratitude2;
-    if (gratitude3 !== undefined) requestBody.gratitude_3 = gratitude3;
-
-    const response = await fetch(
-      `${API_BASE_URL}/journal/notes/${id}`,
-      buildRequestOptions({
-        method: 'PATCH',
-        body: JSON.stringify(requestBody),
-      })
-    );
-
+    const response = await fetch(`${API_BASE_URL}/journal/notes/${id}`, fetchOptions);
     const payload = await handleResponse(response);
-
-    // The response is already processed by handleResponse
     return payload?.data || payload;
   } catch (error) {
     console.error('Error in updateNote:', error);
-    throw error; // Re-throw the error to be handled by the caller
+    throw error;
   }
 }
 
