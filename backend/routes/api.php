@@ -3,6 +3,7 @@
 use App\Http\Controllers\Auth\JwtAuthController;
 use App\Http\Controllers\JournalAnalysisController;
 use App\Http\Controllers\JournalNoteController;
+use App\Http\Controllers\MusicRecommendationController;
 use App\Http\Controllers\RecommendationController;
 use Illuminate\Support\Facades\Route;
 
@@ -24,6 +25,7 @@ Route::get('health', fn () => response()->json([
 ]));
 
 Route::post('recommendations', [RecommendationController::class, 'create']);
+Route::post('music-recommendations', [MusicRecommendationController::class, 'create']);
 
 Route::middleware('auth:api')->group(function () {
     // Journal Analysis

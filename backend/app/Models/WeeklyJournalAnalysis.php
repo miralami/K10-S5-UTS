@@ -44,6 +44,7 @@ class WeeklyJournalAnalysis extends Model
         'week_end',
         'analysis',
         'recommendations',
+        'music_recommendations',
     ];
 
     protected $casts = [
@@ -51,6 +52,7 @@ class WeeklyJournalAnalysis extends Model
         'week_end' => 'date',
         'analysis' => 'array',
         'recommendations' => 'array',
+        'music_recommendations' => 'array',
     ];
 
     /**

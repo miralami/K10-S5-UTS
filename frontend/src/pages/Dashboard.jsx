@@ -2,44 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import PropTypes from 'prop-types';
 import { format, startOfWeek, endOfWeek, isSameDay } from 'date-fns';
 import { id } from 'date-fns/locale';
-
-// --- THEME CONFIGURATION (Warm Organic & Minimal Sans - matching Home.jsx) ---
-const THEME = {
-  colors: {
-    bg: '#FDFCF8', // Warm off-white
-    cardBg: '#FFFFFF',
-    textPrimary: '#2D3748',
-    textSecondary: '#718096',
-    textMuted: '#A0AEC0',
-    accent: '#D6BCFA', // Soft Purple
-    accentHover: '#B794F4',
-    warmHighlight: '#F6E05E', // Soft Yellow
-    success: '#68D391',
-    border: '#E2E8F0',
-    borderLight: '#EDF2F7',
-  },
-  fonts: {
-    sans: '"Inter", sans-serif',
-    serif: '"Merriweather", serif',
-  },
-};
-
-// Helper untuk greeting dinamis
-const getTimeBasedGreeting = () => {
-  const hour = new Date().getHours();
-
-  if (hour >= 5 && hour < 10) {
-    return { greeting: 'Good Morning', message: 'Start your day with reflection' };
-  } else if (hour >= 10 && hour < 15) {
-    return { greeting: 'Good Afternoon', message: "Check your week's journey" };
-  } else if (hour >= 15 && hour < 18) {
-    return { greeting: 'Good Evening', message: 'Time for a moment of clarity' };
-  } else if (hour >= 18 && hour < 22) {
-    return { greeting: 'Good Night', message: "Review today's thoughts" };
-  } else {
-    return { greeting: 'Still awake?', message: "Don't forget to rest" };
-  }
-};
 import {
   Box,
   Button,
@@ -96,6 +58,44 @@ import {
   generateWeeklyForCurrentUser,
 } from '../services/journalService';
 
+// --- THEME CONFIGURATION (Warm Organic & Minimal Sans - matching Home.jsx) ---
+const THEME = {
+  colors: {
+    bg: '#FDFCF8', // Warm off-white
+    cardBg: '#FFFFFF',
+    textPrimary: '#2D3748',
+    textSecondary: '#718096',
+    textMuted: '#A0AEC0',
+    accent: '#D6BCFA', // Soft Purple
+    accentHover: '#B794F4',
+    warmHighlight: '#F6E05E', // Soft Yellow
+    success: '#68D391',
+    border: '#E2E8F0',
+    borderLight: '#EDF2F7',
+  },
+  fonts: {
+    sans: '"Inter", sans-serif',
+    serif: '"Merriweather", serif',
+  },
+};
+
+// Helper untuk greeting dinamis
+const getTimeBasedGreeting = () => {
+  const hour = new Date().getHours();
+
+  if (hour >= 5 && hour < 10) {
+    return { greeting: 'Good Morning', message: 'Start your day with reflection' };
+  } else if (hour >= 10 && hour < 15) {
+    return { greeting: 'Good Afternoon', message: "Check your week's journey" };
+  } else if (hour >= 15 && hour < 18) {
+    return { greeting: 'Good Evening', message: 'Time for a moment of clarity' };
+  } else if (hour >= 18 && hour < 22) {
+    return { greeting: 'Good Night', message: "Review today's thoughts" };
+  } else {
+    return { greeting: 'Still awake?', message: "Don't forget to rest" };
+  }
+};
+
 // Framer Motion wrapper
 const MotionBox = motion(Box);
 
@@ -127,20 +127,6 @@ WarmCard.propTypes = {
   hover: PropTypes.bool,
 };
 
-// Helper component for info cards - commented out as it's unused currently
-// function InfoCard({ label, value, color = 'whiteAlpha.800' }) {
-//   return (
-//     <Box bg="whiteAlpha.100" p={4} borderRadius="lg">
-//       <Text fontSize="sm" color="whiteAlpha.600" mb={1}>
-//         {label}
-//       </Text>
-//       <Text color={color} fontWeight="medium">
-//         {value}
-//       </Text>
-//     </Box>
-//   );
-// }
-
 // lightweight SVG fallback used when poster fails to load or is aborted
 const POSTER_FALLBACK =
   'data:image/svg+xml;utf8,' +
@@ -150,6 +136,88 @@ const POSTER_FALLBACK =
       "<text x='50%' y='50%' fill='%23A0AEC0' font-size='22' text-anchor='middle' dominant-baseline='middle'>No Image</text>" +
       '</svg>'
   );
+
+function MoodMusicCard({ track }) {
+  const hasLink = Boolean(track?.lastfmUrl);
+  return (
+    <Box
+      bg="white"
+      borderRadius="xl"
+      border="1px solid"
+      borderColor="gray.100"
+      overflow="hidden"
+      display="flex"
+      flexDirection="column"
+      h="100%"
+      _hover={{
+        borderColor: 'purple.200',
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.06)',
+        transform: 'translateY(-2px)',
+      }}
+      transition="all 0.3s"
+    >
+      {track.coverUrl ? (
+        <Link href={hasLink ? track.lastfmUrl : undefined} isExternal={hasLink}>
+          <Image
+            src={track.coverUrl}
+            alt={`${track.title} - ${track.artist}`}
+            objectFit="cover"
+            w="100%"
+            h="120px"
+            loading="lazy"
+            decoding="async"
+            referrerPolicy="no-referrer"
+            fallbackSrc={POSTER_FALLBACK}
+          />
+        </Link>
+      ) : (
+        <Flex align="center" justify="center" w="100%" h="120px" bg="gray.50">
+          <Text fontSize="2xl">🎵</Text>
+        </Flex>
+      )}
+
+      <Stack spacing={1.5} p={3} flex="1">
+        <Box>
+          <Heading size="xs" color={THEME.colors.textPrimary} noOfLines={1}>
+            {track.title}
+          </Heading>
+          <Text fontSize="xs" color={THEME.colors.textSecondary} noOfLines={1}>
+            {track.artist}
+          </Text>
+        </Box>
+
+        {track.reason ? (
+          <Text fontSize="xs" color={THEME.colors.textSecondary} lineHeight="short" noOfLines={2}>
+            {track.reason}
+          </Text>
+        ) : null}
+
+        {Array.isArray(track.tags) && track.tags.length > 0 ? (
+          <Wrap spacing={1}>
+            {track.tags.slice(0, 4).map((tag) => (
+              <WrapItem key={tag}>
+                <Tag size="sm" borderRadius="full" variant="subtle" colorScheme="teal" bg="teal.50">
+                  <TagLabel fontSize="2xs">{tag}</TagLabel>
+                </Tag>
+              </WrapItem>
+            ))}
+          </Wrap>
+        ) : null}
+      </Stack>
+    </Box>
+  );
+}
+
+MoodMusicCard.propTypes = {
+  track: PropTypes.shape({
+    title: PropTypes.string,
+    artist: PropTypes.string,
+    reason: PropTypes.string,
+    coverUrl: PropTypes.string,
+    lastfmUrl: PropTypes.string,
+    tags: PropTypes.arrayOf(PropTypes.string),
+  }).isRequired,
+};
 
 function getOmdbHref(movie) {
   const imdbId = movie?.imdbId;
@@ -279,6 +347,7 @@ export default function Dashboard() {
     analysis: null,
     dailySummaries: [],
     recommendations: null,
+    musicRecommendations: null,
     status: 'idle',
     message: null,
   });
@@ -406,6 +475,7 @@ export default function Dashboard() {
         analysis: response?.analysis || null,
         dailySummaries: response?.dailySummaries || [],
         recommendations: response?.recommendations || null,
+        musicRecommendations: response?.musicRecommendations || null,
         status: response?.status || 'success',
         message: response?.message || null,
       });
@@ -415,6 +485,7 @@ export default function Dashboard() {
         analysis: null,
         dailySummaries: [],
         recommendations: null,
+        musicRecommendations: null,
         status: 'error',
         message: error.message || 'Gagal memuat data',
       });
@@ -1283,6 +1354,36 @@ export default function Dashboard() {
                                 <MoodMovieCard key={`${movie.title}-${idx}`} movie={movie} />
                               ))}
                             </SimpleGrid>
+                          </Box>
+                        ) : null}
+
+                        {weeklyData.musicRecommendations?.items?.length ? (
+                          <Box mt={8}>
+                            <Flex align="center" mb={3}>
+                              <Heading
+                                size="sm"
+                                mr={2}
+                                color={THEME.colors.textPrimary}
+                                fontWeight="500"
+                              >
+                                {weeklyData.musicRecommendations.headline || 'Music Recommendations'}
+                              </Heading>
+                              <Text fontSize="lg">🎵</Text>
+                            </Flex>
+                            <Text color={THEME.colors.textSecondary} mb={4} fontSize="sm">
+                              {weeklyData.musicRecommendations.description ||
+                                'Tracks curated for your weekly mood.'}
+                            </Text>
+                            <Box>
+                              <Text fontSize="xs" color="gray.500" mb={2} fontStyle="italic">
+                                Sumber: {weeklyData.musicRecommendations.source === 'gemini' ? 'AI Recommendation' : 'Fallback Recommendation'}
+                              </Text>
+                              <SimpleGrid columns={{ base: 1, sm: 2, md: 3 }} spacing={4}>
+                                {weeklyData.musicRecommendations.items.slice(0, 3).map((track, idx) => (
+                                  <MoodMusicCard key={`${track.title}-${track.artist}-${idx}`} track={track} />
+                                ))}
+                              </SimpleGrid>
+                            </Box>
                           </Box>
                         ) : null}
                       </Stack>

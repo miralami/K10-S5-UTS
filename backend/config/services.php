@@ -45,6 +45,12 @@ return [
         'model' => env('GOOGLE_GENAI_MODEL', 'gemini-2.5-flash'),
     ],
 
+    'lastfm' => [
+        'api_key' => env('LASTFM_API_KEY'),
+        'api_secret' => env('LASTFM_API_SECRET'),
+        'base_uri' => env('LASTFM_BASE_URI', 'https://ws.audioscrobbler.com/2.0/'),
+    ],
+
     'ai_grpc' => [
         'host' => env('AI_GRPC_HOST', 'localhost'),
         'port' => env('AI_GRPC_PORT', 50052),

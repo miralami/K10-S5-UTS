@@ -48,6 +48,7 @@ logger = logging.getLogger(__name__)
 
 # Configuration
 GRPC_PORT = os.getenv('GRPC_PORT', '50052')
+GRPC_BIND_ADDRESS = os.getenv('GRPC_BIND_ADDRESS', '0.0.0.0')
 GEMINI_MODEL = os.getenv('GEMINI_MODEL', 'gemini-2.0-flash')
 GOOGLE_API_KEY = os.getenv('GOOGLE_GENAI_API_KEY', '')
 
@@ -369,7 +370,7 @@ def serve():
         AIAnalysisServicer(), server
     )
 
-    server.add_insecure_port(f'[::]:{GRPC_PORT}')
+    server.add_insecure_port(f'{GRPC_BIND_ADDRESS}:{GRPC_PORT}')
     server.start()
     logger.info(f"AI Analysis gRPC server started on port {GRPC_PORT}")
 

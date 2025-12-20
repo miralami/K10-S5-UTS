@@ -10,6 +10,7 @@ use App\Services\AIGrpcClient;
 use App\Services\DailyJournalAnalysisService;
 use App\Services\GeminiMoodAnalysisService;
 use App\Services\WeeklyMovieRecommendationService;
+use App\Services\WeeklyMusicRecommendationService;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -20,6 +21,7 @@ class JournalAnalysisController extends Controller
 {
     public function __construct(
         private readonly WeeklyMovieRecommendationService $movieRecommendations,
+        private readonly WeeklyMusicRecommendationService $musicRecommendations,
         private readonly AIGrpcClient $grpcClient,
     ) {}
 
@@ -87,10 +89,13 @@ class JournalAnalysisController extends Controller
 
             $analysisPayload = $analysisRecord?->analysis;
             $recommendations = null;
+            $musicRecommendations = null;
 
             if (is_array($analysisPayload) && ! empty($analysisPayload)) {
                 // Check if recommendations are already cached in the analysis record
                 $cachedRecommendations = $analysisRecord->recommendations ?? null;
+
+                $cachedMusicRecommendations = $analysisRecord->music_recommendations ?? null;
 
                 if (is_array($cachedRecommendations) && ! empty($cachedRecommendations['items'])) {
                     // Use cached recommendations - no API calls needed!
@@ -99,10 +104,19 @@ class JournalAnalysisController extends Controller
                     // Generate recommendations and cache them
                     $recommendations = $this->movieRecommendations->buildRecommendations($analysisPayload);
                     $recommendations = $this->enrichWeeklyRecommendationsWithOmdbPosters($recommendations);
-
-                    // Cache the recommendations for future requests
-                    $analysisRecord->update(['recommendations' => $recommendations]);
                 }
+
+                if (is_array($cachedMusicRecommendations) && ! empty($cachedMusicRecommendations['items'])) {
+                    $musicRecommendations = $cachedMusicRecommendations;
+                } else {
+                    $musicRecommendations = $this->musicRecommendations->buildRecommendations($analysisPayload);
+                }
+
+                // Cache the recommendations for future requests
+                $analysisRecord->update([
+                    'recommendations' => $recommendations,
+                    'music_recommendations' => $musicRecommendations,
+                ]);
             }
 
             $dailySummaries = DailyJournalAnalysis::query()
@@ -124,6 +138,7 @@ class JournalAnalysisController extends Controller
                 'analysis' => $analysisPayload,
                 'dailySummaries' => $dailySummaries,
                 'recommendations' => $recommendations,
+                'musicRecommendations' => $musicRecommendations,
                 'status' => $analysisRecord ? 'ready' : 'pending',
                 'message' => $analysisRecord
                     ? null
