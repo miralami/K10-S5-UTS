@@ -1,10 +1,10 @@
-# 📔 Mood Journal & Chat Application
+# Mood Journal & Chat Application
 
 Aplikasi journal dengan analisis mood menggunakan AI, rekomendasi film, dan real-time chat.
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ```bash
 # Install dependencies
@@ -25,12 +25,12 @@ npm run dev:no-ai
 
 ---
 
-## 📚 Documentation
+## Documentation
 
 ### **Core Documentation**
-- **[FEATURES.md](FEATURES.md)** - 📖 Dokumentasi lengkap semua fitur dan sumber data
-- **[START_ALL_SERVICES.md](START_ALL_SERVICES.md)** - 🚀 Panduan menjalankan aplikasi
-- **[TEST_ACCOUNTS.md](TEST_ACCOUNTS.md)** - 👥 Akun testing untuk development
+- **[FEATURES.md](FEATURES.md)** - Dokumentasi lengkap semua fitur dan sumber data
+- **[START_ALL_SERVICES.md](START_ALL_SERVICES.md)** - Panduan menjalankan aplikasi
+- **[TEST_ACCOUNTS.md](TEST_ACCOUNTS.md)** - Akun testing untuk development
 
 ### **Technical Documentation**
 - **[docs/README.md](docs/README.md)** - Project overview & setup
@@ -40,20 +40,20 @@ npm run dev:no-ai
 
 ---
 
-## ✨ Key Features
+## Key Features
 
-- ✍️ **Journal Notes** - Catatan harian dengan upload gambar
-- 🙏 **Gratitude Journal** - 3 hal yang disyukuri per hari (auto-categorized)
-- 😊 **Mood Analysis** - AI-powered daily & weekly mood analysis
-- 🎬 **Movie Recommendations** - Rekomendasi film berdasarkan mood
-- ✏️ **Writing Style Analysis** - Analisis gaya menulis & author doppelgänger
-- 💬 **Real-time Chat** - WebSocket chat antar user
-- 📅 **Calendar View** - Visual calendar untuk navigasi journal
-- 🔍 **Search & Filter** - Pencarian journal dengan filter
+- **Journal Notes** - Catatan harian dengan upload gambar
+- **Gratitude Journal** - 3 hal yang disyukuri per hari (auto-categorized)
+- **Mood Analysis** - AI-powered daily & weekly mood analysis
+- **Movie Recommendations** - Rekomendasi film berdasarkan mood
+- **Writing Style Analysis** - Analisis gaya menulis & author doppelgänger
+- **Real-time Chat** - WebSocket chat antar user
+- **Calendar View** - Visual calendar untuk navigasi journal
+- **Search & Filter** - Pencarian journal dengan filter
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 ### **Frontend**
 - React 19.2.0
@@ -74,7 +74,7 @@ npm run dev:no-ai
 
 ---
 
-## 📦 Project Structure
+## Project Structure
 
 ```
 K10-S5-UTS/
@@ -89,7 +89,7 @@ K10-S5-UTS/
 
 ---
 
-## 🔧 Configuration
+## Configuration
 
 ### **Backend (.env)**
 ```env
@@ -108,13 +108,13 @@ VITE_WS_URL=ws://localhost:8080
 
 ---
 
-## 👥 Test Accounts
+## Test Accounts
 
 See [TEST_ACCOUNTS.md](TEST_ACCOUNTS.md) for login credentials.
 
 ---
 
-## 📖 Learn More
+## Learn More
 
 - **Fitur apa saja yang ada?** → Baca [FEATURES.md](FEATURES.md)
 - **Bagaimana cara menjalankan?** → Baca [START_ALL_SERVICES.md](START_ALL_SERVICES.md)
@@ -122,6 +122,6 @@ See [TEST_ACCOUNTS.md](TEST_ACCOUNTS.md) for login credentials.
 
 ---
 
-## 📝 License
+## License
 
 Educational project for UTS Semester 5.
