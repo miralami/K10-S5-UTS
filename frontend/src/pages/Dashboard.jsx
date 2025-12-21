@@ -13,6 +13,8 @@ import {
   IconButton,
   Image,
   Link,
+  LinkBox,
+  LinkOverlay,
   Modal,
   ModalOverlay,
   ModalContent,
@@ -137,10 +139,26 @@ const POSTER_FALLBACK =
       '</svg>'
   );
 
+function getLastfmHref(track) {
+  const explicitUrl = track?.lastfmUrl;
+  if (typeof explicitUrl === 'string' && explicitUrl.trim()) return explicitUrl;
+  const artist = track?.artist ? String(track.artist).trim() : '';
+  const title = track?.title ? String(track.title).trim() : '';
+  if (artist && title) {
+    return `https://www.last.fm/music/${encodeURIComponent(artist)}/_/${encodeURIComponent(title)}`;
+  }
+  if (artist) {
+    return `https://www.last.fm/music/${encodeURIComponent(artist)}`;
+  }
+  return '';
+}
+
 function MoodMusicCard({ track }) {
-  const hasLink = Boolean(track?.lastfmUrl);
+  const lastfmHref = getLastfmHref(track);
+  const hasLink = Boolean(lastfmHref);
   return (
-    <Box
+    <LinkBox
+      as={Box}
       bg="white"
       borderRadius="xl"
       border="1px solid"
@@ -149,6 +167,7 @@ function MoodMusicCard({ track }) {
       display="flex"
       flexDirection="column"
       h="100%"
+      cursor={hasLink ? 'pointer' : 'default'}
       _hover={{
         borderColor: 'purple.200',
         boxShadow: '0 4px 20px rgba(0, 0, 0, 0.06)',
@@ -156,55 +175,128 @@ function MoodMusicCard({ track }) {
       }}
       transition="all 0.3s"
     >
-      {track.coverUrl ? (
-        <Link href={hasLink ? track.lastfmUrl : undefined} isExternal={hasLink}>
-          <Image
-            src={track.coverUrl}
-            alt={`${track.title} - ${track.artist}`}
-            objectFit="cover"
-            w="100%"
-            h="120px"
-            loading="lazy"
-            decoding="async"
-            referrerPolicy="no-referrer"
-            fallbackSrc={POSTER_FALLBACK}
-          />
-        </Link>
+      {hasLink ? (
+        <LinkOverlay href={lastfmHref} isExternal>
+          {track.coverUrl ? (
+            <Image
+              src={track.coverUrl}
+              alt={`${track.title} - ${track.artist}`}
+              objectFit="cover"
+              w="100%"
+              h="120px"
+              loading="lazy"
+              decoding="async"
+              referrerPolicy="no-referrer"
+              fallbackSrc={POSTER_FALLBACK}
+            />
+          ) : (
+            <Flex align="center" justify="center" w="100%" h="120px" bg="gray.50">
+              <Text fontSize="2xl">🎵</Text>
+            </Flex>
+          )}
+
+          <Stack spacing={1.5} p={3} flex="1">
+            <Box>
+              <Heading size="xs" color={THEME.colors.textPrimary} noOfLines={1}>
+                {track.title}
+              </Heading>
+              <Text fontSize="xs" color={THEME.colors.textSecondary} noOfLines={1}>
+                {track.artist}
+              </Text>
+            </Box>
+
+            {track.reason ? (
+              <Text
+                fontSize="xs"
+                color={THEME.colors.textSecondary}
+                lineHeight="short"
+                noOfLines={2}
+              >
+                {track.reason}
+              </Text>
+            ) : null}
+
+            {Array.isArray(track.tags) && track.tags.length > 0 ? (
+              <Wrap spacing={1}>
+                {track.tags.slice(0, 4).map((tag) => (
+                  <WrapItem key={tag}>
+                    <Tag
+                      size="sm"
+                      borderRadius="full"
+                      variant="subtle"
+                      colorScheme="teal"
+                      bg="teal.50"
+                    >
+                      <TagLabel fontSize="2xs">{tag}</TagLabel>
+                    </Tag>
+                  </WrapItem>
+                ))}
+              </Wrap>
+            ) : null}
+          </Stack>
+        </LinkOverlay>
       ) : (
-        <Flex align="center" justify="center" w="100%" h="120px" bg="gray.50">
-          <Text fontSize="2xl">🎵</Text>
-        </Flex>
+        <>
+          {track.coverUrl ? (
+            <Image
+              src={track.coverUrl}
+              alt={`${track.title} - ${track.artist}`}
+              objectFit="cover"
+              w="100%"
+              h="120px"
+              loading="lazy"
+              decoding="async"
+              referrerPolicy="no-referrer"
+              fallbackSrc={POSTER_FALLBACK}
+            />
+          ) : (
+            <Flex align="center" justify="center" w="100%" h="120px" bg="gray.50">
+              <Text fontSize="2xl">🎵</Text>
+            </Flex>
+          )}
+
+          <Stack spacing={1.5} p={3} flex="1">
+            <Box>
+              <Heading size="xs" color={THEME.colors.textPrimary} noOfLines={1}>
+                {track.title}
+              </Heading>
+              <Text fontSize="xs" color={THEME.colors.textSecondary} noOfLines={1}>
+                {track.artist}
+              </Text>
+            </Box>
+
+            {track.reason ? (
+              <Text
+                fontSize="xs"
+                color={THEME.colors.textSecondary}
+                lineHeight="short"
+                noOfLines={2}
+              >
+                {track.reason}
+              </Text>
+            ) : null}
+
+            {Array.isArray(track.tags) && track.tags.length > 0 ? (
+              <Wrap spacing={1}>
+                {track.tags.slice(0, 4).map((tag) => (
+                  <WrapItem key={tag}>
+                    <Tag
+                      size="sm"
+                      borderRadius="full"
+                      variant="subtle"
+                      colorScheme="teal"
+                      bg="teal.50"
+                    >
+                      <TagLabel fontSize="2xs">{tag}</TagLabel>
+                    </Tag>
+                  </WrapItem>
+                ))}
+              </Wrap>
+            ) : null}
+          </Stack>
+        </>
       )}
-
-      <Stack spacing={1.5} p={3} flex="1">
-        <Box>
-          <Heading size="xs" color={THEME.colors.textPrimary} noOfLines={1}>
-            {track.title}
-          </Heading>
-          <Text fontSize="xs" color={THEME.colors.textSecondary} noOfLines={1}>
-            {track.artist}
-          </Text>
-        </Box>
-
-        {track.reason ? (
-          <Text fontSize="xs" color={THEME.colors.textSecondary} lineHeight="short" noOfLines={2}>
-            {track.reason}
-          </Text>
-        ) : null}
-
-        {Array.isArray(track.tags) && track.tags.length > 0 ? (
-          <Wrap spacing={1}>
-            {track.tags.slice(0, 4).map((tag) => (
-              <WrapItem key={tag}>
-                <Tag size="sm" borderRadius="full" variant="subtle" colorScheme="teal" bg="teal.50">
-                  <TagLabel fontSize="2xs">{tag}</TagLabel>
-                </Tag>
-              </WrapItem>
-            ))}
-          </Wrap>
-        ) : null}
-      </Stack>
-    </Box>
+    </LinkBox>
   );
 }
 
@@ -1375,12 +1467,9 @@ export default function Dashboard() {
                                 'Tracks curated for your weekly mood.'}
                             </Text>
                             <Box>
-                              <Text fontSize="xs" color="gray.500" mb={2} fontStyle="italic">
-                                Sumber: {weeklyData.musicRecommendations.source === 'gemini' ? 'AI Recommendation' : 'Fallback Recommendation'}
-                              </Text>
                               <SimpleGrid columns={{ base: 1, sm: 2, md: 3 }} spacing={4}>
                                 {weeklyData.musicRecommendations.items.slice(0, 3).map((track, idx) => (
-                                  <MoodMusicCard key={`${track.title}-${track.artist}-${idx}`} track={track} />
+                                  <MoodMusicCard key={track.id || idx} track={track} />
                                 ))}
                               </SimpleGrid>
                             </Box>

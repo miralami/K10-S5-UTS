@@ -55,8 +55,8 @@ const THEME = {
     borderLight: '#EDF2F7',
   },
   fonts: {
-    serif: '"Merriweather", "Georgia", serif',
-    sans: '"Inter", sans-serif',
+    serif: '"Fredoka", sans-serif',
+    sans: '"Quicksand", sans-serif',
   },
 };
 
@@ -89,17 +89,18 @@ function SimpleDatePicker({ value, onChange }) {
       <PopoverTrigger>
         <InputGroup>
           <InputLeftElement pointerEvents="none">
-            <Icon as={CalendarIcon} color={THEME.colors.accent} />
+            <Icon as={CalendarIcon} color="purple.400" />
           </InputLeftElement>
           <Input
             type="text"
             value={value ? format(new Date(value), 'dd MMM yyyy', { locale: idLocale }) : ''}
             placeholder="dd-mm-yyyy"
             borderRadius="xl"
-            border={`1px solid ${THEME.colors.borderLight}`}
+            border="1px solid"
+            borderColor="purple.100"
             _focus={{
-              borderColor: THEME.colors.accent,
-              boxShadow: `0 0 0 3px rgba(214, 188, 250, 0.2)`,
+              borderColor: 'purple.300',
+              boxShadow: '0 0 0 3px rgba(159, 122, 234, 0.18)',
             }}
             readOnly
             cursor="pointer"
@@ -107,7 +108,15 @@ function SimpleDatePicker({ value, onChange }) {
           />
         </InputGroup>
       </PopoverTrigger>
-      <PopoverContent width="380px" p={6} borderRadius="2xl" boxShadow="0 4px 20px rgba(0, 0, 0, 0.08)" border={`1px solid ${THEME.colors.borderLight}`} bg={THEME.colors.cardBg}>
+      <PopoverContent
+        width="380px"
+        p={6}
+        borderRadius="2xl"
+        boxShadow="lg"
+        border="2px solid"
+        borderColor="purple.100"
+        bg={THEME.colors.cardBg}
+      >
         <PopoverBody p={0}>
           <Box>
             {/* Header bulan */}
@@ -118,13 +127,13 @@ function SimpleDatePicker({ value, onChange }) {
                 onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
                 p={0}
                 minW="24px"
-                color={THEME.colors.textSecondary}
-                _hover={{ color: THEME.colors.textPrimary, bg: 'transparent' }}
+                color="purple.600"
+                _hover={{ color: 'purple.700', bg: 'transparent' }}
                 fontSize="lg"
               >
                 &lt;
               </Button>
-              <Text fontWeight="600" fontSize="lg" color={THEME.colors.textPrimary}>
+              <Text fontWeight="700" fontSize="lg" color="purple.700">
                 {format(currentMonth, 'MMMM yyyy', { locale: idLocale })}
               </Text>
               <Button
@@ -133,8 +142,8 @@ function SimpleDatePicker({ value, onChange }) {
                 onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
                 p={0}
                 minW="24px"
-                color={THEME.colors.textSecondary}
-                _hover={{ color: THEME.colors.textPrimary, bg: 'transparent' }}
+                color="purple.600"
+                _hover={{ color: 'purple.700', bg: 'transparent' }}
                 fontSize="lg"
               >
                 &gt;
@@ -145,7 +154,7 @@ function SimpleDatePicker({ value, onChange }) {
             <Grid templateColumns="repeat(7, 1fr)" gap={2} mb={4}>
               {weekDays.map((day, idx) => (
                 <Flex key={`weekday-${idx}`} justify="center" align="center" h="32px">
-                  <Text fontSize="sm" fontWeight="500" color={THEME.colors.textMuted}>
+                  <Text fontSize="xs" fontWeight="bold" color="purple.600">
                     {day}
                   </Text>
                 </Flex>
@@ -303,17 +312,13 @@ export default function Search() {
           transition={{ duration: 0.5 }}
           mb={8}
         >
-          <Heading
-            fontSize={{ base: '3xl', md: '4xl' }}
-            fontWeight="300"
-            fontFamily={THEME.fonts.serif}
-            letterSpacing="-0.02em"
-            color={THEME.colors.textPrimary}
-            mb={2}
-          >
-            Cari Catatan
-          </Heading>
-          <Text color={THEME.colors.textSecondary} fontSize="lg">
+          <HStack spacing={3} mb={2}>
+            <SearchIcon boxSize={8} color="purple.500" />
+            <Heading size="xl" bgGradient="linear(to-r, purple.600, pink.500)" bgClip="text">
+              Cari Catatan
+            </Heading>
+          </HStack>
+          <Text color={THEME.colors.textSecondary} fontSize="md">
             Temukan catatan harianmu dengan mudah
           </Text>
         </MotionBox>
@@ -326,29 +331,31 @@ export default function Search() {
           bg={THEME.colors.cardBg}
           p={6}
           borderRadius="2xl"
-          border={`1px solid ${THEME.colors.borderLight}`}
-          boxShadow="0 4px 20px rgba(0, 0, 0, 0.05)"
+          border="2px solid"
+          borderColor="purple.100"
+          boxShadow="lg"
           mb={8}
         >
           <Stack spacing={4}>
             {/* Search Query */}
             <FormControl>
-              <FormLabel fontWeight="600" color={THEME.colors.textSecondary} fontFamily={THEME.fonts.sans}>
+              <FormLabel fontWeight="700" color="purple.700" fontFamily={THEME.fonts.sans}>
                 Kata Kunci
               </FormLabel>
               <InputGroup>
                 <InputLeftElement pointerEvents="none">
-                  <Icon as={SearchIcon} color={THEME.colors.accent} />
+                  <Icon as={SearchIcon} color="purple.400" />
                 </InputLeftElement>
                 <Input
                   placeholder="Cari berdasarkan judul atau isi catatan..."
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   borderRadius="xl"
-                  border={`1px solid ${THEME.colors.borderLight}`}
+                  border="1px solid"
+                  borderColor="purple.100"
                   _focus={{
-                    borderColor: THEME.colors.accent,
-                    boxShadow: `0 0 0 3px rgba(214, 188, 250, 0.2)`,
+                    borderColor: 'purple.300',
+                    boxShadow: '0 0 0 3px rgba(159, 122, 234, 0.18)',
                   }}
                   fontSize="md"
                 />
@@ -358,14 +365,14 @@ export default function Search() {
             {/* Date Range */}
             <Flex gap={4} flexWrap={{ base: 'wrap', md: 'nowrap' }}>
               <FormControl flex={1}>
-                <FormLabel fontWeight="600" color={THEME.colors.textSecondary} fontFamily={THEME.fonts.sans}>
+                <FormLabel fontWeight="700" color="purple.700" fontFamily={THEME.fonts.sans}>
                   Dari Tanggal
                 </FormLabel>
                 <SimpleDatePicker value={dateFrom} onChange={setDateFrom} />
               </FormControl>
 
               <FormControl flex={1}>
-                <FormLabel fontWeight="600" color={THEME.colors.textSecondary} fontFamily={THEME.fonts.sans}>
+                <FormLabel fontWeight="700" color="purple.700" fontFamily={THEME.fonts.sans}>
                   Hingga Tanggal
                 </FormLabel>
                 <SimpleDatePicker value={dateTo} onChange={setDateTo} />
@@ -395,8 +402,9 @@ export default function Search() {
             bg={THEME.colors.cardBg}
             p={4}
             borderRadius="2xl"
-            border={`1px solid ${THEME.colors.borderLight}`}
-            boxShadow="0 4px 20px rgba(0, 0, 0, 0.05)"
+            border="2px solid"
+            borderColor="purple.100"
+            boxShadow="lg"
             mb={6}
           >
             <Text fontSize="sm" fontWeight="600" color={THEME.colors.textSecondary} mb={3}>
