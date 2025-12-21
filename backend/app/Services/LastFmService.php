@@ -16,7 +16,9 @@ class LastFmService
         $apiKey = (string) config('services.lastfm.api_key');
         $baseUri = (string) config('services.lastfm.base_uri', 'https://ws.audioscrobbler.com/2.0/');
 
+        // If no API key, just return tracks as-is (they'll still have basic info)
         if ($apiKey === '') {
+            \Log::info('Last.fm API key not configured, returning tracks without enrichment');
             return $tracks;
         }
 

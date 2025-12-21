@@ -31,6 +31,9 @@ class WeeklyMusicRecommendationService
 
         $normalizedMood = $this->normalizeMood($rawMood);
 
+        // Always try fallback first to ensure we have data
+        $fallback = $this->getFallbackRecommendations($normalizedMood, $moodScore);
+        
         try {
             $result = $this->getRecommendationsFromGemini(
                 mood: $normalizedMood,
@@ -45,6 +48,7 @@ class WeeklyMusicRecommendationService
                 $result['items'] = $this->lastFmService->enrichTracks($result['items']);
                 $result['source'] = 'gemini';
 
+                Log::info('Music recommendations from Gemini', ['count' => count($result['items'])]);
                 return $result;
             }
         } catch (\Throwable $e) {
@@ -54,11 +58,12 @@ class WeeklyMusicRecommendationService
             ]);
         }
 
-        $fallback = $this->getFallbackRecommendations($normalizedMood, $moodScore);
+        // Use fallback
         $fallback['items'] = array_slice($fallback['items'], 0, self::ITEM_LIMIT);
         $fallback['items'] = $this->lastFmService->enrichTracks($fallback['items']);
         $fallback['source'] = 'fallback';
 
+        Log::info('Music recommendations from fallback', ['count' => count($fallback['items'])]);
         return $fallback;
     }
 
