@@ -14,15 +14,12 @@ import {
   VStack,
   Badge,
   Divider,
+  Icon,
 } from '@chakra-ui/react';
-import { StarIcon, RepeatIcon } from '@chakra-ui/icons';
+import { StarIcon, RepeatIcon, CheckCircleIcon } from '@chakra-ui/icons';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
-import { 
-  getGratitudeStats, 
-  getGratitudeDistribution,
-  getRandomGratitude 
-} from '../services/journalService';
+import { listNotes } from '../services/journalService';
 import BeautifulJournalNote from '../components/BeautifulJournalNote';
 
 const MotionBox = motion(Box);
@@ -61,36 +58,52 @@ const categoryEmojis = {
 };
 
 export default function Home() {
-  // Gratitude stats
-  const [stats, setStats] = useState(null);
-  const [distribution, setDistribution] = useState([]);
-  const [randomGratitude, setRandomGratitude] = useState(null);
-  const [loading, setLoading] = useState(true);
-
   const toast = useToast();
+  const [streak, setStreak] = useState(0);
 
+  // Calculate streak on mount
   useEffect(() => {
-    loadGratitudeData();
+    const calculateStreak = async () => {
+      try {
+        const notes = await listNotes();
+        console.log('📊 Total notes fetched:', notes.length);
+        
+        // Get unique dates (YYYY-MM-DD format)
+        const uniqueDates = [...new Set(notes.map(note => {
+          const date = new Date(note.noteDate || note.createdAt || note.created_at);
+          return date.toISOString().split('T')[0];
+        }))].sort().reverse();
+        
+        console.log('📅 Unique dates:', uniqueDates);
+        
+        // Calculate consecutive days from today
+        let currentStreak = 0;
+        const today = new Date().toISOString().split('T')[0];
+        console.log('📆 Today:', today);
+        
+        for (let i = 0; i < uniqueDates.length; i++) {
+          const expectedDate = new Date();
+          expectedDate.setDate(expectedDate.getDate() - i);
+          const expectedDateStr = expectedDate.toISOString().split('T')[0];
+          
+          console.log(`Checking day ${i}: expected ${expectedDateStr}, found: ${uniqueDates.includes(expectedDateStr)}`);
+          
+          if (uniqueDates.includes(expectedDateStr)) {
+            currentStreak++;
+          } else {
+            break;
+          }
+        }
+        
+        console.log('🔥 Final streak:', currentStreak);
+        setStreak(currentStreak);
+      } catch (error) {
+        console.error('Error calculating streak:', error);
+      }
+    };
+    
+    calculateStreak();
   }, []);
-
-  const loadGratitudeData = async () => {
-    try {
-      setLoading(true);
-      const [statsData, distData, randomData] = await Promise.all([
-        getGratitudeStats(),
-        getGratitudeDistribution(),
-        getRandomGratitude(),
-      ]);
-      
-      setStats(statsData);
-      setDistribution(distData);
-      setRandomGratitude(randomData);
-    } catch (error) {
-      console.error('Error loading gratitude data:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -100,20 +113,18 @@ export default function Home() {
   };
 
   const handleSave = (result) => {
-    // Reload stats after saving
-    loadGratitudeData();
-    
-    // Log saved note for debugging
     if (result?.data) {
       console.log('📝 Note saved:', result.data);
       if (result.data.imageUrl) {
         console.log('📸 Image URL:', result.data.imageUrl);
       }
+      // Recalculate streak after saving
+      window.location.reload();
     }
   };
 
   return (
-    <Box minH="100vh" bg={THEME.colors.bg} color={THEME.colors.textPrimary} fontFamily={THEME.fonts.sans}>
+    <Box minH="100vh" bg={THEME.colors.bg} color={THEME.colors.textPrimary} fontFamily={THEME.fonts.sans} overflowX="hidden">
       {/* Background Elements */}
       <Box
         position="absolute"
@@ -128,26 +139,54 @@ export default function Home() {
         pointerEvents="none"
       />
 
-      <Container maxW="7xl" pt={{ base: 8, md: 12 }} pb={20} position="relative" zIndex={1}>
-        <Grid templateColumns={{ base: '1fr', lg: '2fr 1fr' }} gap={8}>
-          {/* Left Column - Journal Editor */}
-          <Stack spacing={6}>
+      <Container maxW="100%" pt={{ base: 6, md: 8 }} pb={12} position="relative" zIndex={1} px={{ base: 4, md: 8, lg: 12 }}>
+        <Stack spacing={4}>
             <MotionBox
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
             >
-              <Stack spacing={1}>
-                <Text fontSize="sm" color={THEME.colors.textSecondary} letterSpacing="wide" textTransform="uppercase">
-                  {format(new Date(), 'EEEE, MMMM d, yyyy')}
-                </Text>
-                <Heading fontSize={{ base: '3xl', md: '4xl' }} fontWeight="300" fontFamily={THEME.fonts.serif} letterSpacing="-0.02em">
-                  {getGreeting()}
-                </Heading>
-                <Text fontSize="md" color={THEME.colors.textSecondary} maxW="xl" mt={1}>
-                  Capture your thoughts and gratitude for today
-                </Text>
-              </Stack>
+              <Flex justify="space-between" align="start" flexWrap="wrap" gap={4}>
+                <Stack spacing={1} flex="1">
+                  <Text fontSize="sm" color={THEME.colors.textSecondary} letterSpacing="wide" textTransform="uppercase">
+                    {format(new Date(), 'EEEE, MMMM d, yyyy')}
+                  </Text>
+                  <Heading fontSize={{ base: '3xl', md: '4xl' }} fontWeight="300" fontFamily={THEME.fonts.serif} letterSpacing="-0.02em">
+                    {getGreeting()}
+                  </Heading>
+                  <Text fontSize="md" color={THEME.colors.textSecondary} maxW="xl" mt={1}>
+                    How is your heart feeling today? Take a moment to breathe and reflect.
+                  </Text>
+                </Stack>
+                
+                {/* Streak Counter */}
+                {streak > 0 && (
+                  <Box
+                    bg="white"
+                    p={4}
+                    borderRadius="xl"
+                    border="1px solid"
+                    borderColor={THEME.colors.border}
+                    boxShadow="sm"
+                    minW="150px"
+                  >
+                    <VStack spacing={1}>
+                      <HStack spacing={2}>
+                        <Icon as={CheckCircleIcon} color={THEME.colors.accent} boxSize={5} />
+                        <Text fontSize="2xl" fontWeight="700" color={THEME.colors.textPrimary} fontFamily={THEME.fonts.sans}>
+                          {streak}
+                        </Text>
+                      </HStack>
+                      <Text fontSize="xs" color={THEME.colors.textSecondary} fontFamily={THEME.fonts.sans} textAlign="center">
+                        Day Streak 🔥
+                      </Text>
+                      <Text fontSize="xs" color={THEME.colors.textMuted} fontFamily={THEME.fonts.sans} textAlign="center">
+                        Keep it going!
+                      </Text>
+                    </VStack>
+                  </Box>
+                )}
+              </Flex>
             </MotionBox>
 
             {/* Writing Suggestions - Clickable */}
@@ -158,30 +197,30 @@ export default function Home() {
             >
               <Box 
                 bg="white" 
-                p={5} 
+                p={4} 
                 borderRadius="xl" 
                 border="1px solid"
-                borderColor="purple.100"
+                borderColor={THEME.colors.border}
                 boxShadow="sm"
               >
-                <HStack mb={3}>
+                <HStack mb={2}>
                   <Text fontSize="xl">✍️</Text>
-                  <Text fontSize="sm" fontWeight="bold" color="purple.700">
+                  <Text fontSize="sm" fontWeight="600" color={THEME.colors.textPrimary} fontFamily={THEME.fonts.sans}>
                     Quick Start - Click to insert
                   </Text>
                 </HStack>
-                <Text fontSize="xs" color="gray.500" mb={3}>
+                <Text fontSize="xs" color={THEME.colors.textMuted} mb={3} fontFamily={THEME.fonts.sans}>
                   Click any suggestion below to insert it into your journal
                 </Text>
                 <Grid templateColumns={{ base: '1fr', md: 'repeat(2, 1fr)' }} gap={2}>
                   <Box 
                     as="button"
-                    p={3} 
-                    bg="purple.50" 
+                    p={2.5} 
+                    bg={THEME.colors.bg} 
                     borderRadius="lg"
                     border="1px solid"
-                    borderColor="purple.200"
-                    _hover={{ bg: 'purple.100', borderColor: 'purple.300' }}
+                    borderColor={THEME.colors.border}
+                    _hover={{ bg: THEME.colors.accent, borderColor: THEME.colors.accent, transform: 'translateY(-1px)' }}
                     transition="all 0.2s"
                     textAlign="left"
                     onClick={() => {
@@ -191,18 +230,18 @@ export default function Home() {
                       window.dispatchEvent(event);
                     }}
                   >
-                    <Text fontSize="sm" color="purple.700" fontWeight="medium">
+                    <Text fontSize="sm" color={THEME.colors.textPrimary} fontWeight="500" fontFamily={THEME.fonts.sans}>
                       🙏 Today I felt grateful for...
                     </Text>
                   </Box>
                   <Box 
                     as="button"
-                    p={3} 
-                    bg="purple.50" 
+                    p={2.5} 
+                    bg={THEME.colors.bg} 
                     borderRadius="lg"
                     border="1px solid"
-                    borderColor="purple.200"
-                    _hover={{ bg: 'purple.100', borderColor: 'purple.300' }}
+                    borderColor={THEME.colors.border}
+                    _hover={{ bg: THEME.colors.accent, borderColor: THEME.colors.accent, transform: 'translateY(-1px)' }}
                     transition="all 0.2s"
                     textAlign="left"
                     onClick={() => {
@@ -212,18 +251,18 @@ export default function Home() {
                       window.dispatchEvent(event);
                     }}
                   >
-                    <Text fontSize="sm" color="purple.700" fontWeight="medium">
+                    <Text fontSize="sm" color={THEME.colors.textPrimary} fontWeight="500" fontFamily={THEME.fonts.sans}>
                       ✨ Something interesting that happened...
                     </Text>
                   </Box>
                   <Box 
                     as="button"
-                    p={3} 
-                    bg="purple.50" 
+                    p={2.5} 
+                    bg={THEME.colors.bg} 
                     borderRadius="lg"
                     border="1px solid"
-                    borderColor="purple.200"
-                    _hover={{ bg: 'purple.100', borderColor: 'purple.300' }}
+                    borderColor={THEME.colors.border}
+                    _hover={{ bg: THEME.colors.accent, borderColor: THEME.colors.accent, transform: 'translateY(-1px)' }}
                     transition="all 0.2s"
                     textAlign="left"
                     onClick={() => {
@@ -233,18 +272,18 @@ export default function Home() {
                       window.dispatchEvent(event);
                     }}
                   >
-                    <Text fontSize="sm" color="purple.700" fontWeight="medium">
+                    <Text fontSize="sm" color={THEME.colors.textPrimary} fontWeight="500" fontFamily={THEME.fonts.sans}>
                       📚 Today I learned that...
                     </Text>
                   </Box>
                   <Box 
                     as="button"
-                    p={3} 
-                    bg="purple.50" 
+                    p={2.5} 
+                    bg={THEME.colors.bg} 
                     borderRadius="lg"
                     border="1px solid"
-                    borderColor="purple.200"
-                    _hover={{ bg: 'purple.100', borderColor: 'purple.300' }}
+                    borderColor={THEME.colors.border}
+                    _hover={{ bg: THEME.colors.accent, borderColor: THEME.colors.accent, transform: 'translateY(-1px)' }}
                     transition="all 0.2s"
                     textAlign="left"
                     onClick={() => {
@@ -254,7 +293,7 @@ export default function Home() {
                       window.dispatchEvent(event);
                     }}
                   >
-                    <Text fontSize="sm" color="purple.700" fontWeight="medium">
+                    <Text fontSize="sm" color={THEME.colors.textPrimary} fontWeight="500" fontFamily={THEME.fonts.sans}>
                       🌟 Tomorrow I want to...
                     </Text>
                   </Box>
@@ -273,124 +312,7 @@ export default function Home() {
                 onSave={handleSave}
               />
             </MotionBox>
-          </Stack>
-
-          {/* Right Column - Gratitude Stats & Insights */}
-          <Stack spacing={6}>
-            {/* Stats Cards */}
-            <MotionBox
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-            >
-              <VStack spacing={4} align="stretch">
-                <Heading size="md" fontFamily={THEME.fonts.serif} fontWeight="400">
-                  Your Gratitude Journey ✨
-                </Heading>
-
-                <SimpleGrid columns={2} spacing={3}>
-                  <Box bg="linear-gradient(135deg, #667eea 0%, #764ba2 100%)" p={4} borderRadius="xl" color="white">
-                    <Text fontSize="xs" opacity={0.9} mb={1}>
-                      Streak
-                    </Text>
-                    <Flex align="baseline" gap={1}>
-                      <Heading size="xl">{stats?.current_streak || 0}</Heading>
-                      <Text fontSize="lg">🔥</Text>
-                    </Flex>
-                  </Box>
-
-                  <Box bg="linear-gradient(135deg, #f093fb 0%, #f5576c 100%)" p={4} borderRadius="xl" color="white">
-                    <Text fontSize="xs" opacity={0.9} mb={1}>
-                      This Week
-                    </Text>
-                    <Flex align="baseline" gap={1}>
-                      <Heading size="xl">{stats?.week_count || 0}</Heading>
-                      <Text fontSize="lg">📝</Text>
-                    </Flex>
-                  </Box>
-
-                  <Box bg="linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)" p={4} borderRadius="xl" color="white">
-                    <Text fontSize="xs" opacity={0.9} mb={1}>
-                      Total
-                    </Text>
-                    <Flex align="baseline" gap={1}>
-                      <Heading size="xl">{stats?.total_gratitudes || 0}</Heading>
-                      <Text fontSize="lg">✨</Text>
-                    </Flex>
-                  </Box>
-
-                  <Box bg="linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)" p={4} borderRadius="xl" color="white">
-                    <Text fontSize="xs" opacity={0.9} mb={1}>
-                      Today
-                    </Text>
-                    <Flex align="baseline" gap={1}>
-                      <Heading size="xl">{stats?.today_gratitude?.gratitude_count || 0}</Heading>
-                      <Text fontSize="lg">🌟</Text>
-                    </Flex>
-                  </Box>
-                </SimpleGrid>
-              </VStack>
-            </MotionBox>
-
-            {/* Category Distribution */}
-            {distribution && distribution.length > 0 && (
-              <MotionBox
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.6, delay: 0.3 }}
-              >
-                <Box bg="white" p={5} borderRadius="xl" border="1px solid" borderColor={THEME.colors.border}>
-                  <Heading size="sm" mb={4}>
-                    Top Categories
-                  </Heading>
-                  <VStack spacing={3} align="stretch">
-                    {distribution.slice(0, 5).map((cat) => (
-                      <Flex key={cat.category} justify="space-between" align="center">
-                        <HStack spacing={2}>
-                          <Text fontSize="xl">{categoryEmojis[cat.category] || '✨'}</Text>
-                          <Text fontSize="sm" fontWeight="500">
-                            {cat.category}
-                          </Text>
-                        </HStack>
-                        <Badge colorScheme="purple" borderRadius="full" px={2}>
-                          {cat.percentage?.toFixed(0)}%
-                        </Badge>
-                      </Flex>
-                    ))}
-                  </VStack>
-                </Box>
-              </MotionBox>
-            )}
-
-            {/* Random Past Gratitude */}
-            {randomGratitude && (
-              <MotionBox
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.6, delay: 0.4 }}
-              >
-                <Box bg="linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)" p={5} borderRadius="xl">
-                  <Flex justify="space-between" align="start" mb={3}>
-                    <Text fontSize="sm" fontWeight="600" color={THEME.colors.textPrimary}>
-                      🌟 Memory Lane
-                    </Text>
-                    <Button size="xs" variant="ghost" onClick={loadGratitudeData} leftIcon={<RepeatIcon />}>
-                      New
-                    </Button>
-                  </Flex>
-                  <Text fontSize="sm" color={THEME.colors.textPrimary} mb={2}>
-                    {randomGratitude.item}
-                  </Text>
-                  {randomGratitude.date && (
-                    <Text fontSize="xs" color={THEME.colors.textSecondary}>
-                      {format(new Date(randomGratitude.date), 'MMMM d, yyyy')}
-                    </Text>
-                  )}
-                </Box>
-              </MotionBox>
-            )}
-          </Stack>
-        </Grid>
+        </Stack>
       </Container>
     </Box>
   );

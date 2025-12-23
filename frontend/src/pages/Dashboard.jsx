@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import PropTypes from 'prop-types';
-import { format, startOfWeek, endOfWeek, isSameDay } from 'date-fns';
+import { format, startOfWeek, endOfWeek, isSameDay, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths } from 'date-fns';
 import { id } from 'date-fns/locale';
 import {
   Box,
@@ -38,6 +38,16 @@ import {
   WrapItem,
   Tag,
   TagLabel,
+  Tabs,
+  TabList,
+  TabPanels,
+  Tab,
+  TabPanel,
+  InputGroup,
+  InputLeftElement,
+  AspectRatio,
+  Divider,
+  Badge,
 } from '@chakra-ui/react';
 import CircularProgress from '../components/CircularProgress';
 import { motion } from 'framer-motion';
@@ -50,6 +60,8 @@ import {
   EditIcon,
   RepeatIcon,
   HamburgerIcon,
+  SearchIcon,
+  CalendarIcon,
 } from '@chakra-ui/icons';
 import JournalCalendar from '../components/JournalCalendar';
 import {
@@ -453,15 +465,31 @@ export default function Dashboard() {
   const [isGeneratingWeekly, setIsGeneratingWeekly] = useState(false);
   const [editTitle, setEditTitle] = useState('');
   const [editBody, setEditBody] = useState('');
+  
+  // Search state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  
+  // Refs for date inputs
+  const fromDateRef = useRef(null);
+  const toDateRef = useRef(null);
+  
+  // History state
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [historyNotes, setHistoryNotes] = useState([]);
+  const [historyDateRange, setHistoryDateRange] = useState({
+    start: startOfWeek(new Date()),
+    end: endOfWeek(new Date())
+  });
+  const [filteredHistoryNotes, setFilteredHistoryNotes] = useState([]);
+  
   const toast = useToast();
 
-  // Get notes for the selected date
+  // Get notes for the selected date - only show the latest note per day
   const notesForSelectedDate = useMemo(() => {
     if (!selectedDate) return [];
     // Filter notes by selectedDate using normalized `note_date` or `createdAt` fields.
-    const seen = new Set();
     const filtered = allNotes.filter((note) => {
-      // group strictly by note_date to avoid moving to today after edits
       const dateStr =
         note.note_date ||
         note.noteDate ||
@@ -471,21 +499,18 @@ export default function Dashboard() {
         note.updated_at;
       if (!dateStr) return false;
       const noteDate = new Date(dateStr);
-      if (!isSameDay(noteDate, selectedDate)) return false;
-      // dedupe by id if present, otherwise by combination key
-      const key = note.id ?? `${dateStr}::${(note.body || '').slice(0, 40)}`;
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
+      return isSameDay(noteDate, selectedDate);
     });
 
-    // sort by updated time descending (most recent first), fallbacks included
+    // Sort by createdAt descending (most recent first) and return only the first one
     filtered.sort(
       (a, b) =>
-        new Date(b.updatedAt || b.note_date || b.createdAt) -
-        new Date(a.updatedAt || a.note_date || a.createdAt)
+        new Date(b.createdAt || b.created_at || b.note_date) -
+        new Date(a.createdAt || a.created_at || a.note_date)
     );
-    return filtered;
+    
+    // Return only the latest note (first in sorted array)
+    return filtered.length > 0 ? [filtered[0]] : [];
   }, [allNotes, selectedDate]);
 
   // Fetch notes for the current date range
@@ -744,6 +769,116 @@ export default function Dashboard() {
     }
   };
 
+  // Search functionality - matches words that start with the query
+  const handleSearch = (query) => {
+    setSearchQuery(query);
+    if (!query.trim()) {
+      setSearchResults([]);
+      return;
+    }
+
+    const searchLower = query.toLowerCase().trim();
+    console.log('=== SEARCH START ===');
+    console.log('Query:', searchLower);
+    
+    const results = allNotes.filter(note => {
+      // Remove all non-alphanumeric except spaces, then split
+      const cleanTitle = (note.title || '').toLowerCase().replace(/[^a-z0-9\s]/g, ' ');
+      const cleanBody = (note.body || '').toLowerCase().replace(/[^a-z0-9\s]/g, ' ');
+      
+      const titleWords = cleanTitle.split(/\s+/).filter(w => w.length > 0);
+      const bodyWords = cleanBody.split(/\s+/).filter(w => w.length > 0);
+      
+      // Check if ANY word starts EXACTLY with the search query
+      const titleMatch = titleWords.some(word => word.startsWith(searchLower));
+      const bodyMatch = bodyWords.some(word => word.startsWith(searchLower));
+      
+      const hasMatch = titleMatch || bodyMatch;
+      if (hasMatch) {
+        console.log('MATCH FOUND in note:', note.title);
+        console.log('  Title words:', titleWords.filter(w => w.startsWith(searchLower)));
+        console.log('  Body words:', bodyWords.filter(w => w.startsWith(searchLower)));
+      }
+      
+      return hasMatch;
+    });
+
+    console.log('Total results:', results.length);
+    console.log('=== SEARCH END ===');
+    setSearchResults(results);
+  };
+
+  // History functionality - show ALL notes for the selected date
+  const filterNotesByDate = (date) => {
+    const filtered = allNotes.filter(note => {
+      const noteDate = new Date(note.noteDate || note.createdAt);
+      return isSameDay(noteDate, date);
+    });
+    
+    // Sort by createdAt descending (newest first)
+    filtered.sort((a, b) => {
+      const dateA = new Date(a.createdAt || a.created_at || a.noteDate);
+      const dateB = new Date(b.createdAt || b.created_at || b.noteDate);
+      return dateB - dateA;
+    });
+    
+    console.log(`History: Found ${filtered.length} notes for ${date.toDateString()}`);
+    setHistoryNotes(filtered);
+  };
+
+  const getDaysInMonth = () => {
+    const start = startOfMonth(currentMonth);
+    const end = endOfMonth(currentMonth);
+    return eachDayOfInterval({ start, end });
+  };
+
+  const hasNotesOnDate = (date) => {
+    return allNotes.some(note => {
+      const noteDate = new Date(note.noteDate || note.createdAt);
+      return isSameDay(noteDate, date);
+    });
+  };
+
+  const handlePrevMonth = () => {
+    setCurrentMonth(subMonths(currentMonth, 1));
+  };
+
+  const handleNextMonth = () => {
+    setCurrentMonth(addMonths(currentMonth, 1));
+  };
+
+  useEffect(() => {
+    if (selectedDate) {
+      filterNotesByDate(selectedDate);
+    }
+  }, [selectedDate, allNotes]);
+
+  // Filter notes for History section based on date range
+  useEffect(() => {
+    const filtered = allNotes.filter(note => {
+      const noteDate = new Date(note.noteDate || note.createdAt);
+      const startDate = new Date(historyDateRange.start);
+      const endDate = new Date(historyDateRange.end);
+      
+      // Set time to start of day for comparison
+      startDate.setHours(0, 0, 0, 0);
+      endDate.setHours(23, 59, 59, 999);
+      noteDate.setHours(0, 0, 0, 0);
+      
+      return noteDate >= startDate && noteDate <= endDate;
+    });
+    
+    // Sort by date descending (newest first)
+    filtered.sort((a, b) => {
+      const dateA = new Date(a.createdAt || a.created_at || a.noteDate);
+      const dateB = new Date(b.createdAt || b.created_at || b.noteDate);
+      return dateB - dateA;
+    });
+    
+    console.log(`History: Filtered ${filtered.length} notes from ${format(historyDateRange.start, 'dd MMM')} to ${format(historyDateRange.end, 'dd MMM')}`);
+    setFilteredHistoryNotes(filtered);
+  }, [historyDateRange, allNotes]);
+
   // Loading state
   if (weeklyLoading || notesLoading) {
     const quotes = [
@@ -943,21 +1078,16 @@ export default function Dashboard() {
             </Flex>
           </MotionBox>
 
-          {/* Sidebar Toggle Button (Mobile) */}
-          {showSidebarToggle && (
-            <Box>
-              <IconButton
-                icon={<HamburgerIcon />}
-                onClick={onSidebarToggle}
-                variant="ghost"
-                aria-label="Toggle Sidebar"
-                size="lg"
-                borderRadius="full"
-                _hover={{ bg: 'gray.100' }}
-              />
-            </Box>
-          )}
+          {/* Tabs for Dashboard sections */}
+          <Tabs colorScheme="purple" variant="soft-rounded">
+            <TabList mb={6}>
+              <Tab>📊 Weekly Summary</Tab>
+              <Tab>📅 History & Search</Tab>
+            </TabList>
 
+            <TabPanels>
+              {/* Weekly Summary Tab */}
+              <TabPanel p={0}>
           <Grid templateColumns={{ base: '1fr', xl: isSidebarOpen ? '340px 1fr' : '1fr' }} gap={8}>
             {/* Left Side - Calendar & Notes */}
             <Box
@@ -1494,6 +1624,145 @@ export default function Dashboard() {
               </MotionBox>
             </Box>
           </Grid>
+              </TabPanel>
+
+              {/* History & Search Combined Tab */}
+              <TabPanel p={0}>
+                <VStack spacing={6} align="stretch">
+                  {/* Search Section */}
+                  <Box bg={THEME.colors.cardBg} p={6} borderRadius="2xl" boxShadow="sm" border="1px solid" borderColor={THEME.colors.border}>
+                    <Heading size="md" color={THEME.colors.textPrimary} mb={4} fontFamily={THEME.fonts.sans} fontWeight="600">🔍 Search Notes</Heading>
+                    <InputGroup size="lg">
+                      <InputLeftElement pointerEvents="none"><SearchIcon color={THEME.colors.accent} /></InputLeftElement>
+                      <Input 
+                        placeholder="Type to search (e.g., 'f' for words starting with F)..." 
+                        value={searchQuery} 
+                        onChange={(e) => handleSearch(e.target.value)} 
+                        borderRadius="xl" 
+                        border="1px solid" 
+                        borderColor={THEME.colors.border} 
+                        _focus={{ borderColor: THEME.colors.accent, boxShadow: 'none' }}
+                        fontFamily={THEME.fonts.sans}
+                      />
+                    </InputGroup>
+                    {searchQuery && (
+                      <Box mt={4}>
+                        <Flex justify="space-between" align="center" mb={3}>
+                          <Text fontSize="sm" color={THEME.colors.textSecondary} fontFamily={THEME.fonts.sans} fontWeight="500">Search Results</Text>
+                          <Badge bg={THEME.colors.accent} color="white" fontFamily={THEME.fonts.sans} fontSize="xs" px={2} py={1} borderRadius="md">{searchResults.length} found</Badge>
+                        </Flex>
+                        {searchResults.length === 0 ? (
+                          <Flex direction="column" justify="center" align="center" py={8}>
+                            <Text fontSize="4xl" mb={2}>🔍</Text>
+                            <Text color={THEME.colors.textMuted} fontFamily={THEME.fonts.sans} fontSize="sm">No results found</Text>
+                          </Flex>
+                        ) : (
+                          <VStack spacing={3} maxH="400px" overflowY="auto" sx={{
+                            '&::-webkit-scrollbar': { width: '4px' },
+                            '&::-webkit-scrollbar-track': { bg: 'transparent' },
+                            '&::-webkit-scrollbar-thumb': { bg: THEME.colors.border, borderRadius: 'full' },
+                          }}>
+                            {searchResults.map(note => (
+                              <Box key={note.id} p={4} borderRadius="lg" border="1px solid" borderColor={THEME.colors.border} bg={THEME.colors.bg} w="full" transition="all 0.2s" _hover={{ borderColor: THEME.colors.accent, boxShadow: 'sm' }}>
+                                {note.imageUrl && <AspectRatio ratio={16/9} maxH="150px" mb={3}><Image src={note.imageUrl} borderRadius="md" objectFit="cover" /></AspectRatio>}
+                                <Flex justify="space-between" align="start" mb={2}>
+                                  <Heading size="xs" color={THEME.colors.textPrimary} fontFamily={THEME.fonts.sans} fontWeight="600">{note.title || 'Untitled'}</Heading>
+                                  <Text fontSize="xs" color={THEME.colors.textMuted} fontFamily={THEME.fonts.sans} flexShrink={0} ml={2}>{format(new Date(note.noteDate || note.createdAt), 'dd MMM yyyy')}</Text>
+                                </Flex>
+                                <Text fontSize="sm" color={THEME.colors.textSecondary} fontFamily={THEME.fonts.sans} noOfLines={2} lineHeight="1.5">{note.body}</Text>
+                              </Box>
+                            ))}
+                          </VStack>
+                        )}
+                      </Box>
+                    )}
+                  </Box>
+
+                  {/* History Section with Date Range */}
+                  <Box bg={THEME.colors.cardBg} p={6} borderRadius="2xl" boxShadow="sm" border="1px solid" borderColor={THEME.colors.border}>
+                    <Heading size="md" color={THEME.colors.textPrimary} mb={4} fontFamily={THEME.fonts.sans} fontWeight="600">📅 History</Heading>
+                    <VStack spacing={4} align="stretch">
+                      <HStack spacing={3}>
+                        <Box flex="1">
+                          <Text fontSize="sm" color={THEME.colors.textSecondary} mb={2} fontFamily={THEME.fonts.sans} fontWeight="500">From</Text>
+                          <InputGroup>
+                            <InputLeftElement cursor="pointer" onClick={() => fromDateRef.current?.showPicker()}>
+                              <CalendarIcon color={THEME.colors.accent} />
+                            </InputLeftElement>
+                            <Input 
+                              ref={fromDateRef}
+                              type="date" 
+                              value={format(historyDateRange.start, 'yyyy-MM-dd')}
+                              onChange={(e) => setHistoryDateRange(prev => ({ ...prev, start: new Date(e.target.value) }))}
+                              size="md"
+                              borderColor={THEME.colors.border}
+                              _focus={{ borderColor: THEME.colors.accent, boxShadow: 'none' }}
+                              pl="40px"
+                              fontFamily={THEME.fonts.sans}
+                            />
+                          </InputGroup>
+                        </Box>
+                        <Box flex="1">
+                          <Text fontSize="sm" color={THEME.colors.textSecondary} mb={2} fontFamily={THEME.fonts.sans} fontWeight="500">To</Text>
+                          <InputGroup>
+                            <InputLeftElement cursor="pointer" onClick={() => toDateRef.current?.showPicker()}>
+                              <CalendarIcon color={THEME.colors.accent} />
+                            </InputLeftElement>
+                            <Input 
+                              ref={toDateRef}
+                              type="date" 
+                              value={format(historyDateRange.end, 'yyyy-MM-dd')}
+                              onChange={(e) => setHistoryDateRange(prev => ({ ...prev, end: new Date(e.target.value) }))}
+                              size="md"
+                              borderColor={THEME.colors.border}
+                              _focus={{ borderColor: THEME.colors.accent, boxShadow: 'none' }}
+                              pl="40px"
+                              fontFamily={THEME.fonts.sans}
+                            />
+                          </InputGroup>
+                        </Box>
+                      </HStack>
+                      
+                      <Divider />
+                      
+                      <Box>
+                        <Flex justify="space-between" align="center" mb={3}>
+                          <Text fontSize="sm" color={THEME.colors.textSecondary} fontFamily={THEME.fonts.sans} fontWeight="500">Notes in Range</Text>
+                          <Badge bg={THEME.colors.accent} color="white" fontFamily={THEME.fonts.sans} fontSize="xs" px={2} py={1} borderRadius="md">{filteredHistoryNotes.length} notes</Badge>
+                        </Flex>
+                        {filteredHistoryNotes.length === 0 ? (
+                          <Flex direction="column" justify="center" align="center" py={8}>
+                            <Text fontSize="4xl" mb={2}>📝</Text>
+                            <Text color={THEME.colors.textMuted} fontFamily={THEME.fonts.sans} fontSize="sm">No notes in this date range</Text>
+                          </Flex>
+                        ) : (
+                          <VStack spacing={3} maxH="500px" overflowY="auto" sx={{
+                            '&::-webkit-scrollbar': { width: '4px' },
+                            '&::-webkit-scrollbar-track': { bg: 'transparent' },
+                            '&::-webkit-scrollbar-thumb': { bg: THEME.colors.border, borderRadius: 'full' },
+                          }}>
+                            {filteredHistoryNotes.map(note => (
+                              <Box key={note.id} p={4} borderRadius="lg" border="1px solid" borderColor={THEME.colors.border} bg={THEME.colors.bg} w="full" transition="all 0.2s" _hover={{ borderColor: THEME.colors.accent, boxShadow: 'sm' }}>
+                                {note.imageUrl && <AspectRatio ratio={16/9} maxH="150px" mb={3}><Image src={note.imageUrl} borderRadius="md" objectFit="cover" /></AspectRatio>}
+                                <Flex justify="space-between" align="start" mb={2}>
+                                  <Heading size="xs" color={THEME.colors.textPrimary} fontFamily={THEME.fonts.sans} fontWeight="600" flex="1">{note.title || 'Untitled'}</Heading>
+                                  <VStack spacing={0} align="end" flexShrink={0} ml={2}>
+                                    <Text fontSize="xs" color={THEME.colors.textMuted} fontFamily={THEME.fonts.sans}>{format(new Date(note.noteDate || note.createdAt), 'dd MMM yyyy')}</Text>
+                                    <Text fontSize="xs" color={THEME.colors.textMuted} fontFamily={THEME.fonts.sans}>{format(new Date(note.createdAt || note.created_at), 'HH:mm')}</Text>
+                                  </VStack>
+                                </Flex>
+                                <Text fontSize="sm" color={THEME.colors.textSecondary} fontFamily={THEME.fonts.sans} noOfLines={2} lineHeight="1.5">{note.body}</Text>
+                              </Box>
+                            ))}
+                          </VStack>
+                        )}
+                      </Box>
+                    </VStack>
+                  </Box>
+                </VStack>
+              </TabPanel>
+            </TabPanels>
+          </Tabs>
         </Stack>
       </Container>
 

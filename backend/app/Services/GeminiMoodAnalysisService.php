@@ -281,18 +281,55 @@ class GeminiMoodAnalysisService
                 $weekEnd->toDateString()
             );
         } catch (\Exception $e) {
-            Log::error('Weekly analysis failed, returning mock data', [
+            Log::error('Weekly analysis failed, aggregating from daily data', [
                 'error' => $e->getMessage(),
                 'week' => $weekStart->toDateString().' - '.$weekEnd->toDateString(),
             ]);
 
-            // Return mock data instead of throwing error
+            // Aggregate mood from daily analyses instead of defaulting to neutral
+            $moodCounts = [];
+            $totalScore = 0;
+            $scoreCount = 0;
+            $allHighlights = [];
+            $allAdvice = [];
+
+            foreach ($dailyAnalyses as $daily) {
+                $analysis = $daily instanceof DailyJournalAnalysis
+                    ? $daily->analysis
+                    : ($daily['analysis'] ?? []);
+                
+                $mood = $analysis['dominantMood'] ?? 'neutral';
+                $moodCounts[$mood] = ($moodCounts[$mood] ?? 0) + 1;
+                
+                if (isset($analysis['moodScore']) && is_numeric($analysis['moodScore'])) {
+                    $totalScore += $analysis['moodScore'];
+                    $scoreCount++;
+                }
+                
+                if (!empty($analysis['highlights'])) {
+                    $allHighlights = array_merge($allHighlights, (array)$analysis['highlights']);
+                }
+                
+                if (!empty($analysis['advice'])) {
+                    $allAdvice = array_merge($allAdvice, (array)$analysis['advice']);
+                }
+            }
+
+            // Find dominant mood
+            arsort($moodCounts);
+            $dominantMood = array_key_first($moodCounts) ?? 'neutral';
+            $avgScore = $scoreCount > 0 ? round($totalScore / $scoreCount) : 60;
+
+            // Deduplicate and limit highlights/advice
+            $allHighlights = array_unique($allHighlights);
+            $allAdvice = array_unique($allAdvice);
+
             return [
                 'summary' => 'Minggu ini kamu telah menulis beberapa catatan jurnal. Terus pertahankan!',
-                'dominantMood' => 'neutral',
-                'moodScore' => 60,
-                'highlights' => ['Aktivitas jurnal tercatat minggu ini'],
-                'advice' => ['Terus menulis untuk mendapatkan insight lebih baik'],
+                'dominantMood' => $dominantMood,
+                'moodScore' => $avgScore,
+                'highlights' => array_slice($allHighlights, 0, 5) ?: ['Aktivitas jurnal tercatat minggu ini'],
+                'advice' => array_slice($allAdvice, 0, 5) ?: ['Terus menulis untuk mendapatkan insight lebih baik'],
                 'affirmation' => 'Setiap minggu adalah kesempatan baru untuk tumbuh.',
                 'weeklyPattern' => 'Pola mingguan sedang dianalisis.',
             ];

@@ -16,8 +16,16 @@ import {
   AspectRatio,
   Divider,
   Stack,
+  Input,
+  InputGroup,
+  InputLeftElement,
+  Tabs,
+  TabList,
+  TabPanels,
+  Tab,
+  TabPanel,
 } from '@chakra-ui/react';
-import { ChevronLeftIcon, ChevronRightIcon, CalendarIcon } from '@chakra-ui/icons';
+import { ChevronLeftIcon, ChevronRightIcon, CalendarIcon, SearchIcon } from '@chakra-ui/icons';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths } from 'date-fns';
 import { motion } from 'framer-motion';
 import { listNotes } from '../services/journalService';
@@ -43,6 +51,8 @@ export default function JournalHistory() {
   const [notes, setNotes] = useState([]);
   const [allNotes, setAllNotes] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
   const toast = useToast();
 
   useEffect(() => {
@@ -98,6 +108,22 @@ export default function JournalHistory() {
     setNotes(filtered);
   };
 
+  const handleSearch = (query) => {
+    setSearchQuery(query);
+    if (!query.trim()) {
+      setSearchResults([]);
+      return;
+    }
+
+    const results = allNotes.filter(note => {
+      const titleMatch = note.title?.toLowerCase().includes(query.toLowerCase());
+      const bodyMatch = note.body?.toLowerCase().includes(query.toLowerCase());
+      return titleMatch || bodyMatch;
+    });
+
+    setSearchResults(results);
+  };
+
   const getDaysInMonth = () => {
     const start = startOfMonth(currentMonth);
     const end = endOfMonth(currentMonth);
@@ -140,19 +166,30 @@ export default function JournalHistory() {
             transition={{ duration: 0.5 }}
           >
             <HStack spacing={3} mb={2}>
-              <CalendarIcon boxSize={8} color="purple.500" />
+              <SearchIcon boxSize={8} color="purple.500" />
               <Heading 
                 size="xl" 
                 bgGradient="linear(to-r, purple.600, pink.500)"
                 bgClip="text"
               >
-                Journal History
+                Riwayat & Cari
               </Heading>
             </HStack>
             <Text color={THEME.colors.textSecondary}>
-              Browse your journal entries by date
+              Lihat riwayat jurnal atau cari catatan tertentu
             </Text>
           </MotionBox>
+
+          {/* Tabs for History and Search */}
+          <Tabs colorScheme="purple" variant="soft-rounded">
+            <TabList mb={4}>
+              <Tab>📅 Riwayat</Tab>
+              <Tab>🔍 Cari</Tab>
+            </TabList>
+
+            <TabPanels>
+              {/* History Tab */}
+              <TabPanel p={0}>
 
           <Grid templateColumns={{ base: '1fr', lg: '400px 1fr' }} gap={8}>
             {/* Calendar Section */}
@@ -453,6 +490,148 @@ export default function JournalHistory() {
               </Box>
             </MotionBox>
           </Grid>
+              </TabPanel>
+
+              {/* Search Tab */}
+              <TabPanel p={0}>
+                <VStack spacing={6} align="stretch">
+                  {/* Search Input */}
+                  <Box
+                    bg="white"
+                    p={6}
+                    borderRadius="2xl"
+                    boxShadow="lg"
+                    border="2px solid"
+                    borderColor="purple.100"
+                  >
+                    <InputGroup size="lg">
+                      <InputLeftElement pointerEvents="none">
+                        <SearchIcon color="purple.400" />
+                      </InputLeftElement>
+                      <Input
+                        placeholder="Cari berdasarkan judul atau isi catatan..."
+                        value={searchQuery}
+                        onChange={(e) => handleSearch(e.target.value)}
+                        borderRadius="xl"
+                        border="2px solid"
+                        borderColor="purple.200"
+                        _focus={{
+                          borderColor: 'purple.500',
+                          boxShadow: '0 0 0 3px rgba(159, 122, 234, 0.18)',
+                        }}
+                      />
+                    </InputGroup>
+                  </Box>
+
+                  {/* Search Results */}
+                  {searchQuery && (
+                    <Box
+                      bg="white"
+                      p={6}
+                      borderRadius="2xl"
+                      boxShadow="lg"
+                      border="2px solid"
+                      borderColor="purple.100"
+                      minH="400px"
+                    >
+                      <Heading size="md" color="purple.700" mb={4}>
+                        Hasil Pencarian ({searchResults.length})
+                      </Heading>
+                      <Divider mb={6} borderColor="purple.200" />
+
+                      {searchResults.length === 0 ? (
+                        <Flex
+                          direction="column"
+                          justify="center"
+                          align="center"
+                          minH="300px"
+                          color="gray.400"
+                        >
+                          <Text fontSize="6xl" mb={4}>🔍</Text>
+                          <Text fontSize="lg" fontWeight="medium">Tidak ada hasil</Text>
+                          <Text fontSize="sm" color="gray.500">
+                            Coba gunakan kata kunci yang berbeda
+                          </Text>
+                        </Flex>
+                      ) : (
+                        <VStack spacing={4} align="stretch">
+                          {searchResults.map((note, index) => (
+                            <MotionBox
+                              key={note.id}
+                              initial={{ opacity: 0, y: 20 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ duration: 0.3, delay: index * 0.05 }}
+                            >
+                              <Box
+                                p={5}
+                                borderRadius="xl"
+                                border="2px solid"
+                                borderColor="purple.200"
+                                bg="purple.50"
+                                _hover={{
+                                  borderColor: 'purple.400',
+                                  boxShadow: 'lg',
+                                }}
+                                transition="all 0.3s"
+                              >
+                                <VStack spacing={3} align="stretch">
+                                  {note.imageUrl && (
+                                    <AspectRatio ratio={16/9} maxH="300px">
+                                      <Image
+                                        src={note.imageUrl}
+                                        alt={note.title || 'Journal image'}
+                                        borderRadius="lg"
+                                        objectFit="cover"
+                                        boxShadow="md"
+                                      />
+                                    </AspectRatio>
+                                  )}
+                                  <Flex justify="space-between" align="start">
+                                    <Heading size="md" color="purple.700">
+                                      {note.title || 'Untitled'}
+                                    </Heading>
+                                    <Badge colorScheme="purple" fontSize="sm">
+                                      {format(new Date(note.noteDate || note.createdAt), 'dd MMM yyyy')}
+                                    </Badge>
+                                  </Flex>
+                                  {note.body && (
+                                    <Text color="gray.700" lineHeight="tall" whiteSpace="pre-wrap" noOfLines={3}>
+                                      {note.body}
+                                    </Text>
+                                  )}
+                                </VStack>
+                              </Box>
+                            </MotionBox>
+                          ))}
+                        </VStack>
+                      )}
+                    </Box>
+                  )}
+
+                  {!searchQuery && (
+                    <Flex
+                      direction="column"
+                      justify="center"
+                      align="center"
+                      minH="400px"
+                      bg="white"
+                      borderRadius="2xl"
+                      border="2px dashed"
+                      borderColor="purple.200"
+                    >
+                      <Text fontSize="6xl" mb={4}>🔍</Text>
+                      <Text fontSize="lg" fontWeight="medium" color="gray.600">
+                        Mulai Pencarian
+                      </Text>
+                      <Text fontSize="sm" color="gray.500" mt={2}>
+                        Ketik kata kunci di atas untuk mencari catatan
+                      </Text>
+                    </Flex>
+                  )}
+                </VStack>
+              </TabPanel>
+            </TabPanels>
+          </Tabs>
         </VStack>
       </Container>
     </Box>

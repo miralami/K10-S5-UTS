@@ -24,6 +24,25 @@ import { DeleteIcon, AttachmentIcon, ChevronDownIcon, ChevronUpIcon } from '@cha
 import { format } from 'date-fns';
 import { createNote } from '../services/journalService';
 
+const THEME = {
+  colors: {
+    bg: '#FDFCF8',
+    cardBg: '#FFFFFF',
+    textPrimary: '#2D3748',
+    textSecondary: '#718096',
+    textMuted: '#A0AEC0',
+    accent: '#D6BCFA',
+    accentHover: '#B794F4',
+    warmHighlight: '#F6E05E',
+    success: '#68D391',
+    border: '#E2E8F0',
+  },
+  fonts: {
+    sans: '"Inter", sans-serif',
+    serif: '"Merriweather", serif',
+  },
+};
+
 const BeautifulJournalNote = ({ selectedDate, onSave }) => {
   const toast = useToast();
   const [loading, setLoading] = useState(false);
@@ -31,7 +50,6 @@ const BeautifulJournalNote = ({ selectedDate, onSave }) => {
   const [imageFile, setImageFile] = useState(null);
   const fileInputRef = useRef(null);
   const bodyTextareaRef = useRef(null);
-  const { isOpen: isGratitudeOpen, onToggle: onGratitudeToggle } = useDisclosure({ defaultIsOpen: false });
 
   useEffect(() => {
     const handleInsertText = (event) => {
@@ -58,10 +76,16 @@ const BeautifulJournalNote = ({ selectedDate, onSave }) => {
   const [formData, setFormData] = useState({
     title: '',
     body: '',
-    gratitude1: '',
-    gratitude2: '',
-    gratitude3: '',
+    mood: '',
   });
+
+  const moods = [
+    { name: 'Calm', emoji: '🍃', color: 'green' },
+    { name: 'Happy', emoji: '😊', color: 'yellow' },
+    { name: 'Anxious', emoji: '😰', color: 'gray' },
+    { name: 'Tired', emoji: '😴', color: 'blue' },
+    { name: 'Inspired', emoji: '✨', color: 'purple' },
+  ];
 
   const handleChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -121,9 +145,9 @@ const BeautifulJournalNote = ({ selectedDate, onSave }) => {
       formDataToSend.append('title', formData.title);
       formDataToSend.append('body', formData.body);
       formDataToSend.append('note_date', noteDate);
-      formDataToSend.append('gratitude_1', formData.gratitude1);
-      formDataToSend.append('gratitude_2', formData.gratitude2);
-      formDataToSend.append('gratitude_3', formData.gratitude3);
+      if (formData.mood) {
+        formDataToSend.append('mood', formData.mood);
+      }
       
       if (imageFile) {
         formDataToSend.append('image', imageFile);
@@ -149,9 +173,7 @@ const BeautifulJournalNote = ({ selectedDate, onSave }) => {
       setFormData({
         title: '',
         body: '',
-        gratitude1: '',
-        gratitude2: '',
-        gratitude3: '',
+        mood: '',
       });
       setImageFile(null);
       setImagePreview(null);
@@ -176,7 +198,6 @@ const BeautifulJournalNote = ({ selectedDate, onSave }) => {
     }
   };
 
-  const gratitudeCount = [formData.gratitude1, formData.gratitude2, formData.gratitude3].filter(g => g).length;
 
   return (
     <Box 
@@ -185,238 +206,112 @@ const BeautifulJournalNote = ({ selectedDate, onSave }) => {
       bg="white"
       p={{ base: 6, md: 8 }}
       borderRadius="2xl"
-      boxShadow="lg"
+      boxShadow="sm"
       border="1px solid"
-      borderColor="purple.100"
-      maxW="4xl"
+      borderColor="gray.100"
+      maxW="100%"
       mx="auto"
     >
-      <VStack spacing={6} align="stretch">
-        {/* Header with Word Count */}
-        <Flex justify="space-between" align="center" flexWrap="wrap" gap={3}>
-          <HStack spacing={3}>
-            <Text fontSize="3xl">📝</Text>
-            <Box>
-              <Heading 
-                size="lg" 
-                color="purple.700"
-                fontWeight="bold"
+      <VStack spacing={5} align="stretch">
+        {/* Mood Selector */}
+        <Box>
+          <HStack spacing={4} justify="center" flexWrap="wrap">
+            {moods.map((mood) => (
+              <Button
+                key={mood.name}
+                size="md"
+                variant="ghost"
+                leftIcon={<Text fontSize="xl">{mood.emoji}</Text>}
+                onClick={() => handleChange('mood', mood.name)}
+                borderRadius="full"
+                px={6}
+                py={6}
+                bg={formData.mood === mood.name ? 'gray.50' : 'transparent'}
+                color="gray.700"
+                fontWeight="normal"
+                fontSize="sm"
+                _hover={{
+                  bg: 'gray.50',
+                }}
+                transition="all 0.2s"
               >
-                Journal Entry
-              </Heading>
-              <Text fontSize="xs" color="gray.500">
-                {formData.body.split(/\s+/).filter(w => w).length} words written
-              </Text>
-            </Box>
+                {mood.name}
+              </Button>
+            ))}
           </HStack>
-          <VStack spacing={1} align="end">
-            <Badge 
-              colorScheme="purple" 
-              fontSize="md" 
-              px={4} 
-              py={2} 
-              borderRadius="full"
-            >
-              {format(selectedDate || new Date(), 'MMM dd, yyyy')}
-            </Badge>
-            {gratitudeCount > 0 && (
-              <HStack spacing={1}>
-                <Text fontSize="xs" color="purple.500">✨</Text>
-                <Text fontSize="xs" color="purple.600" fontWeight="medium">
-                  {gratitudeCount} gratitude{gratitudeCount > 1 ? 's' : ''} added
-                </Text>
-              </HStack>
-            )}
-          </VStack>
-        </Flex>
-
-        <Divider borderColor="purple.100" />
-
-        {/* Title Input */}
-        <Box>
-          <Text fontWeight="semibold" color="purple.700" mb={2} fontSize="sm">
-            Title (optional)
-          </Text>
-          <Input
-            value={formData.title}
-            onChange={(e) => handleChange('title', e.target.value)}
-            placeholder="Give your entry a title..."
-            size="lg"
-            bg="white"
-            color="gray.800"
-            borderColor="purple.300"
-            _focus={{ borderColor: 'purple.500', boxShadow: '0 0 0 1px purple.500', bg: 'white' }}
-            _hover={{ borderColor: 'purple.400' }}
-            _placeholder={{ color: 'gray.400' }}
-            borderRadius="xl"
-          />
         </Box>
 
-        {/* Body Textarea */}
-        <Box>
-          <Text fontWeight="semibold" color="purple.600" mb={2} fontSize="sm">
-            What's on your mind?
-          </Text>
-          <Textarea
-            ref={bodyTextareaRef}
-            value={formData.body}
-            onChange={(e) => handleChange('body', e.target.value)}
-            placeholder="Click a suggestion above or start writing your thoughts..."
-            rows={12}
-            size="lg"
-            bg="white"
-            color="gray.800"
-            borderColor="purple.300"
-            _focus={{ borderColor: 'purple.500', boxShadow: '0 0 0 1px purple.500', bg: 'white' }}
-            _hover={{ borderColor: 'purple.400' }}
-            _placeholder={{ color: 'gray.400' }}
-            borderRadius="xl"
-            resize="vertical"
-          />
-          <Flex justify="space-between" mt={2}>
-            <Text fontSize="xs" color="gray.500">
-              💡 Tip: Aim for at least 50 words for a meaningful reflection
-            </Text>
-            <Text fontSize="xs" color={formData.body.split(/\s+/).filter(w => w).length >= 50 ? 'green.600' : 'gray.500'} fontWeight="medium">
-              {formData.body.split(/\s+/).filter(w => w).length >= 50 ? '✓ Great!' : `${formData.body.split(/\s+/).filter(w => w).length}/50`}
-            </Text>
-          </Flex>
-        </Box>
-
-        {/* Gratitude Section */}
+        {/* Combined Title and Body Box */}
         <Box
-          border="2px solid"
-          borderColor="purple.200"
-          borderRadius="xl"
-          overflow="hidden"
-          bg={gratitudeCount > 0 ? 'purple.50' : 'white'}
-          transition="all 0.3s"
+          border="1px solid"
+          borderColor={THEME.colors.border}
+          borderRadius="lg"
+          bg="transparent"
+          _hover={{ borderColor: THEME.colors.accent }}
+          _focusWithin={{ borderColor: THEME.colors.accentHover }}
+          transition="all 0.2s"
         >
-          <Flex
-            p={4}
-            bg={gratitudeCount > 0 ? 'purple.100' : 'purple.50'}
-            cursor="pointer"
-            onClick={onGratitudeToggle}
-            justify="space-between"
-            align="center"
-            _hover={{ bg: 'purple.100' }}
-            transition="all 0.2s"
-          >
-            <HStack>
-              <Text fontSize="xl">✨</Text>
-              <Box>
-                <Text fontWeight="bold" color="purple.700">
-                  Gratitude Journal
+          <VStack spacing={0} align="stretch">
+            {/* Title Section */}
+            <Box p={4}>
+              {!formData.title && (
+                <Text fontSize="xs" color={THEME.colors.textMuted} fontFamily={THEME.fonts.sans} mb={1} fontWeight="500">
+                  Title
                 </Text>
-                <Text fontSize="xs" color="purple.600">
-                  {gratitudeCount === 0 ? 'Add what you\'re grateful for (optional)' : `${gratitudeCount} gratitude${gratitudeCount > 1 ? 's' : ''} added`}
-                </Text>
-              </Box>
-              {gratitudeCount > 0 && (
-                <Badge colorScheme="purple" borderRadius="full">
-                  {gratitudeCount}
-                </Badge>
               )}
-            </HStack>
-            <IconButton
-              icon={isGratitudeOpen ? <ChevronUpIcon /> : <ChevronDownIcon />}
-              variant="ghost"
-              colorScheme="purple"
-              size="sm"
-              aria-label="Toggle gratitude"
-            />
-          </Flex>
+              <Input
+                value={formData.title}
+                onChange={(e) => handleChange('title', e.target.value)}
+                placeholder="Title your day..."
+                size="lg"
+                bg="transparent"
+                color={THEME.colors.textPrimary}
+                border="none"
+                fontSize="lg"
+                fontWeight="600"
+                fontFamily={THEME.fonts.sans}
+                _focus={{ boxShadow: 'none' }}
+                _placeholder={{ color: THEME.colors.textMuted }}
+                px={0}
+                py={0}
+              />
+            </Box>
 
-          <Collapse in={isGratitudeOpen} animateOpacity>
-            <VStack spacing={4} p={4} bg="purple.50">
-              {[1, 2, 3].map((num) => (
-                <Box key={num} w="full">
-                  <HStack mb={2} justify="space-between">
-                    <Text fontSize="sm" fontWeight="semibold" color="purple.700">
-                      Gratitude #{num}
-                    </Text>
-                    {num === 1 && (
-                      <Badge colorScheme="purple" fontSize="xs">Optional</Badge>
-                    )}
-                  </HStack>
-                  <Textarea
-                    value={formData[`gratitude${num}`]}
-                    onChange={(e) => handleChange(`gratitude${num}`, e.target.value)}
-                    placeholder={`I'm grateful for...`}
-                    rows={2}
-                    maxLength={500}
-                    bg="white"
-                    color="gray.800"
-                    borderColor="purple.200"
-                    _focus={{ borderColor: 'purple.400', boxShadow: '0 0 0 1px purple.400', bg: 'white' }}
-                    _placeholder={{ color: 'gray.400' }}
-                    borderRadius="lg"
-                    size="sm"
-                  />
-                  <Text fontSize="xs" color="gray.500" mt={1} textAlign="right">
-                    {formData[`gratitude${num}`].length}/500
-                  </Text>
-                </Box>
-              ))}
-            </VStack>
-          </Collapse>
+            {/* Divider */}
+            <Divider borderColor={THEME.colors.border} />
+
+            {/* Body Section */}
+            <Box p={4}>
+              {!formData.body && (
+                <Text fontSize="xs" color={THEME.colors.textMuted} fontFamily={THEME.fonts.sans} mb={1} fontWeight="500">
+                  Content
+                </Text>
+              )}
+              <Textarea
+                ref={bodyTextareaRef}
+                value={formData.body}
+                onChange={(e) => handleChange('body', e.target.value)}
+                placeholder="Start writing here..."
+                rows={16}
+                size="lg"
+                bg="transparent"
+                color={THEME.colors.textPrimary}
+                border="none"
+                fontFamily={THEME.fonts.sans}
+                _focus={{ boxShadow: 'none' }}
+                _placeholder={{ color: THEME.colors.textMuted }}
+                resize="none"
+                fontSize="md"
+                lineHeight="tall"
+                px={0}
+                py={0}
+              />
+            </Box>
+          </VStack>
         </Box>
 
         {/* Image Upload Section */}
         <Box>
-          <Text fontWeight="semibold" color="purple.700" mb={3} fontSize="sm">
-            📸 Add a photo (optional)
-          </Text>
-          
-          {imagePreview ? (
-            <VStack spacing={3}>
-              <AspectRatio ratio={16/9} w="100%" maxH="300px">
-                <Image 
-                  src={imagePreview} 
-                  alt="Journal image" 
-                  borderRadius="xl"
-                  objectFit="cover"
-                  boxShadow="lg"
-                />
-              </AspectRatio>
-              <Button
-                leftIcon={<DeleteIcon />}
-                colorScheme="red"
-                variant="outline"
-                onClick={handleRemoveImage}
-                borderRadius="full"
-                size="sm"
-              >
-                Remove Image
-              </Button>
-            </VStack>
-          ) : (
-            <Box
-              border="2px dashed"
-              borderColor="purple.300"
-              borderRadius="xl"
-              p={8}
-              textAlign="center"
-              cursor="pointer"
-              onClick={() => fileInputRef.current?.click()}
-              _hover={{
-                borderColor: 'purple.500',
-                bg: 'purple.50',
-              }}
-              transition="all 0.3s"
-            >
-              <VStack spacing={2}>
-                <AttachmentIcon boxSize={8} color="purple.400" />
-                <Text fontSize="sm" fontWeight="medium" color="purple.700">
-                  Click to upload an image
-                </Text>
-                <Text fontSize="xs" color="gray.500">
-                  JPG, PNG, GIF, WEBP (max 5MB)
-                </Text>
-              </VStack>
-            </Box>
-          )}
-          
           <Input
             ref={fileInputRef}
             type="file"
@@ -424,31 +319,92 @@ const BeautifulJournalNote = ({ selectedDate, onSave }) => {
             onChange={handleImageChange}
             display="none"
           />
+          
+          {imagePreview ? (
+            <Box>
+              <AspectRatio ratio={16/9} w="100%" maxH="300px">
+                <Image 
+                  src={imagePreview} 
+                  alt="Journal image" 
+                  borderRadius="lg"
+                  objectFit="cover"
+                  border="1px solid"
+                  borderColor={THEME.colors.border}
+                />
+              </AspectRatio>
+              <Button
+                mt={3}
+                size="sm"
+                variant="outline"
+                colorScheme="red"
+                onClick={handleRemoveImage}
+                borderRadius="md"
+              >
+                Remove Image
+              </Button>
+            </Box>
+          ) : (
+            <Box
+              border="2px dashed"
+              borderColor={THEME.colors.border}
+              borderRadius="lg"
+              p={8}
+              textAlign="center"
+              cursor="pointer"
+              onClick={() => fileInputRef.current?.click()}
+              _hover={{ borderColor: THEME.colors.accent, bg: THEME.colors.bg }}
+              transition="all 0.2s"
+            >
+              <VStack spacing={2}>
+                <AttachmentIcon boxSize={6} color={THEME.colors.accent} />
+                <Text fontSize="sm" color={THEME.colors.textSecondary} fontWeight="medium" fontFamily={THEME.fonts.sans}>
+                  Click to upload image
+                </Text>
+                <Text fontSize="xs" color={THEME.colors.textMuted} fontFamily={THEME.fonts.sans}>
+                  JPG, PNG, GIF, WEBP (max 5MB)
+                </Text>
+              </VStack>
+            </Box>
+          )}
         </Box>
 
-        <Divider borderColor="purple.100" />
+        {/* Add Tag Button */}
+        <Box>
+          <Button
+            variant="ghost"
+            size="sm"
+            color={THEME.colors.textMuted}
+            leftIcon={<Text>+</Text>}
+            _hover={{ bg: 'transparent', color: THEME.colors.textSecondary }}
+            px={2}
+            fontWeight="normal"
+            fontFamily={THEME.fonts.sans}
+          >
+            Add tag
+          </Button>
+        </Box>
 
-        {/* Submit Button */}
-        <Button
-          type="submit"
-          bg="purple.500"
-          color="white"
-          size="lg"
-          isLoading={loading}
-          loadingText="Saving..."
-          _hover={{ 
-            bg: 'purple.600',
-            transform: 'translateY(-2px)',
-            boxShadow: 'xl',
-          }}
-          _active={{ transform: 'scale(0.98)' }}
-          borderRadius="full"
-          boxShadow="lg"
-          leftIcon={<Text fontSize="xl">✨</Text>}
-          w="100%"
-        >
-          Save Journal Entry
-        </Button>
+        {/* Bottom Actions */}
+        <Flex justify="space-between" align="center" pt={2} borderTop="1px solid" borderColor={THEME.colors.border} mt={4}>
+          <Text fontSize="xs" color={THEME.colors.textMuted} fontFamily={THEME.fonts.sans}>
+            {formData.body.split(/\s+/).filter(w => w).length} words
+          </Text>
+          <Button
+            type="submit"
+            bg={THEME.colors.textPrimary}
+            color="white"
+            size="sm"
+            isLoading={loading}
+            loadingText="Saving..."
+            borderRadius="md"
+            px={6}
+            _hover={{ bg: THEME.colors.textSecondary }}
+            fontWeight="normal"
+            fontFamily={THEME.fonts.sans}
+          >
+            Save
+          </Button>
+        </Flex>
       </VStack>
     </Box>
   );

@@ -465,6 +465,12 @@ class JournalNoteController extends Controller
 
     private function transformNote(JournalNote $note): array
     {
+        $imageUrl = null;
+        if ($note->image_path) {
+            // Generate full URL for the image
+            $imageUrl = url('storage/' . $note->image_path);
+        }
+
         return [
             'id' => $note->id,
             'userId' => $note->user_id ?? null,
@@ -481,7 +487,7 @@ class JournalNoteController extends Controller
             'gratitudeCategory3' => $note->gratitude_category_3 ?? null,
             'gratitudeCount' => $note->gratitude_count ?? 0,
             'imagePath' => $note->image_path ?? null,
-            'imageUrl' => $note->image_path ? asset('storage/' . $note->image_path) : null,
+            'imageUrl' => $imageUrl,
         ];
     }
 
