@@ -74,61 +74,34 @@ class GeminiMoodAnalysisService
             // Try gRPC first if enabled and available
             if (config('services.ai_grpc.enabled', false)) {
                 try {
-                    return $this->grpcClient->analyzeDaily(
+                    $result = $this->grpcClient->analyzeDaily(
                         $userId,
                         $dayStart->toDateString(),
                         $notesArray
                     );
+                    Log::info('gRPC daily analysis successful', ['date' => $dayStart->toDateString()]);
+                    return $result;
                 } catch (\Throwable $grpcError) {
                     Log::warning('gRPC failed, trying direct Gemini API', [
                         'date' => $dayStart->toDateString(),
-                        'reason' => $grpcError->getMessage(),
+                        'error' => $grpcError->getMessage(),
+                        'trace' => $grpcError->getTraceAsString(),
                     ]);
                 }
             }
-            
+
             // Fallback to direct Gemini API
-            try {
-                return $this->analyzeDailyWithGemini($notes, $dayStart);
-            } catch (\Throwable $geminiError) {
-                Log::warning('Direct Gemini API also failed, using mock data', [
-                    'date' => $dayStart->toDateString(),
-                    'reason' => $geminiError->getMessage(),
-                ]);
-                
-                // Last resort: return mock analysis data
-                return [
-                    'summary' => 'Hari ini kamu menulis ' . $notes->count() . ' catatan jurnal. Terus semangat mencatat perjalanan hidupmu!',
-                    'dominantMood' => 'positive',
-                    'moodScore' => 75,
-                    'highlights' => [
-                        'Kamu aktif menulis jurnal hari ini',
-                        'Mencatat ' . $notes->count() . ' momen penting',
-                    ],
-                    'advice' => [
-                        'Terus pertahankan kebiasaan menulis jurnal',
-                        'Refleksikan pengalaman hari ini untuk pembelajaran besok',
-                    ],
-                    'affirmation' => 'Setiap catatan yang kamu tulis adalah langkah menuju pemahaman diri yang lebih baik.',
-                    'noteCount' => $notes->count(),
-                ];
-            }
+            Log::info('Attempting direct Gemini API', ['date' => $dayStart->toDateString()]);
+            $result = $this->analyzeDailyWithGemini($notes, $dayStart);
+            Log::info('Direct Gemini API successful', ['date' => $dayStart->toDateString()]);
+            return $result;
         } catch (\Exception $e) {
-            Log::error('Daily analysis failed, returning mock data', [
+            Log::error('Daily analysis failed', [
                 'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
                 'date' => $dayStart->toDateString(),
             ]);
-
-            // Return mock data instead of throwing error
-            return [
-                'summary' => 'Hari ini kamu menulis ' . $notes->count() . ' catatan jurnal.',
-                'dominantMood' => 'neutral',
-                'moodScore' => 60,
-                'highlights' => ['Aktivitas jurnal tercatat'],
-                'advice' => ['Terus menulis untuk mendapatkan insight lebih baik'],
-                'affirmation' => 'Menulis adalah langkah pertama menuju pemahaman diri.',
-                'noteCount' => $notes->count(),
-            ];
+            throw new RuntimeException('Failed to analyze daily notes: ' . $e->getMessage(), 0, $e);
         }
     }
 
@@ -260,79 +233,58 @@ class GeminiMoodAnalysisService
             // Try gRPC first if enabled
             if (config('services.ai_grpc.enabled', false)) {
                 try {
-                    return $this->grpcClient->analyzeWeekly(
+                    $result = $this->grpcClient->analyzeWeekly(
                         $userId,
                         $weekStart->toDateString(),
                         $weekEnd->toDateString(),
                         $dailySummariesArray
                     );
+                    Log::info('gRPC weekly analysis successful', ['week' => $weekStart->toDateString() . ' - ' . $weekEnd->toDateString()]);
+                    return $result;
                 } catch (\Throwable $grpcError) {
                     Log::warning('gRPC weekly analysis failed, trying direct Gemini API', [
                         'week' => $weekStart->toDateString() . ' - ' . $weekEnd->toDateString(),
-                        'reason' => $grpcError->getMessage(),
+                        'error' => $grpcError->getMessage(),
+                        'trace' => $grpcError->getTraceAsString(),
                     ]);
                 }
             }
 
             // Fallback to direct Gemini API
-            return $this->analyzeWeeklyWithGemini(
+            Log::info('Attempting direct Gemini API for weekly', ['week' => $weekStart->toDateString() . ' - ' . $weekEnd->toDateString()]);
+            $result = $this->analyzeWeeklyWithGemini(
                 $dailySummariesArray,
                 $weekStart->toDateString(),
                 $weekEnd->toDateString()
             );
+            Log::info('Direct Gemini API weekly successful');
+            return $result;
         } catch (\Exception $e) {
-            Log::error('Weekly analysis failed, aggregating from daily data', [
-                'error' => $e->getMessage(),
-                'week' => $weekStart->toDateString().' - '.$weekEnd->toDateString(),
-            ]);
+            // Check if it's a rate limit error
+            if ($e->getCode() === 429 || str_contains($e->getMessage(), 'Rate limit') || str_contains($e->getMessage(), 'quota')) {
+                Log::warning('Weekly analysis rate limited', [
+                    'error' => $e->getMessage(),
+                    'week' => $weekStart->toDateString().' - '.$weekEnd->toDateString(),
+                ]);
 
-            // Aggregate mood from daily analyses instead of defaulting to neutral
-            $moodCounts = [];
-            $totalScore = 0;
-            $scoreCount = 0;
-            $allHighlights = [];
-            $allAdvice = [];
-
-            foreach ($dailyAnalyses as $daily) {
-                $analysis = $daily instanceof DailyJournalAnalysis
-                    ? $daily->analysis
-                    : ($daily['analysis'] ?? []);
-                
-                $mood = $analysis['dominantMood'] ?? 'neutral';
-                $moodCounts[$mood] = ($moodCounts[$mood] ?? 0) + 1;
-                
-                if (isset($analysis['moodScore']) && is_numeric($analysis['moodScore'])) {
-                    $totalScore += $analysis['moodScore'];
-                    $scoreCount++;
-                }
-                
-                if (!empty($analysis['highlights'])) {
-                    $allHighlights = array_merge($allHighlights, (array)$analysis['highlights']);
-                }
-                
-                if (!empty($analysis['advice'])) {
-                    $allAdvice = array_merge($allAdvice, (array)$analysis['advice']);
-                }
+                // Return a fallback analysis instead of failing
+                return [
+                    'summary' => 'Ringkasan mingguan tidak dapat dihasilkan saat ini karena batas kuota API tercapai. Silakan coba lagi dalam beberapa menit.',
+                    'dominantMood' => 'unknown',
+                    'moodScore' => null,
+                    'highlights' => ['Data ringkasan mingguan sementara tidak tersedia.'],
+                    'advice' => ['Coba lagi dalam beberapa menit untuk mendapatkan ringkasan lengkap.'],
+                    'affirmation' => 'Kesejahteraanmu tetap penting, meski analisis sementara tertunda.',
+                    'rateLimited' => true,
+                ];
             }
 
-            // Find dominant mood
-            arsort($moodCounts);
-            $dominantMood = array_key_first($moodCounts) ?? 'neutral';
-            $avgScore = $scoreCount > 0 ? round($totalScore / $scoreCount) : 60;
-
-            // Deduplicate and limit highlights/advice
-            $allHighlights = array_unique($allHighlights);
-            $allAdvice = array_unique($allAdvice);
-
-            return [
-                'summary' => 'Minggu ini kamu telah menulis beberapa catatan jurnal. Terus pertahankan!',
-                'dominantMood' => $dominantMood,
-                'moodScore' => $avgScore,
-                'highlights' => array_slice($allHighlights, 0, 5) ?: ['Aktivitas jurnal tercatat minggu ini'],
-                'advice' => array_slice($allAdvice, 0, 5) ?: ['Terus menulis untuk mendapatkan insight lebih baik'],
-                'affirmation' => 'Setiap minggu adalah kesempatan baru untuk tumbuh.',
-                'weeklyPattern' => 'Pola mingguan sedang dianalisis.',
-            ];
+            Log::error('Weekly analysis failed', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'week' => $weekStart->toDateString().' - '.$weekEnd->toDateString(),
+            ]);
+            throw new RuntimeException('Failed to analyze weekly notes: ' . $e->getMessage(), 0, $e);
         }
     }
 
@@ -344,7 +296,7 @@ class GeminiMoodAnalysisService
         try {
             $apiKey = config('services.google_genai.api_key');
             $model = config('services.google_genai.model', 'gemini-2.0-flash-exp');
-            
+
             if (!$apiKey) {
                 throw new RuntimeException('GOOGLE_GENAI_API_KEY not configured');
             }
@@ -365,7 +317,11 @@ class GeminiMoodAnalysisService
             $prompt .= '  "advice": ["saran 1", "saran 2"],'."\n";
             $prompt .= '  "affirmation": "afirmasi positif"'."\n";
             $prompt .= "}\n";
-
+            Log::info('Calling Gemini API for daily analysis', [
+                'model' => $model,
+                'date' => $day->toDateString(),
+                'notes_count' => $notes->count(),
+            ]);
             $response = \Illuminate\Support\Facades\Http::withHeaders([
                 'Content-Type' => 'application/json',
             ])->post("https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}", [
@@ -382,6 +338,19 @@ class GeminiMoodAnalysisService
             ]);
 
             if (!$response->successful()) {
+                // Check if it's a rate limit error
+                $statusCode = $response->status();
+                $body = $response->body();
+
+                if ($statusCode === 429 || str_contains($body, 'RESOURCE_EXHAUSTED') || str_contains($body, 'quota')) {
+                    Log::warning('Gemini API rate limit exceeded in daily analysis', [
+                        'status' => $statusCode,
+                        'date' => $day->toDateString(),
+                        'body_snippet' => substr($body, 0, 500),
+                    ]);
+                    throw new RuntimeException('Rate limit exceeded. Please try again in a few moments.', 429);
+                }
+
                 throw new RuntimeException('Gemini API request failed: ' . $response->body());
             }
 
@@ -414,7 +383,7 @@ class GeminiMoodAnalysisService
         try {
             $apiKey = config('services.google_genai.api_key');
             $model = config('services.google_genai.model', 'gemini-2.0-flash-exp');
-            
+
             if (!$apiKey) {
                 throw new RuntimeException('GOOGLE_GENAI_API_KEY not configured');
             }
@@ -453,6 +422,18 @@ class GeminiMoodAnalysisService
             ]);
 
             if (!$response->successful()) {
+                // Check if it's a rate limit error
+                $statusCode = $response->status();
+                $body = $response->body();
+
+                if ($statusCode === 429 || str_contains($body, 'RESOURCE_EXHAUSTED') || str_contains($body, 'quota')) {
+                    Log::warning('Gemini API rate limit exceeded in weekly analysis', [
+                        'status' => $statusCode,
+                        'body_snippet' => substr($body, 0, 500),
+                    ]);
+                    throw new RuntimeException('Rate limit exceeded. Please try again in a few moments.', 429);
+                }
+
                 throw new RuntimeException('Gemini API request failed: ' . $response->body());
             }
 
@@ -471,18 +452,11 @@ class GeminiMoodAnalysisService
         } catch (\Exception $e) {
             Log::error('Direct Gemini weekly API failed', [
                 'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
                 'week' => "{$weekStart} - {$weekEnd}",
+                'response' => $response ?? null,
             ]);
-            // Return mock data instead of throwing error
-            return [
-                'summary' => 'Minggu ini kamu telah menulis beberapa catatan jurnal.',
-                'dominantMood' => 'neutral',
-                'moodScore' => 60,
-                'highlights' => ['Aktivitas jurnal tercatat'],
-                'advice' => ['Terus menulis untuk insight lebih baik'],
-                'affirmation' => 'Menulis adalah investasi untuk dirimu.',
-                'weeklyPattern' => 'Pola mingguan tersimpan.',
-            ];
+            throw new RuntimeException('Failed to analyze weekly with Gemini: ' . $e->getMessage(), 0, $e);
         }
     }
 }

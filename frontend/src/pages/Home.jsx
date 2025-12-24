@@ -8,53 +8,30 @@ import {
   Stack,
   Text,
   useToast,
-  Grid,
-  SimpleGrid,
-  Flex,
-  VStack,
-  Badge,
-  Divider,
   Icon,
 } from '@chakra-ui/react';
-import { StarIcon, RepeatIcon, CheckCircleIcon } from '@chakra-ui/icons';
+import { CheckCircleIcon } from '@chakra-ui/icons';
 import { motion } from 'framer-motion';
-import { format } from 'date-fns';
 import { listNotes } from '../services/journalService';
 import BeautifulJournalNote from '../components/BeautifulJournalNote';
 
+// Framer Motion wrapper
 const MotionBox = motion(Box);
 
+// --- THEME CONFIGURATION (Warm Organic & Minimal Sans) ---
 const THEME = {
   colors: {
-    bg: '#FDFCF8',
-    cardBg: '#FFFFFF',
+    bg: '#FDFCF8', // Warm off-white
     textPrimary: '#2D3748',
     textSecondary: '#718096',
-    textMuted: '#A0AEC0',
-    accent: '#D6BCFA',
+    accent: '#D6BCFA', // Soft Purple
     accentHover: '#B794F4',
-    warmHighlight: '#F6E05E',
-    success: '#68D391',
-    border: '#E2E8F0',
+    warmHighlight: '#F6E05E', // Soft Yellow
   },
   fonts: {
     sans: '"Inter", sans-serif',
-    serif: '"Merriweather", serif',
+    serif: '"Merriweather", serif', // Or any warm serif available
   },
-};
-
-const categoryEmojis = {
-  Friends: '👥',
-  Family: '👨‍👩‍👧‍👦',
-  Health: '💪',
-  Work: '💼',
-  Nature: '🌿',
-  Food: '🍽️',
-  Love: '❤️',
-  Learning: '📚',
-  Peace: '🧘',
-  Success: '🏆',
-  General: '✨',
 };
 
 export default function Home() {
@@ -105,6 +82,7 @@ export default function Home() {
     calculateStreak();
   }, []);
 
+  // Dynamic Greeting
   const getGreeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return 'Good Morning';
@@ -124,8 +102,8 @@ export default function Home() {
   };
 
   return (
-    <Box minH="100vh" bg={THEME.colors.bg} color={THEME.colors.textPrimary} fontFamily={THEME.fonts.sans} overflowX="hidden">
-      {/* Background Elements */}
+    <Box minH="100vh" bg={THEME.colors.bg} color={THEME.colors.textPrimary} fontFamily={THEME.fonts.sans} position="relative" overflowX="hidden">
+      {/* Floating Background Elements - Subtle & Organic */}
       <Box
         position="absolute"
         top="-10%"
@@ -136,182 +114,107 @@ export default function Home() {
         borderRadius="full"
         filter="blur(60px)"
         zIndex={0}
-        pointerEvents="none"
+      />
+      <Box
+        position="absolute"
+        bottom="10%"
+        left="-10%"
+        w="400px"
+        h="400px"
+        bg="radial-gradient(circle, rgba(246, 224, 94, 0.15) 0%, rgba(255,255,255,0) 70%)"
+        borderRadius="full"
+        filter="blur(50px)"
+        zIndex={0}
       />
 
-      <Container maxW="100%" pt={{ base: 6, md: 8 }} pb={12} position="relative" zIndex={1} px={{ base: 4, md: 8, lg: 12 }}>
-        <Stack spacing={4}>
-            <MotionBox
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-            >
-              <Flex justify="space-between" align="start" flexWrap="wrap" gap={4}>
-                <Stack spacing={1} flex="1">
-                  <Text fontSize="sm" color={THEME.colors.textSecondary} letterSpacing="wide" textTransform="uppercase">
-                    {format(new Date(), 'EEEE, MMMM d, yyyy')}
-                  </Text>
-                  <Heading fontSize={{ base: '3xl', md: '4xl' }} fontWeight="300" fontFamily={THEME.fonts.serif} letterSpacing="-0.02em">
-                    {getGreeting()}
-                  </Heading>
-                  <Text fontSize="md" color={THEME.colors.textSecondary} maxW="xl" mt={1}>
-                    How is your heart feeling today? Take a moment to breathe and reflect.
-                  </Text>
-                </Stack>
-                
-                {/* Streak Counter */}
+      <Container maxW="7xl" pt={{ base: 12, md: 20 }} pb={20} position="relative" zIndex={1}>
+        <Stack spacing={12}>
+          {/* Header Section - Minimal & Welcoming */}
+          <MotionBox
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, ease: [0.2, 0.65, 0.3, 0.9] }}
+          >
+            <Stack spacing={1}>
+              <Text
+                fontSize="sm"
+                color={THEME.colors.textSecondary}
+                letterSpacing="wide"
+                textTransform="uppercase"
+              >
+                {new Date().toLocaleDateString('en-US', {
+                  weekday: 'long',
+                  month: 'long',
+                  day: 'numeric',
+                })}
+              </Text>
+              <Heading
+                fontSize={{ base: '4xl', md: '5xl' }}
+                fontWeight="300" // Light font weight for elegance
+                fontFamily={THEME.fonts.serif}
+                letterSpacing="-0.02em"
+              >
+                {getGreeting()}.
+              </Heading>
+              <Text
+                fontSize="lg"
+                color={THEME.colors.textSecondary}
+                maxW="2xl"
+                mt={2}
+                lineHeight="tall"
+              >
+                How is your heart feeling today? Take a moment to breathe and reflect.
+              </Text>
+              
+              {/* Streak Counter and Quick Add - Side by side */}
+              <HStack spacing={3} mt={3} flexWrap="wrap">
                 {streak > 0 && (
                   <Box
+                    display="inline-flex"
+                    alignItems="center"
+                    gap={2}
                     bg="white"
-                    p={4}
-                    borderRadius="xl"
+                    px={4}
+                    py={2}
+                    borderRadius="full"
                     border="1px solid"
-                    borderColor={THEME.colors.border}
+                    borderColor="gray.100"
                     boxShadow="sm"
-                    minW="150px"
                   >
-                    <VStack spacing={1}>
-                      <HStack spacing={2}>
-                        <Icon as={CheckCircleIcon} color={THEME.colors.accent} boxSize={5} />
-                        <Text fontSize="2xl" fontWeight="700" color={THEME.colors.textPrimary} fontFamily={THEME.fonts.sans}>
-                          {streak}
-                        </Text>
-                      </HStack>
-                      <Text fontSize="xs" color={THEME.colors.textSecondary} fontFamily={THEME.fonts.sans} textAlign="center">
-                        Day Streak 🔥
-                      </Text>
-                      <Text fontSize="xs" color={THEME.colors.textMuted} fontFamily={THEME.fonts.sans} textAlign="center">
-                        Keep it going!
-                      </Text>
-                    </VStack>
+                    <Icon as={CheckCircleIcon} color={THEME.colors.accent} boxSize={4} />
+                    <Text fontSize="sm" fontWeight="600" color={THEME.colors.textPrimary}>
+                      {streak} Day Streak 🔥
+                    </Text>
                   </Box>
                 )}
-              </Flex>
-            </MotionBox>
-
-            {/* Writing Suggestions - Clickable */}
-            <MotionBox
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.15 }}
-            >
-              <Box 
-                bg="white" 
-                p={4} 
-                borderRadius="xl" 
-                border="1px solid"
-                borderColor={THEME.colors.border}
-                boxShadow="sm"
-              >
-                <HStack mb={2}>
-                  <Text fontSize="xl">✍️</Text>
-                  <Text fontSize="sm" fontWeight="600" color={THEME.colors.textPrimary} fontFamily={THEME.fonts.sans}>
-                    Quick Start - Click to insert
-                  </Text>
+                
+                {/* Quick add buttons */}
+                <HStack spacing={2}>
+                  <Text fontSize="xs" color={THEME.colors.textSecondary}>Quick add:</Text>
+                  <Button size="sm" bgGradient="linear(to-r, purple.50, white)" color={THEME.colors.textPrimary} onClick={() => { window.dispatchEvent(new CustomEvent('insertJournalText', { detail: 'Today I felt grateful for...\n\n' })); toast({ title: 'Inserted', description: 'Gratitude', status: 'info', duration: 1200 }); }} _hover={{ transform: 'translateY(-3px)', boxShadow: 'md' }} borderRadius="full">Gratitude</Button>
+                  <Button size="sm" bgGradient="linear(to-r, purple.50, white)" color={THEME.colors.textPrimary} onClick={() => { window.dispatchEvent(new CustomEvent('insertJournalText', { detail: 'One memorable moment today was...\n\n' })); toast({ title: 'Inserted', description: 'Moment', status: 'info', duration: 1200 }); }} _hover={{ transform: 'translateY(-3px)', boxShadow: 'md' }} borderRadius="full">Moment</Button>
+                  <Button size="sm" bgGradient="linear(to-r, purple.50, white)" color={THEME.colors.textPrimary} onClick={() => { window.dispatchEvent(new CustomEvent('insertJournalText', { detail: 'Today I learned that...\n\n' })); toast({ title: 'Inserted', description: 'Learned', status: 'info', duration: 1200 }); }} _hover={{ transform: 'translateY(-3px)', boxShadow: 'md' }} borderRadius="full">Learned</Button>
                 </HStack>
-                <Text fontSize="xs" color={THEME.colors.textMuted} mb={3} fontFamily={THEME.fonts.sans}>
-                  Click any suggestion below to insert it into your journal
-                </Text>
-                <Grid templateColumns={{ base: '1fr', md: 'repeat(2, 1fr)' }} gap={2}>
-                  <Box 
-                    as="button"
-                    p={2.5} 
-                    bg={THEME.colors.bg} 
-                    borderRadius="lg"
-                    border="1px solid"
-                    borderColor={THEME.colors.border}
-                    _hover={{ bg: THEME.colors.accent, borderColor: THEME.colors.accent, transform: 'translateY(-1px)' }}
-                    transition="all 0.2s"
-                    textAlign="left"
-                    onClick={() => {
-                      const event = new CustomEvent('insertJournalText', { 
-                        detail: 'Today I felt grateful for... \n\n' 
-                      });
-                      window.dispatchEvent(event);
-                    }}
-                  >
-                    <Text fontSize="sm" color={THEME.colors.textPrimary} fontWeight="500" fontFamily={THEME.fonts.sans}>
-                      🙏 Today I felt grateful for...
-                    </Text>
-                  </Box>
-                  <Box 
-                    as="button"
-                    p={2.5} 
-                    bg={THEME.colors.bg} 
-                    borderRadius="lg"
-                    border="1px solid"
-                    borderColor={THEME.colors.border}
-                    _hover={{ bg: THEME.colors.accent, borderColor: THEME.colors.accent, transform: 'translateY(-1px)' }}
-                    transition="all 0.2s"
-                    textAlign="left"
-                    onClick={() => {
-                      const event = new CustomEvent('insertJournalText', { 
-                        detail: 'Something interesting that happened today... \n\n' 
-                      });
-                      window.dispatchEvent(event);
-                    }}
-                  >
-                    <Text fontSize="sm" color={THEME.colors.textPrimary} fontWeight="500" fontFamily={THEME.fonts.sans}>
-                      ✨ Something interesting that happened...
-                    </Text>
-                  </Box>
-                  <Box 
-                    as="button"
-                    p={2.5} 
-                    bg={THEME.colors.bg} 
-                    borderRadius="lg"
-                    border="1px solid"
-                    borderColor={THEME.colors.border}
-                    _hover={{ bg: THEME.colors.accent, borderColor: THEME.colors.accent, transform: 'translateY(-1px)' }}
-                    transition="all 0.2s"
-                    textAlign="left"
-                    onClick={() => {
-                      const event = new CustomEvent('insertJournalText', { 
-                        detail: 'Today I learned that... \n\n' 
-                      });
-                      window.dispatchEvent(event);
-                    }}
-                  >
-                    <Text fontSize="sm" color={THEME.colors.textPrimary} fontWeight="500" fontFamily={THEME.fonts.sans}>
-                      📚 Today I learned that...
-                    </Text>
-                  </Box>
-                  <Box 
-                    as="button"
-                    p={2.5} 
-                    bg={THEME.colors.bg} 
-                    borderRadius="lg"
-                    border="1px solid"
-                    borderColor={THEME.colors.border}
-                    _hover={{ bg: THEME.colors.accent, borderColor: THEME.colors.accent, transform: 'translateY(-1px)' }}
-                    transition="all 0.2s"
-                    textAlign="left"
-                    onClick={() => {
-                      const event = new CustomEvent('insertJournalText', { 
-                        detail: 'Tomorrow I want to... \n\n' 
-                      });
-                      window.dispatchEvent(event);
-                    }}
-                  >
-                    <Text fontSize="sm" color={THEME.colors.textPrimary} fontWeight="500" fontFamily={THEME.fonts.sans}>
-                      🌟 Tomorrow I want to...
-                    </Text>
-                  </Box>
-                </Grid>
-              </Box>
-            </MotionBox>
+              </HStack>
+            </Stack>
+          </MotionBox>
 
-            {/* Beautiful Journal Note Component */}
-            <MotionBox
-              initial={{ opacity: 0, scale: 0.98 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-            >
+          {/* Main Editor Canvas - Edge-free & Breathable */}
+          <MotionBox
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+          >
+            <Stack spacing={6}>
+              {/* BeautifulJournalNote Component */}
               <BeautifulJournalNote 
                 selectedDate={new Date()} 
                 onSave={handleSave}
               />
-            </MotionBox>
+
+              {/* Quick add moved into the note component for a tighter UX */}
+            </Stack>
+          </MotionBox>
         </Stack>
       </Container>
     </Box>

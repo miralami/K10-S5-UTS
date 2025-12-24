@@ -104,6 +104,8 @@ class DailyJournalAnalysisService
 
         // Only call API for dates that need analysis
         $newAnalyses = collect();
+        $apiCallCount = 0;
+
         foreach ($datesToAnalyze as $dateString) {
             $day = CarbonImmutable::parse($dateString);
             $dayNotes = $notesByDate->get($dateString, collect());
@@ -111,9 +113,24 @@ class DailyJournalAnalysisService
             if ($dayNotes->isEmpty()) {
                 $analysis = $this->emptyAnalysisPayload();
             } else {
-                // This is where the Gemini API call happens
-                $analysis = $this->analysisService->analyzeDailyNotes($dayNotes, $day);
-                $analysis['noteCount'] = $dayNotes->count();
+                // Add a small delay between API calls to avoid rate limiting
+                if ($apiCallCount > 0) {
+                    usleep(500000); // 0.5 second delay between calls
+                }
+
+                try {
+                    // This is where the Gemini API call happens
+                    $analysis = $this->analysisService->analyzeDailyNotes($dayNotes, $day);
+                    $analysis['noteCount'] = $dayNotes->count();
+                    $apiCallCount++;
+                } catch (\Exception $e) {
+                    // If rate limited or failed, use empty analysis for this day
+                    Log::warning('Failed to analyze day, using empty analysis', [
+                        'date' => $dateString,
+                        'error' => $e->getMessage(),
+                    ]);
+                    $analysis = $this->emptyAnalysisPayload();
+                }
             }
 
             $record = DailyJournalAnalysis::updateOrCreate(

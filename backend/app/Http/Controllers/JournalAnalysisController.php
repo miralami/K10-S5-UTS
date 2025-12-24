@@ -337,11 +337,19 @@ class JournalAnalysisController extends Controller
                 'trace' => $e->getTraceAsString(),
             ]);
 
+            // Check if it's a rate limit error
+            $isRateLimit = $e->getCode() === 429 ||
+                          str_contains($e->getMessage(), 'Rate limit') ||
+                          str_contains($e->getMessage(), 'quota');
+
             return response()->json([
                 'status' => 'error',
-                'message' => 'Gagal menghasilkan ringkasan mingguan. Cek log untuk detail.',
+                'message' => $isRateLimit
+                    ? 'Batas kuota API tercapai. Silakan tunggu beberapa menit dan coba lagi.'
+                    : 'Gagal menghasilkan ringkasan mingguan. Cek log untuk detail.',
+                'rateLimited' => $isRateLimit,
                 'error' => config('app.debug') ? $e->getMessage() : null,
-            ], 500);
+            ], $isRateLimit ? 429 : 500);
         }
     }
 

@@ -43,6 +43,7 @@ const THEME = {
   },
 };
 
+
 const BeautifulJournalNote = ({ selectedDate, onSave }) => {
   const toast = useToast();
   const [loading, setLoading] = useState(false);
@@ -210,38 +211,9 @@ const BeautifulJournalNote = ({ selectedDate, onSave }) => {
       border="1px solid"
       borderColor="gray.100"
       maxW="100%"
-      mx="auto"
     >
       <VStack spacing={5} align="stretch">
-        {/* Mood Selector */}
-        <Box>
-          <HStack spacing={4} justify="center" flexWrap="wrap">
-            {moods.map((mood) => (
-              <Button
-                key={mood.name}
-                size="md"
-                variant="ghost"
-                leftIcon={<Text fontSize="xl">{mood.emoji}</Text>}
-                onClick={() => handleChange('mood', mood.name)}
-                borderRadius="full"
-                px={6}
-                py={6}
-                bg={formData.mood === mood.name ? 'gray.50' : 'transparent'}
-                color="gray.700"
-                fontWeight="normal"
-                fontSize="sm"
-                _hover={{
-                  bg: 'gray.50',
-                }}
-                transition="all 0.2s"
-              >
-                {mood.name}
-              </Button>
-            ))}
-          </HStack>
-        </Box>
-
-        {/* Combined Title and Body Box */}
+            {/* Combined Title and Body Box */}
         <Box
           border="1px solid"
           borderColor={THEME.colors.border}
@@ -347,7 +319,6 @@ const BeautifulJournalNote = ({ selectedDate, onSave }) => {
             <Box
               border="2px dashed"
               borderColor={THEME.colors.border}
-              borderRadius="lg"
               p={8}
               textAlign="center"
               cursor="pointer"
@@ -366,22 +337,6 @@ const BeautifulJournalNote = ({ selectedDate, onSave }) => {
               </VStack>
             </Box>
           )}
-        </Box>
-
-        {/* Add Tag Button */}
-        <Box>
-          <Button
-            variant="ghost"
-            size="sm"
-            color={THEME.colors.textMuted}
-            leftIcon={<Text>+</Text>}
-            _hover={{ bg: 'transparent', color: THEME.colors.textSecondary }}
-            px={2}
-            fontWeight="normal"
-            fontFamily={THEME.fonts.sans}
-          >
-            Add tag
-          </Button>
         </Box>
 
         {/* Bottom Actions */}
