@@ -1,10 +1,7 @@
 import { format } from 'date-fns';
+import { getAuthToken } from './authService';
 
 const API_BASE_URL = 'http://localhost:8000/api';
-
-function getAuthToken() {
-  return localStorage.getItem('token');
-}
 
 const requestDefaults = {
   mode: 'cors',
