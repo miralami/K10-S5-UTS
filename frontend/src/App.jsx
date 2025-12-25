@@ -2,12 +2,10 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import Layout from './components/SidebarLayout.jsx';
 import Home from './pages/Home.jsx';
 import Dashboard from './pages/Dashboard.jsx';
-import Search from './pages/Search.jsx';
 import Login from './pages/Login.jsx';
 import Register from './pages/Register.jsx';
 import ProtectedRoute from './components/ProtectedRoute';
 import Chat from './pages/Chat.jsx';
-import JournalHistory from './pages/JournalHistory.jsx';
 import { ChatProvider } from './context/ChatContext.jsx';
 
 function App() {
@@ -42,26 +40,6 @@ function App() {
           {/* TAMBAH ROUTE BARU DI SINI (2) */}
           {/* ============================================ */}
           
-          <Route
-            path="/history"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <JournalHistory />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/search"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <Search />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
           <Route
             path="/chat"
             element={

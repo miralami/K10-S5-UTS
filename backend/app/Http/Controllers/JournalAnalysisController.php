@@ -94,29 +94,39 @@ class JournalAnalysisController extends Controller
             if (is_array($analysisPayload) && ! empty($analysisPayload)) {
                 // Check if recommendations are already cached in the analysis record
                 $cachedRecommendations = $analysisRecord->recommendations ?? null;
-
                 $cachedMusicRecommendations = $analysisRecord->music_recommendations ?? null;
 
+                // Use cached data if available to avoid expensive API calls
                 if (is_array($cachedRecommendations) && ! empty($cachedRecommendations['items'])) {
-                    // Use cached recommendations - no API calls needed!
                     $recommendations = $cachedRecommendations;
                 } else {
-                    // Generate recommendations and cache them
-                    $recommendations = $this->movieRecommendations->buildRecommendations($analysisPayload);
-                    $recommendations = $this->enrichWeeklyRecommendationsWithOmdbPosters($recommendations);
+                    // Generate recommendations only if not cached
+                    try {
+                        $recommendations = $this->movieRecommendations->buildRecommendations($analysisPayload);
+                        $recommendations = $this->enrichWeeklyRecommendationsWithOmdbPosters($recommendations);
+                        
+                        // Cache immediately after generation
+                        $analysisRecord->update(['recommendations' => $recommendations]);
+                    } catch (\Exception $e) {
+                        \Log::warning('Failed to generate movie recommendations', ['error' => $e->getMessage()]);
+                        $recommendations = null;
+                    }
                 }
 
                 if (is_array($cachedMusicRecommendations) && ! empty($cachedMusicRecommendations['items'])) {
                     $musicRecommendations = $cachedMusicRecommendations;
                 } else {
-                    $musicRecommendations = $this->musicRecommendations->buildRecommendations($analysisPayload);
+                    // Generate music recommendations only if not cached
+                    try {
+                        $musicRecommendations = $this->musicRecommendations->buildRecommendations($analysisPayload);
+                        
+                        // Cache immediately after generation
+                        $analysisRecord->update(['music_recommendations' => $musicRecommendations]);
+                    } catch (\Exception $e) {
+                        \Log::warning('Failed to generate music recommendations', ['error' => $e->getMessage()]);
+                        $musicRecommendations = null;
+                    }
                 }
-
-                // Cache the recommendations for future requests
-                $analysisRecord->update([
-                    'recommendations' => $recommendations,
-                    'music_recommendations' => $musicRecommendations,
-                ]);
             }
 
             $dailySummaries = DailyJournalAnalysis::query()

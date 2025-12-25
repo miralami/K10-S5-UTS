@@ -24,23 +24,25 @@ class TestUsersSeeder extends Seeder
             ]
         );
 
-        // Create journal entries for user1 (last 7 days with streak)
-        for ($i = 0; $i < 7; $i++) {
-            $date = Carbon::now()->subDays($i);
-            JournalNote::create([
-                'user_id' => $user1->id,
-                'title' => "Day " . (7 - $i) . " - Productive Day",
-                'body' => "Today was amazing! I accomplished so much and felt really grateful for the opportunities I have. The weather was beautiful and I spent quality time with my family.",
-                'note_date' => $date,
-                'gratitude_1' => 'My supportive family who always believes in me',
-                'gratitude_2' => 'The beautiful sunny weather today',
-                'gratitude_3' => 'My health and ability to exercise',
-                'gratitude_category_1' => 'Family',
-                'gratitude_category_2' => 'Nature',
-                'gratitude_category_3' => 'Health',
-                'created_at' => $date,
-                'updated_at' => $date,
-            ]);
+        // Create journal entries for user1 (last 7 days with streak) - only if not exists
+        if ($user1->journalNotes()->count() === 0) {
+            for ($i = 0; $i < 7; $i++) {
+                $date = Carbon::now()->subDays($i);
+                JournalNote::create([
+                    'user_id' => $user1->id,
+                    'title' => "Day " . (7 - $i) . " - Productive Day",
+                    'body' => "Today was amazing! I accomplished so much and felt really grateful for the opportunities I have. The weather was beautiful and I spent quality time with my family.",
+                    'note_date' => $date,
+                    'gratitude_1' => 'My supportive family who always believes in me',
+                    'gratitude_2' => 'The beautiful sunny weather today',
+                    'gratitude_3' => 'My health and ability to exercise',
+                    'gratitude_category_1' => 'Family',
+                    'gratitude_category_2' => 'Nature',
+                    'gratitude_category_3' => 'Health',
+                    'created_at' => $date,
+                    'updated_at' => $date,
+                ]);
+            }
         }
 
         // User 2: Moderate journaler with mixed content
@@ -52,22 +54,24 @@ class TestUsersSeeder extends Seeder
             ]
         );
 
-        // Create journal entries for user2 (last 5 days, some gaps)
-        $days = [0, 1, 3, 5, 6]; // Days with entries (has gaps)
-        foreach ($days as $dayOffset) {
-            $date = Carbon::now()->subDays($dayOffset);
-            JournalNote::create([
-                'user_id' => $user2->id,
-                'title' => "Reflection - Day " . $dayOffset,
-                'body' => "Reflecting on my day. Had some challenges but also moments of joy. Learning to appreciate the small things in life.",
-                'note_date' => $date,
-                'gratitude_1' => 'Good coffee this morning',
-                'gratitude_2' => 'A kind word from a colleague',
-                'gratitude_category_1' => 'Food',
-                'gratitude_category_2' => 'Friends',
-                'created_at' => $date,
-                'updated_at' => $date,
-            ]);
+        // Create journal entries for user2 (last 5 days, some gaps) - only if not exists
+        if ($user2->journalNotes()->count() === 0) {
+            $days = [0, 1, 3, 5, 6]; // Days with entries (has gaps)
+            foreach ($days as $dayOffset) {
+                $date = Carbon::now()->subDays($dayOffset);
+                JournalNote::create([
+                    'user_id' => $user2->id,
+                    'title' => "Reflection - Day " . $dayOffset,
+                    'body' => "Reflecting on my day. Had some challenges but also moments of joy. Learning to appreciate the small things in life.",
+                    'note_date' => $date,
+                    'gratitude_1' => 'Good coffee this morning',
+                    'gratitude_2' => 'A kind word from a colleague',
+                    'gratitude_category_1' => 'Food',
+                    'gratitude_category_2' => 'Friends',
+                    'created_at' => $date,
+                    'updated_at' => $date,
+                ]);
+            }
         }
 
         // User 3: New user with minimal entries
@@ -79,21 +83,23 @@ class TestUsersSeeder extends Seeder
             ]
         );
 
-        // Create just 2 entries for user3 (today and yesterday)
-        for ($i = 0; $i < 2; $i++) {
-            $date = Carbon::now()->subDays($i);
-            JournalNote::create([
-                'user_id' => $user3->id,
-                'title' => $i === 0 ? "My First Journal Entry" : "Day 2 - Getting Started",
-                'body' => $i === 0 
-                    ? "Starting my gratitude journal journey today. Excited to see where this takes me!"
-                    : "Second day of journaling. Already feeling more mindful of the good things in my life.",
-                'note_date' => $date,
-                'gratitude_1' => $i === 0 ? 'This new opportunity to practice gratitude' : 'Learning something new every day',
-                'gratitude_category_1' => $i === 0 ? 'Learning' : 'Learning',
-                'created_at' => $date,
-                'updated_at' => $date,
-            ]);
+        // Create just 2 entries for user3 (today and yesterday) - only if not exists
+        if ($user3->journalNotes()->count() === 0) {
+            for ($i = 0; $i < 2; $i++) {
+                $date = Carbon::now()->subDays($i);
+                JournalNote::create([
+                    'user_id' => $user3->id,
+                    'title' => $i === 0 ? "My First Journal Entry" : "Day 2 - Getting Started",
+                    'body' => $i === 0 
+                        ? "Starting my gratitude journal journey today. Excited to see where this takes me!"
+                        : "Second day of journaling. Already feeling more mindful of the good things in my life.",
+                    'note_date' => $date,
+                    'gratitude_1' => $i === 0 ? 'This new opportunity to practice gratitude' : 'Learning something new every day',
+                    'gratitude_category_1' => $i === 0 ? 'Learning' : 'Learning',
+                    'created_at' => $date,
+                    'updated_at' => $date,
+                ]);
+            }
         }
 
         $this->command->info('✅ Created 3 test users:');
