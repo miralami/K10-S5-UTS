@@ -104,7 +104,7 @@ class JournalAnalysisController extends Controller
                     try {
                         $recommendations = $this->movieRecommendations->buildRecommendations($analysisPayload);
                         $recommendations = $this->enrichWeeklyRecommendationsWithOmdbPosters($recommendations);
-                        
+
                         // Cache immediately after generation
                         $analysisRecord->update(['recommendations' => $recommendations]);
                     } catch (\Exception $e) {
@@ -119,7 +119,7 @@ class JournalAnalysisController extends Controller
                     // Generate music recommendations only if not cached
                     try {
                         $musicRecommendations = $this->musicRecommendations->buildRecommendations($analysisPayload);
-                        
+
                         // Cache immediately after generation
                         $analysisRecord->update(['music_recommendations' => $musicRecommendations]);
                     } catch (\Exception $e) {
@@ -249,6 +249,9 @@ class JournalAnalysisController extends Controller
      */
     public function generateWeeklyForUser(Request $request, DailyJournalAnalysisService $dailyService, GeminiMoodAnalysisService $analysisService): JsonResponse
     {
+        // Increase execution time limit to 5 minutes for this endpoint (multiple API calls)
+        set_time_limit(300);
+
         try {
             $validated = $request->validate([
                 'week_ending' => ['nullable', 'date'],
@@ -298,26 +301,47 @@ class JournalAnalysisController extends Controller
                 'end_date' => $weekEnding->toDateString(),
             ]);
 
-            // Ensure daily analyses exist (or are created) for this user's week
-            $dailyAnalyses = $dailyService->ensureWeekForUser($user, $weekEnding);
+            // Fetch all notes for the week directly (no daily analysis generation)
+            $notes = $user->journalNotes()
+                ->whereDate('note_date', '>=', $weekStart->toDateString())
+                ->whereDate('note_date', '<=', $weekEnding->toDateString())
+                ->orderBy('note_date')
+                ->orderBy('created_at')
+                ->get(['id', 'title', 'body', 'note_date', 'created_at']);
 
-            $analysis = $analysisService->analyzeWeeklyFromDaily($dailyAnalyses, $weekEnding);
+            \Log::info('Notes fetched for weekly generation', [
+                'user_id' => $user->id,
+                'notes_count' => $notes->count(),
+            ]);
 
-            $analysis['noteCount'] = $dailyAnalyses->sum(function ($daily) {
-                $payload = $daily->analysis ?? [];
+            // Generate weekly analysis directly from notes (1 API call instead of 8)
+            $analysis = $analysisService->analyzeWeeklyDirectFromNotes($notes, $weekStart, $weekEnding);
 
-                return (int) ($payload['noteCount'] ?? 0);
-            });
+            // Create empty daily breakdown for UI compatibility
+            $dailyBreakdown = [];
+            $currentDate = $weekStart;
+            while ($currentDate <= $weekEnding) {
+                $dateStr = $currentDate->toDateString();
+                $dayNotes = $notes->filter(function ($note) use ($dateStr) {
+                    return CarbonImmutable::parse($note->note_date)->toDateString() === $dateStr;
+                });
 
-            $analysis['dailyBreakdown'] = $dailyAnalyses
-                ->map(function ($daily) {
-                    return [
-                        'date' => $daily->analysis_date ? CarbonImmutable::parse($daily->analysis_date)->toDateString() : null,
-                        'analysis' => $daily->analysis,
-                    ];
-                })
-                ->values()
-                ->all();
+                $dailyBreakdown[] = [
+                    'date' => $dateStr,
+                    'analysis' => [
+                        'summary' => $dayNotes->isEmpty() ? 'Tidak ada catatan untuk hari ini.' : 'Lihat ringkasan mingguan.',
+                        'dominantMood' => 'unknown',
+                        'moodScore' => null,
+                        'highlights' => [],
+                        'advice' => [],
+                        'affirmation' => null,
+                        'noteCount' => $dayNotes->count(),
+                    ],
+                ];
+                $currentDate = $currentDate->addDay();
+            }
+
+            $analysis['dailyBreakdown'] = $dailyBreakdown;
 
             WeeklyJournalAnalysis::updateOrCreate(
                 [

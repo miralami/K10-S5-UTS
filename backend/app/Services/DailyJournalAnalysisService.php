@@ -31,7 +31,7 @@ class DailyJournalAnalysisService
         $dayEnd = $day->endOfDay();
 
         $notes = $user->journalNotes()
-            ->whereBetween('created_at', [$day, $dayEnd])
+            ->whereDate('note_date', $day->toDateString())
             ->orderBy('created_at')
             ->get(['id', 'title', 'body', 'created_at']);
 
@@ -80,12 +80,21 @@ class DailyJournalAnalysisService
 
         // Batch fetch all notes for the week in ONE query
         $allNotes = $user->journalNotes()
-            ->whereBetween('created_at', [$weekStart->startOfDay(), $weekEnd->endOfDay()])
+            ->whereDate('note_date', '>=', $weekStart->toDateString())
+            ->whereDate('note_date', '<=', $weekEnd->toDateString())
             ->orderBy('created_at')
-            ->get(['id', 'title', 'body', 'created_at']);
+            ->get(['id', 'title', 'body', 'created_at', 'note_date']);
+
+        Log::info('Notes fetched for week', [
+            'user_id' => $user->id,
+            'week_range' => [$weekStart->toDateString(), $weekEnd->toDateString()],
+            'notes_count' => $allNotes->count(),
+            'note_ids' => $allNotes->pluck('id')->toArray(),
+            'note_dates' => $allNotes->pluck('note_date')->map(fn($d) => $d instanceof \Carbon\Carbon ? $d->toDateString() : $d)->toArray(),
+        ]);
 
         // Group notes by date
-        $notesByDate = $allNotes->groupBy(fn ($note) => CarbonImmutable::parse($note->created_at)->toDateString());
+        $notesByDate = $allNotes->groupBy(fn ($note) => CarbonImmutable::parse($note->note_date)->toDateString());
 
         // Identify which dates need new analysis
         $datesToAnalyze = [];
@@ -100,6 +109,7 @@ class DailyJournalAnalysisService
             'week_start' => $weekStart->toDateString(),
             'existing_count' => $existingAnalyses->count(),
             'to_analyze_count' => count($datesToAnalyze),
+            'notes_by_date_keys' => $notesByDate->keys()->toArray(),
         ]);
 
         // Only call API for dates that need analysis
