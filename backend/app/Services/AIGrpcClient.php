@@ -33,11 +33,11 @@ class AIGrpcClient
     private function getClient(): \Ai\AIAnalysisServiceClient
     {
         if ($this->client === null) {
-            if (! extension_loaded('grpc')) {
+            if (! class_exists('\Ai\AIAnalysisServiceClient')) {
                 throw new RuntimeException(
-                    'The gRPC PHP extension is not installed. '.
-                    'Install it via PECL: pecl install grpc, or enable it in php.ini. '.
-                    'See: https://grpc.io/docs/languages/php/quickstart/ '.
+                    'The gRPC client classes are not available. '.
+                    'Ensure grpc/grpc composer package is installed and proto files are generated. '.
+                    'Run: composer require grpc/grpc and php generate-proto.php '.
                     'Current workaround: The service will use direct Gemini API fallback.'
                 );
             }
@@ -45,7 +45,7 @@ class AIGrpcClient
             $this->client = new \Ai\AIAnalysisServiceClient(
                 "{$this->host}:{$this->port}",
                 [
-                    'credentials' => \Grpc\ChannelCredentials::createInsecure(),
+                    'credentials' => null, // insecure connection for local development
                 ]
             );
         }
@@ -137,16 +137,22 @@ class AIGrpcClient
      */
     public function isAvailable(): bool
     {
-        if (! extension_loaded('grpc')) {
+        if (! class_exists('\Ai\AIAnalysisServiceClient')) {
+            return false;
+        }
+
+        if (! config('services.ai_grpc.enabled', false)) {
             return false;
         }
 
         try {
-            $channel = $this->getClient()->getChannel();
-            $state = $channel->getConnectivityState(true);
+            // Try to create a client connection
+            $client = $this->getClient();
 
-            return $state === \Grpc\CHANNEL_READY || $state === \Grpc\CHANNEL_IDLE;
+            // Assume available if client can be created successfully
+            return true;
         } catch (\Throwable $e) {
+            \Log::warning('[AIGrpcClient] Not available: ' . $e->getMessage());
             return false;
         }
     }

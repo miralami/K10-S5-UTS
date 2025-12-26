@@ -31,8 +31,8 @@ class AfifWeeklySadSeeder extends Seeder
         $notes = [
             [
                 'user_id' => $user->id,
-                'title' => 'Hari 1 - Placeholder',
-                'body' => sprintf('Hari %s: mantap bet bro hari ini dapet konsumsi 2 wkwk', $weekStart->toDateString()),
+                'title' => 'Hari 1 - MANTAP',
+                'body' => sprintf('mantap bet bro hari ini dapet konsumsi 2 wkwk', $weekStart->toDateString()),
                 'note_date' => $weekStart->toDateString(),
                 'vibe' => 'sedih',
                 'created_at' => $weekStart->addHours(9),
@@ -41,7 +41,7 @@ class AfifWeeklySadSeeder extends Seeder
             [
                 'user_id' => $user->id,
                 'title' => 'Hari 2 - Placeholder',
-                'body' => sprintf('Hari %s: jir hari ini cuma dapet 1 konsumsi, ya tetep bersyukur sih', $weekStart->addDays(1)->toDateString()),
+                'body' => sprintf('hari ini cuma dapet 1 konsumsi :(, ya tetep bersyukur sih', $weekStart->addDays(1)->toDateString()),
                 'note_date' => $weekStart->addDays(1)->toDateString(),
                 'vibe' => 'sedih',
                 'created_at' => $weekStart->addDays(1)->addHours(10),
@@ -49,8 +49,8 @@ class AfifWeeklySadSeeder extends Seeder
             ],
             [
                 'user_id' => $user->id,
-                'title' => 'Hari 3 - Placeholder',
-                'body' => sprintf('Hari %s: gasuka bat anjjj dapet konsumnya dapur solo cok', $weekStart->addDays(2)->toDateString()),
+                'title' => 'Hari 3 - Tidakk',
+                'body' => sprintf('ak suka, dapet konsumnya kurang enak', $weekStart->addDays(2)->toDateString()),
                 'note_date' => $weekStart->addDays(2)->toDateString(),
                 'vibe' => 'sedih',
                 'created_at' => $weekStart->addDays(2)->addHours(11),
@@ -58,8 +58,8 @@ class AfifWeeklySadSeeder extends Seeder
             ],
             [
                 'user_id' => $user->id,
-                'title' => 'Hari 4 - Placeholder',
-                'body' => sprintf('Hari %s: cok gadapet konsum', $weekStart->addDays(3)->toDateString()),
+                'title' => 'Hari 4 - Haduh',
+                'body' => sprintf('GAK DAPAT KONSUM', $weekStart->addDays(3)->toDateString()),
                 'note_date' => $weekStart->addDays(3)->toDateString(),
                 'vibe' => 'sedih',
                 'created_at' => $weekStart->addDays(3)->addHours(12),
@@ -67,8 +67,8 @@ class AfifWeeklySadSeeder extends Seeder
             ],
             [
                 'user_id' => $user->id,
-                'title' => 'Hari 5 - Placeholder',
-                'body' => sprintf('Hari %s: anjj sekalinya dapet konsum, malah dapur solo, gasuka bat sambel terasinya sumpah', $weekStart->addDays(4)->toDateString()),
+                'title' => 'Hari 5 - Sedih',
+                'body' => sprintf('aku sedih', $weekStart->addDays(4)->toDateString()),
                 'note_date' => $weekStart->addDays(4)->toDateString(),
                 'vibe' => 'sedih',
                 'created_at' => $weekStart->addDays(4)->addHours(13),
@@ -76,8 +76,8 @@ class AfifWeeklySadSeeder extends Seeder
             ],
             [
                 'user_id' => $user->id,
-                'title' => 'Hari 6 - Placeholder',
-                'body' => sprintf('Hari %s: anjay waktunya libur wok, hari ini seru bat mabar ml pushrank wkwk', $weekStart->addDays(5)->toDateString()),
+                'title' => 'Hari 6 - Sedih juga',
+                'body' => sprintf('Masih sedih', $weekStart->addDays(5)->toDateString()),
                 'note_date' => $weekStart->addDays(5)->toDateString(),
                 'vibe' => 'sedih',
                 'created_at' => $weekStart->addDays(5)->addHours(14),

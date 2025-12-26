@@ -343,6 +343,28 @@ class JournalAnalysisController extends Controller
 
             $analysis['dailyBreakdown'] = $dailyBreakdown;
 
+            // Generate and cache recommendations immediately
+            $recommendations = null;
+            $musicRecommendations = null;
+
+            try {
+                $recommendations = $this->movieRecommendations->buildRecommendations($analysis);
+                $recommendations = $this->enrichWeeklyRecommendationsWithOmdbPosters($recommendations);
+                \Log::info('Movie recommendations generated', ['count' => count($recommendations['items'] ?? [])]);
+            } catch (\Exception $e) {
+                \Log::warning('Failed to generate movie recommendations during weekly generation', ['error' => $e->getMessage()]);
+                $recommendations = null;
+            }
+
+            try {
+                $musicRecommendations = $this->musicRecommendations->buildRecommendations($analysis);
+                \Log::info('Music recommendations generated', ['count' => count($musicRecommendations['items'] ?? [])]);
+            } catch (\Exception $e) {
+                \Log::warning('Failed to generate music recommendations during weekly generation', ['error' => $e->getMessage()]);
+                $musicRecommendations = null;
+            }
+
+            // Save analysis with cached recommendations
             WeeklyJournalAnalysis::updateOrCreate(
                 [
                     'user_id' => $user->id,
@@ -351,6 +373,8 @@ class JournalAnalysisController extends Controller
                 [
                     'week_end' => $weekEnding->toDateString(),
                     'analysis' => $analysis,
+                    'recommendations' => $recommendations,
+                    'music_recommendations' => $musicRecommendations,
                 ],
             );
 
@@ -359,6 +383,8 @@ class JournalAnalysisController extends Controller
                 'message' => 'Weekly analysis generated for user.',
                 'week' => ['start' => $weekStart->toDateString(), 'end' => $weekEnding->toDateString()],
                 'analysis' => $analysis,
+                'recommendations' => $recommendations,
+                'musicRecommendations' => $musicRecommendations,
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
             throw $e;
