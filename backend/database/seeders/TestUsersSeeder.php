@@ -19,7 +19,7 @@ class TestUsersSeeder extends Seeder
         $user1 = User::firstOrCreate(
             ['email' => 'user1@test.com'],
             [
-                'name' => 'CUKI',
+                'name' => 'Fajar',
                 'password' => Hash::make('password123'),
             ]
         );
