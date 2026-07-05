@@ -1,5 +1,13 @@
 const API_BASE_URL = 'http://localhost:8000/api';
 
+function emitAuthChanged() {
+  try {
+    window.dispatchEvent(new CustomEvent('authChanged'));
+  } catch {
+    // ignore
+  }
+}
+
 const requestDefaults = {
   mode: 'cors',
   credentials: 'include',
@@ -36,15 +44,17 @@ export async function login({ email, password }) {
 
     // Save auth data
     const { access_token, user } = data.data;
-    localStorage.setItem('token', access_token);
-    localStorage.setItem('user', JSON.stringify(user));
+    sessionStorage.setItem('token', access_token);
+    sessionStorage.setItem('user', JSON.stringify(user));
+    emitAuthChanged();
 
     return data;
   } catch (error) {
     console.error('Login error:', error);
     // Make sure to clean up any partially stored auth data
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    sessionStorage.removeItem('token');
+    sessionStorage.removeItem('user');
+    emitAuthChanged();
     throw error;
   }
 }
@@ -75,22 +85,24 @@ export async function register({ name, email, password, password_confirmation })
 
     // Save auth data
     const { access_token, user } = data.data;
-    localStorage.setItem('token', access_token);
-    localStorage.setItem('user', JSON.stringify(user));
+    sessionStorage.setItem('token', access_token);
+    sessionStorage.setItem('user', JSON.stringify(user));
+    emitAuthChanged();
 
     return data;
   } catch (error) {
     console.error('Register error:', error);
     // Make sure to clean up any partially stored auth data
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    sessionStorage.removeItem('token');
+    sessionStorage.removeItem('user');
+    emitAuthChanged();
     throw error;
   }
 }
 
 export async function logout() {
   try {
-    const token = localStorage.getItem('token');
+    const token = sessionStorage.getItem('token');
     const response = await fetch(`${API_BASE_URL}/auth/logout`, {
       ...requestDefaults,
       method: 'POST',
@@ -103,8 +115,9 @@ export async function logout() {
     const data = await response.json();
 
     // Always clean up local storage regardless of success
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    sessionStorage.removeItem('token');
+    sessionStorage.removeItem('user');
+    emitAuthChanged();
 
     if (data.status === 'error') {
       console.error('Logout error response:', data);
@@ -120,12 +133,12 @@ export async function logout() {
 }
 
 export function getAuthUser() {
-  const userStr = localStorage.getItem('user');
+  const userStr = sessionStorage.getItem('user');
   return userStr ? JSON.parse(userStr) : null;
 }
 
 export function getAuthToken() {
-  return localStorage.getItem('token');
+  return sessionStorage.getItem('token');
 }
 
 export function isAuthenticated() {

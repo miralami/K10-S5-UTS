@@ -31,7 +31,20 @@ export function ChatProvider({ children }) {
   const toast = useToast();
   const navigate = useNavigate();
   const location = useLocation();
-  const currentUser = getAuthUser();
+  const [authSnapshot, setAuthSnapshot] = useState(() => ({
+    user: getAuthUser(),
+    authed: isAuthenticated(),
+  }));
+  const currentUser = authSnapshot.user;
+
+  useEffect(() => {
+    const handler = () => {
+      setAuthSnapshot({ user: getAuthUser(), authed: isAuthenticated() });
+    };
+
+    window.addEventListener('authChanged', handler);
+    return () => window.removeEventListener('authChanged', handler);
+  }, []);
 
   // Connection state (status koneksi)
   const [isConnected, setIsConnected] = useState(false);
@@ -141,20 +154,23 @@ export function ChatProvider({ children }) {
    * Connect to WebSocket when user is authenticated
    */
   useEffect(() => {
-    if (!currentUser || !isAuthenticated()) {
+    if (!currentUser || !authSnapshot.authed) {
       // Jika tidak authenticated, reset state
       setIsConnected(false);
       setIsConnecting(false);
+      setUsers([]);
+      chatService.endChatStream();
+      connectionRef.current = null;
       return;
     }
 
     // Cegah koneksi ganda (React StrictMode double-mount)
     // Prevent double connection
-    if (connectionRef.current) {
+    if (connectionRef.current === String(currentUser.id)) {
       console.log('[ChatContext] Connection already in progress, skipping');
       return;
     }
-    connectionRef.current = true;
+    connectionRef.current = String(currentUser.id);
 
     setIsConnecting(true);
     let mounted = true;
@@ -291,8 +307,11 @@ export function ChatProvider({ children }) {
       // Don't reset connectionRef here to avoid React HMR triggering reconnect
       // connectionRef.current = false;
       chatService.endChatStream();
+      if (connectionRef.current === String(currentUser.id)) {
+        connectionRef.current = null;
+      }
     };
-  }, [currentUser?.id]); // Hanya depend pada currentUser.id untuk menghindari re-connection
+  }, [currentUser?.id, authSnapshot.authed]); // Hanya depend pada currentUser.id untuk menghindari re-connection
 
   /**
    * Send message helper function

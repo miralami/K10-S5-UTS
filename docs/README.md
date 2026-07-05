@@ -4,6 +4,7 @@ Welcome to the centralized documentation for K10-S5-UTS.
 
 ## Contents
 
+- **Mobile App Technical Overview**: [`MOBILE-VERSION.md`](MOBILE-VERSION.md) — full feature inventory, architecture, differences from web
 - Architecture Overview: `ARCHITECTURE.md`
 - CI/CD Pipeline: `ci-explanation/CI-IMPLEMENTATION.md`
 - Commands Reference: `COMMANDS.md`
@@ -12,8 +13,9 @@ Welcome to the centralized documentation for K10-S5-UTS.
 - Environment Variables
 - Troubleshooting
 
-## Getting Started (Windows)
+## Getting Started
 
+### Web (all services) — Windows
 ```powershell
 # 1. Install dependencies
 .\scripts\install-all.ps1
@@ -26,31 +28,39 @@ cd backend; php artisan migrate --seed; cd ..
 npm run dev
 ```
 
+### Mobile (React Native / Expo)
+```bash
+cd mobile
+npm install
+cp .env.example .env   # then edit EXPO_PUBLIC_API_BASE_URL
+npx expo start
+```
+See [`MOBILE-VERSION.md`](MOBILE-VERSION.md) for full mobile documentation.
+
 Access:
-- Frontend: http://localhost:5173
+- Web Frontend: http://localhost:5173
 - Backend API: http://localhost:8000
 - WebSocket: ws://localhost:8080
+- **Mobile**: Expo Go QR code at `http://localhost:8081`
 
 ## Services & Ports
 
-- Frontend (Vite): 5173
-- Backend (Laravel): 8000
-- WebSocket Service (Node): 8080
-- AI Service (Python gRPC): 50052
+| Service | Port | Notes |
+|---------|------|-------|
+| Backend (Laravel) | 8000 | REST API |
+| Web Frontend (Vite) | 5173 | React SPA |
+| **Mobile (Expo Metro)** | **8081** | **React Native dev server** |
+| WebSocket (Node) | 8080 | Real-time chat |
+| AI Service (Python gRPC) | 50052 | Optional |
 
 ## Health Checks
 
-Each service exposes a lightweight health endpoint for monitoring and quick checks:
-
-- Backend API: `GET /api/health` (e.g. `http://localhost:8000/api/health`)
-- WebSocket Service: `GET /health` (e.g. `http://localhost:8080/health`)
-
-Use these endpoints with your load balancer or monitoring system to verify availability.
+- Backend API: `GET /api/health` (`http://localhost:8000/api/health`)
+- WebSocket Service: `GET /health` (`http://localhost:8080/health`)
 
 ## Environment Variables
 
-Backend `.env` essentials:
-
+### Backend `.env`
 ```ini
 DB_CONNECTION=mysql
 DB_HOST=127.0.0.1
@@ -65,8 +75,15 @@ AI_GRPC_HOST=localhost
 AI_GRPC_PORT=50052
 ```
 
+### Mobile `.env`
+```
+EXPO_PUBLIC_API_BASE_URL=http://localhost:8000
+```
+
 ## Troubleshooting
 
 - Enable PowerShell scripts: `Set-ExecutionPolicy RemoteSigned -Scope CurrentUser`
 - Ensure ports 8000, 5173, 8080, 50052 are free
+- **For mobile on a physical device**: use your LAN IP (not `localhost`) in `EXPO_PUBLIC_API_BASE_URL`
+- **For Android emulator**: use `http://10.0.2.2:8000`
 - Python in PATH if using AI service

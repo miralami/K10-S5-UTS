@@ -1,10 +1,7 @@
 import { format } from 'date-fns';
+import { getAuthToken } from './authService';
 
 const API_BASE_URL = 'http://localhost:8000/api';
-
-function getAuthToken() {
-  return localStorage.getItem('token');
-}
 
 const requestDefaults = {
   mode: 'cors',
@@ -102,15 +99,24 @@ async function handleResponse(response) {
 
   if (!response.ok) {
     let message;
+    let rateLimited = false;
     try {
       // Try to parse as JSON for structured error messages
       const errorData = JSON.parse(responseText);
       message =
         errorData.message || errorData.error || `Permintaan gagal dengan status ${response.status}`;
+      rateLimited = errorData.rateLimited === true || response.status === 429;
     } catch {
       // If not JSON, use the raw text or default message
       message = responseText || `Permintaan gagal dengan status ${response.status}`;
+      rateLimited = response.status === 429;
     }
+    
+    // Add additional context for rate limit errors
+    if (rateLimited) {
+      message = message + ' (Batas API tercapai - coba lagi dalam beberapa menit)';
+    }
+    
     throw new Error(message);
   }
 

@@ -36,21 +36,9 @@ const navItems = [
   },
   {
     label: 'Dashboard Jurnal',
-    description: 'Ringkasan mingguan & semua catatan',
+    description: 'Ringkasan, riwayat & cari catatan',
     to: '/dashboard',
     icon: CalendarIcon,
-  },
-  {
-    label: 'Riwayat Jurnal',
-    description: 'Lihat catatan & gambar per hari',
-    to: '/history',
-    icon: CalendarIcon,
-  },
-  {
-    label: 'Cari Catatan',
-    description: 'Pencarian catatan harianmu',
-    to: '/search',
-    icon: SearchIcon,
   },
   {
     label: 'Chat Langsung',

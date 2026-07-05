@@ -10,6 +10,7 @@ use App\Services\AIGrpcClient;
 use App\Services\DailyJournalAnalysisService;
 use App\Services\GeminiMoodAnalysisService;
 use App\Services\WeeklyMovieRecommendationService;
+use App\Services\WeeklyMusicRecommendationService;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -20,6 +21,7 @@ class JournalAnalysisController extends Controller
 {
     public function __construct(
         private readonly WeeklyMovieRecommendationService $movieRecommendations,
+        private readonly WeeklyMusicRecommendationService $musicRecommendations,
         private readonly AIGrpcClient $grpcClient,
     ) {}
 
@@ -87,21 +89,43 @@ class JournalAnalysisController extends Controller
 
             $analysisPayload = $analysisRecord?->analysis;
             $recommendations = null;
+            $musicRecommendations = null;
 
             if (is_array($analysisPayload) && ! empty($analysisPayload)) {
                 // Check if recommendations are already cached in the analysis record
                 $cachedRecommendations = $analysisRecord->recommendations ?? null;
+                $cachedMusicRecommendations = $analysisRecord->music_recommendations ?? null;
 
+                // Use cached data if available to avoid expensive API calls
                 if (is_array($cachedRecommendations) && ! empty($cachedRecommendations['items'])) {
-                    // Use cached recommendations - no API calls needed!
                     $recommendations = $cachedRecommendations;
                 } else {
-                    // Generate recommendations and cache them
-                    $recommendations = $this->movieRecommendations->buildRecommendations($analysisPayload);
-                    $recommendations = $this->enrichWeeklyRecommendationsWithOmdbPosters($recommendations);
+                    // Generate recommendations only if not cached
+                    try {
+                        $recommendations = $this->movieRecommendations->buildRecommendations($analysisPayload);
+                        $recommendations = $this->enrichWeeklyRecommendationsWithOmdbPosters($recommendations);
 
-                    // Cache the recommendations for future requests
-                    $analysisRecord->update(['recommendations' => $recommendations]);
+                        // Cache immediately after generation
+                        $analysisRecord->update(['recommendations' => $recommendations]);
+                    } catch (\Exception $e) {
+                        \Log::warning('Failed to generate movie recommendations', ['error' => $e->getMessage()]);
+                        $recommendations = null;
+                    }
+                }
+
+                if (is_array($cachedMusicRecommendations) && ! empty($cachedMusicRecommendations['items'])) {
+                    $musicRecommendations = $cachedMusicRecommendations;
+                } else {
+                    // Generate music recommendations only if not cached
+                    try {
+                        $musicRecommendations = $this->musicRecommendations->buildRecommendations($analysisPayload);
+
+                        // Cache immediately after generation
+                        $analysisRecord->update(['music_recommendations' => $musicRecommendations]);
+                    } catch (\Exception $e) {
+                        \Log::warning('Failed to generate music recommendations', ['error' => $e->getMessage()]);
+                        $musicRecommendations = null;
+                    }
                 }
             }
 
@@ -124,6 +148,7 @@ class JournalAnalysisController extends Controller
                 'analysis' => $analysisPayload,
                 'dailySummaries' => $dailySummaries,
                 'recommendations' => $recommendations,
+                'musicRecommendations' => $musicRecommendations,
                 'status' => $analysisRecord ? 'ready' : 'pending',
                 'message' => $analysisRecord
                     ? null
@@ -224,6 +249,9 @@ class JournalAnalysisController extends Controller
      */
     public function generateWeeklyForUser(Request $request, DailyJournalAnalysisService $dailyService, GeminiMoodAnalysisService $analysisService): JsonResponse
     {
+        // Increase execution time limit to 5 minutes for this endpoint (multiple API calls)
+        set_time_limit(300);
+
         try {
             $validated = $request->validate([
                 'week_ending' => ['nullable', 'date'],
@@ -273,27 +301,70 @@ class JournalAnalysisController extends Controller
                 'end_date' => $weekEnding->toDateString(),
             ]);
 
-            // Ensure daily analyses exist (or are created) for this user's week
-            $dailyAnalyses = $dailyService->ensureWeekForUser($user, $weekEnding);
+            // Fetch all notes for the week directly (no daily analysis generation)
+            $notes = $user->journalNotes()
+                ->whereDate('note_date', '>=', $weekStart->toDateString())
+                ->whereDate('note_date', '<=', $weekEnding->toDateString())
+                ->orderBy('note_date')
+                ->orderBy('created_at')
+                ->get(['id', 'title', 'body', 'note_date', 'created_at']);
 
-            $analysis = $analysisService->analyzeWeeklyFromDaily($dailyAnalyses, $weekEnding);
+            \Log::info('Notes fetched for weekly generation', [
+                'user_id' => $user->id,
+                'notes_count' => $notes->count(),
+            ]);
 
-            $analysis['noteCount'] = $dailyAnalyses->sum(function ($daily) {
-                $payload = $daily->analysis ?? [];
+            // Generate weekly analysis directly from notes (1 API call instead of 8)
+            $analysis = $analysisService->analyzeWeeklyDirectFromNotes($notes, $weekStart, $weekEnding);
 
-                return (int) ($payload['noteCount'] ?? 0);
-            });
+            // Create empty daily breakdown for UI compatibility
+            $dailyBreakdown = [];
+            $currentDate = $weekStart;
+            while ($currentDate <= $weekEnding) {
+                $dateStr = $currentDate->toDateString();
+                $dayNotes = $notes->filter(function ($note) use ($dateStr) {
+                    return CarbonImmutable::parse($note->note_date)->toDateString() === $dateStr;
+                });
 
-            $analysis['dailyBreakdown'] = $dailyAnalyses
-                ->map(function ($daily) {
-                    return [
-                        'date' => $daily->analysis_date ? CarbonImmutable::parse($daily->analysis_date)->toDateString() : null,
-                        'analysis' => $daily->analysis,
-                    ];
-                })
-                ->values()
-                ->all();
+                $dailyBreakdown[] = [
+                    'date' => $dateStr,
+                    'analysis' => [
+                        'summary' => $dayNotes->isEmpty() ? 'Tidak ada catatan untuk hari ini.' : 'Lihat ringkasan mingguan.',
+                        'dominantMood' => 'unknown',
+                        'moodScore' => null,
+                        'highlights' => [],
+                        'advice' => [],
+                        'affirmation' => null,
+                        'noteCount' => $dayNotes->count(),
+                    ],
+                ];
+                $currentDate = $currentDate->addDay();
+            }
 
+            $analysis['dailyBreakdown'] = $dailyBreakdown;
+
+            // Generate and cache recommendations immediately
+            $recommendations = null;
+            $musicRecommendations = null;
+
+            try {
+                $recommendations = $this->movieRecommendations->buildRecommendations($analysis);
+                $recommendations = $this->enrichWeeklyRecommendationsWithOmdbPosters($recommendations);
+                \Log::info('Movie recommendations generated', ['count' => count($recommendations['items'] ?? [])]);
+            } catch (\Exception $e) {
+                \Log::warning('Failed to generate movie recommendations during weekly generation', ['error' => $e->getMessage()]);
+                $recommendations = null;
+            }
+
+            try {
+                $musicRecommendations = $this->musicRecommendations->buildRecommendations($analysis);
+                \Log::info('Music recommendations generated', ['count' => count($musicRecommendations['items'] ?? [])]);
+            } catch (\Exception $e) {
+                \Log::warning('Failed to generate music recommendations during weekly generation', ['error' => $e->getMessage()]);
+                $musicRecommendations = null;
+            }
+
+            // Save analysis with cached recommendations
             WeeklyJournalAnalysis::updateOrCreate(
                 [
                     'user_id' => $user->id,
@@ -302,6 +373,8 @@ class JournalAnalysisController extends Controller
                 [
                     'week_end' => $weekEnding->toDateString(),
                     'analysis' => $analysis,
+                    'recommendations' => $recommendations,
+                    'music_recommendations' => $musicRecommendations,
                 ],
             );
 
@@ -310,6 +383,8 @@ class JournalAnalysisController extends Controller
                 'message' => 'Weekly analysis generated for user.',
                 'week' => ['start' => $weekStart->toDateString(), 'end' => $weekEnding->toDateString()],
                 'analysis' => $analysis,
+                'recommendations' => $recommendations,
+                'musicRecommendations' => $musicRecommendations,
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
             throw $e;
@@ -322,11 +397,19 @@ class JournalAnalysisController extends Controller
                 'trace' => $e->getTraceAsString(),
             ]);
 
+            // Check if it's a rate limit error
+            $isRateLimit = $e->getCode() === 429 ||
+                          str_contains($e->getMessage(), 'Rate limit') ||
+                          str_contains($e->getMessage(), 'quota');
+
             return response()->json([
                 'status' => 'error',
-                'message' => 'Gagal menghasilkan ringkasan mingguan. Cek log untuk detail.',
+                'message' => $isRateLimit
+                    ? 'Batas kuota API tercapai. Silakan tunggu beberapa menit dan coba lagi.'
+                    : 'Gagal menghasilkan ringkasan mingguan. Cek log untuk detail.',
+                'rateLimited' => $isRateLimit,
                 'error' => config('app.debug') ? $e->getMessage() : null,
-            ], 500);
+            ], $isRateLimit ? 429 : 500);
         }
     }
 
