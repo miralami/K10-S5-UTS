@@ -33,7 +33,7 @@ const JWT_SECRET = process.env.JWT_SECRET;
 
 if (!JWT_SECRET) {
   console.warn(
-    '⚠️  JWT_SECRET not found in environment. JWT verification will be skipped (dev mode).'
+    'JWT_SECRET not found in environment. JWT verification will be skipped (dev mode).'
   );
 }
 
